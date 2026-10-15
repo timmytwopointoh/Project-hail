@@ -37,6 +37,32 @@ jobs:
             adb devices -l | tee inspection_output/adb_devices.txt
             adb shell screencap -p /sdcard/home.png
             adb pull /sdcard/home.png inspection_output/emulator_home.png
+            adb shell wm size | tee inspection_output/display_size.txt
+            adb shell wm density | tee inspection_output/display_density.txt
+            adb shell input keyevent KEYCODE_HOME
+            adb shell input swipe 250 700 250 300 350
+            sleep 2
+            adb shell screencap -p /sdcard/after-swipe.png
+            adb pull /sdcard/after-swipe.png inspection_output/after_swipe.png
+            adb shell settings put system accelerometer_rotation 0
+            adb shell settings put system user_rotation 1
+            sleep 3
+            adb shell screencap -p /sdcard/landscape.png
+            adb pull /sdcard/landscape.png inspection_output/landscape.png
+            adb shell settings put system user_rotation 0
+            adb shell settings put system accelerometer_rotation 1
+            python3 - <<'PY'
+            import pathlib,struct,json
+            folder=pathlib.Path("inspection_output")
+            checks={}
+            for name in ("emulator_home.png","after_swipe.png","landscape.png"):
+                data=(folder/name).read_bytes()
+                assert data[:8]==bytes.fromhex("89504e470d0a1a0a"), name
+                width,height=struct.unpack(">II",data[16:24])
+                assert width>100 and height>100, name
+                checks[name]={"width":width,"height":height,"bytes":len(data)}
+            (folder/"screen_checks.json").write_text(json.dumps(checks,indent=2))
+            PY
             if [ -n "${APK_PATH:-}" ]; then
               python3 - <<'PY'
             import os,pathlib,sys
@@ -61,7 +87,7 @@ jobs:
             python3 - <<'PY'
             import json,os,pathlib
             out=pathlib.Path("inspection_output")
-            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":True,"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
+            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
             PY
       - name: Upload report
         if: always()
