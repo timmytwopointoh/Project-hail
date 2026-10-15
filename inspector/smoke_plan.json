@@ -1,0 +1,20 @@
+{
+  "description": "Test stock Android launcher and Settings UI with repeatable steps",
+  "steps": [
+    {
+      "action": "home"
+    },
+    {
+      "action": "settings"
+    },
+    {
+      "action": "dump_ui"
+    },
+    {
+      "action": "back"
+    },
+    {
+      "action": "screenshot"
+    }
+  ]
+}
