@@ -1,34 +1,93 @@
-name: VEILBOUND - Scoped AI Code Workers
+name: VEILBOUND - Master AI Worker Manager
 on:
   workflow_dispatch:
     inputs:
-      reason:
-        description: 'Goal of this proposal cycle (workers remain file-scoped)'
+      max_workers:
+        description: 'Maximum independent coding workers (bounded for cost/control)'
+        required: true
+        type: choice
+        default: '4'
+        options: ['2', '4', '6']
+      emulator_run_id:
+        description: 'Optional Android emulator run ID for evidence-driven prioritization'
         required: false
-        default: 'Find and propose small validated game improvements'
+        type: string
   push:
     branches: ['feature/veilbound-parallel-ai-qa']
     paths:
       - '.github/workflows/veilbound-ai-workers.yml'
+      - 'veilbound/scripts/worker_manager.py'
+      - 'veilbound/scripts/ai_worker.py'
+      - 'veilbound/worker_backlog.json'
+  workflow_run:
+    workflows: ['VEILBOUND - Native 3D Android RPG']
+    types: [completed]
 permissions:
   contents: read
-# Three different worker instances; no writes to the game's live branch.
+  actions: read
+# A push runs the *planner* by default. To enable charged AI work on pushes
+# and emulator completions, explicitly set ENABLE_AUTO_AI_WORKERS=true.
+# Manual dispatch runs workers whether or not auto mode is enabled.
 jobs:
-  propose-and-validate:
-    name: Proposal worker / ${{ matrix.role }}
+  manager:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      worker_count: ${{ steps.plan.outputs.worker_count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run can access secrets: ALWAYS use trusted default branch.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download precise emulator QA evidence when selected
+        if: github.event_name == 'workflow_run' || inputs.emulator_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-native3d-inspection-report
+          path: inspection_output/veilbound
+          run-id: ${{ github.event.workflow_run.id || inputs.emulator_run_id }}
+          github-token: ${{ github.token }}
+      - name: Spawn worker assignments from measured QA and roadmap
+        id: plan
+        run: |
+          python3 veilbound/scripts/worker_manager.py \
+            --max-workers "${{ inputs.max_workers || '3' }}" \
+            --github-output "${GITHUB_OUTPUT}" \
+            --out inspection_output/manager
+          cat inspection_output/manager/assignment_plan.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Archive manager decisions
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager/
+          retention-days: 14
+  parallel-code-workers:
+    needs: manager
+    if: >-
+      needs.manager.outputs.worker_count != '0' &&
+      (github.event_name == 'workflow_dispatch' || vars.ENABLE_AUTO_AI_WORKERS == 'true')
+    name: Independent coder / ${{ matrix.role }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
-      max-parallel: 3
-      matrix:
-        role: [combat, models, world]
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.manager.outputs.matrix) }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
           persist-credentials: false
       - uses: actions/setup-java@v4
         with:
@@ -37,13 +96,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: AI proposes narrowly scoped edits and validates Java tests
-        run: python3 veilbound/scripts/ai_worker.py --role "${{ matrix.role }}" --out "inspection_output/agent-${{ matrix.role }}"
-      - name: Store patch proposals for human review
+      - name: Generate isolated source patch and validate trusted Java tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
+          VEILBOUND_TASK_ID: ${{ matrix.task_id }}
+        run: |
+          python3 veilbound/scripts/ai_worker.py \
+            --role "${{ matrix.role }}" \
+            --out "inspection_output/agent-${{ matrix.role }}"
+      - name: Save immutable source proposal and validation result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: veilbound-proposal-${{ matrix.role }}-${{ github.run_attempt }}
+          name: veilbound-coder-${{ matrix.role }}-${{ github.run_attempt }}
           path: inspection_output/agent-${{ matrix.role }}/
           if-no-files-found: warn
           retention-days: 14
