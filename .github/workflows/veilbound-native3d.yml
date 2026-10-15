@@ -35,6 +35,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/CombatMotion.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/CharacterRig.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/EnvironmentKit.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ModelStudio.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/DetailArtKit.java \
@@ -46,6 +47,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/CombatMotionTest.java \
             veilbound/tests/game/ashenveil/veilbound/CharacterRigTest.java \
             veilbound/tests/game/ashenveil/veilbound/CombatGameplayTest.java \
+            veilbound/tests/game/ashenveil/veilbound/EnvironmentKitTest.java \
             veilbound/tests/game/ashenveil/veilbound/ModelStudioTest.java \
             veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java \
             veilbound/tests/game/ashenveil/veilbound/DetailArtKitTest.java \
@@ -58,6 +60,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatMotionTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CharacterRigTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatGameplayTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.EnvironmentKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArtKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.DetailArtKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CinematicArtKitTest
