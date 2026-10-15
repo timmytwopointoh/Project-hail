@@ -1,0 +1,63 @@
+name: APK Vision Inspector
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      apk_path:
+        description: Repository-relative APK path; blank runs emulator smoke test
+        required: false
+        default: ''
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create report directory
+        run: mkdir -p inspection_output
+      - name: Emulator smoke test and optional APK installation
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APK_PATH: ${{ inputs.apk_path }}
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: |
+            set -euo pipefail
+            adb wait-for-device
+            adb shell getprop sys.boot_completed | tee inspection_output/boot_completed.txt
+            adb shell getprop ro.build.version.release | tee inspection_output/android_version.txt
+            adb devices -l | tee inspection_output/adb_devices.txt
+            adb shell screencap -p /sdcard/home.png
+            adb pull /sdcard/home.png inspection_output/emulator_home.png
+            if [ -n "${APK_PATH:-}" ]; then
+              python3 - <<'PY'
+            import os,pathlib,sys
+            p=pathlib.Path(os.environ["APK_PATH"])
+            if p.is_absolute() or ".." in p.parts or p.suffix.lower()!=".apk" or not p.is_file():
+                sys.exit("Invalid APK_PATH: expected repository-relative existing APK")
+            PY
+              adb install -r "$APK_PATH" | tee inspection_output/install.txt
+              adb shell pm list packages -3 | tee inspection_output/packages.txt
+              adb shell screencap -p /sdcard/installed.png
+              adb pull /sdcard/installed.png inspection_output/after_install.png
+            fi
+            python3 - <<'PY'
+            import json,os,pathlib
+            out=pathlib.Path("inspection_output")
+            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":True,"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
+            PY
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-vision-report
+          path: inspection_output/
+          if-no-files-found: warn
