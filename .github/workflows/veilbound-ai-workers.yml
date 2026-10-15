@@ -12,8 +12,14 @@ on:
         description: 'Simultaneous coding jobs (queued jobs wait for a runner)'
         required: true
         type: choice
-        default: '4'
+        default: '2'
         options: ['2', '4', '8', '12']
+      run_mode:
+        description: 'Plan only (free) or call paid Gemini coding workers'
+        required: true
+        type: choice
+        default: 'plan_only'
+        options: ['plan_only', 'coding_proposals']
       emulator_run_id:
         description: 'Optional Android emulator run ID for evidence-driven prioritization'
         required: false
@@ -83,6 +89,19 @@ jobs:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager/
           retention-days: 14
+      - name: Confirm Gemini key exists before billable coding work
+        if: >-
+          (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals') ||
+          (github.event_name != 'workflow_dispatch' && vars.ENABLE_AUTO_AI_WORKERS == 'true')
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "${GEMINI_API_KEY}" ]; then
+            echo "::error::GEMINI_API_KEY not configured. Add it under Settings > Secrets and variables > Actions."
+            echo "Manager plan was saved; no code workers were started."
+            exit 1
+          fi
+          echo "Gemini credential present; value intentionally not logged." >> "${GITHUB_STEP_SUMMARY}"
   division-managers:
     needs: manager
     if: needs.manager.outputs.division_count != '0'
@@ -172,7 +191,8 @@ jobs:
     needs: [manager, team-managers]
     if: >-
       needs.manager.outputs.worker_count != '0' &&
-      (github.event_name == 'workflow_dispatch' || vars.ENABLE_AUTO_AI_WORKERS == 'true')
+      ((github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals') ||
+       (github.event_name != 'workflow_dispatch' && vars.ENABLE_AUTO_AI_WORKERS == 'true'))
     name: Independent coder / ${{ matrix.slot_id }} / ${{ matrix.role }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
