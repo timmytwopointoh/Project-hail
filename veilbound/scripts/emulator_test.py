@@ -176,8 +176,14 @@ def main():
         report["screenshots"].append(chapel)
         atelier["chapel"]=True
         touch(w*.08,h*.08)
-        time.sleep(.7)
-        if diagnostic_state()!="title":
+        # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
+        # sampled every ~1.4 s. Poll state instead of treating a stale log as
+        # proof that BACK was ignored.
+        for _ in range(12):
+            time.sleep(.38)
+            if diagnostic_state()=="title":
+                break
+        else:
             raise AssertionError("Studio return control did not restore main menu")
 
         # System's one-time immersive tutorial may cover the first screen.

@@ -293,7 +293,11 @@ public final class WardenHud extends View {
         if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN){
             float x=normX(event.getX(idx)),y=normY(event.getY(idx));
             if(action==MotionEvent.ACTION_DOWN){
-                if(y<100&&x<145){game.exitStudio();invalidate();return true;}
+                if(y<100&&x<145){
+                    game.exitStudio();
+                    Log.i("VEILBOUND_STATE","mode=title studio_exit_via_touch");
+                    invalidate();return true;
+                }
                 if(y>120&&y<213&&x<310){
                     if(importAction!=null)importAction.run();
                     return true;
