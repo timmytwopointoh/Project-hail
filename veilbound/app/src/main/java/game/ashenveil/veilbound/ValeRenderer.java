@@ -19,7 +19,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                           model=new float[16],mvp=new float[16];
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
     private int skyPos,skyClock;
-    private Mesh staticWorld,cube,octa,needle;
+    private Mesh staticWorld,cube,octa,needle,cape;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -98,7 +98,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
-        cube=makeCube();octa=makeOcta();needle=makeNeedle();
+        cube=makeCube();octa=makeOcta();needle=makeNeedle();cape=makeCape();
         staticWorld=buildWorld();
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count);
@@ -217,7 +217,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawPart(x,root+.40f*scale,z,.31f,.42f,0,.36f,.85f,.44f,
                 yaw,c*.51f,g*.52f,b*.57f,0);
         // Tattered cloak, armored torso and layered gorget.
-        drawPart(x,root+1.25f*scale,z,0,0,-.24f,.99f,1.54f,.25f,
+        drawCape(x,root,z,yaw,scale,foe?.62f:.79f,foe?.55f:.77f,foe?.63f:.82f);
+        drawPart(x,root+1.25f*scale,z,0,0,-.24f,.82f,1.45f,.23f,
                 yaw,foe?.12f:.08f,foe?.16f:.21f,foe?.19f:.30f,0);
         drawPart(x,root+1.35f*scale,z,0,0,0,.88f,.97f,.56f,
                 yaw,c,g,b,0);
@@ -228,9 +229,28 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 yaw,c*.8f,g*.85f,b*.98f,0);
         drawPart(x,root+2.34f*scale,z,0,0,.31f,.41f,.18f,.08f,
                 yaw,.035f,.045f,.055f,0);
+        // Visor slits, filigree brow, gorget and belt break up boxy armor.
+        drawPart(x,root+2.36f*scale,z,0,0,.36f,.31f,.055f,.09f,
+                yaw,foe?.71f:.72f,foe?.28f:.60f,foe?.17f:.54f,.16f);
+        drawPart(x,root+1.78f*scale,z,0,0,.43f,.61f,.07f,.07f,
+                yaw,.67f,.63f,.53f,.05f);
+        drawPart(x,root+.93f*scale,z,0,0,.20f,.93f,.19f,.66f,
+                yaw,.28f,.22f,.18f,0);
+        drawPart(x,root+1.21f*scale,z,0,0,.44f,.16f,.28f,.08f,
+                yaw,foe?.73f:.82f,.58f,.68f,.35f,.1f);
         for(int side=-1;side<=1;side+=2){
             drawPart(x,root+2.63f*scale,z,side*.30f,0,0,.23f,.38f,.26f,
                     yaw,c*.65f,g*.75f,b*.90f,0);
+        }
+        // Segmented pauldrons, horn-tips and reinforced greaves.
+        for(int side=-1;side<=1;side+=2){
+            drawPart(x,root+1.80f*scale,z,side*.70f,0,.015f,
+                    .60f,.35f,.65f,yaw,c*.89f,g*.96f,b,0);
+            drawOcta(x+(float)Math.cos(yaw)*side*.78f,
+                     root+2.19f*scale,z-(float)Math.sin(yaw)*side*.78f,
+                     .18f,.57f,.19f,.59f,.63f,.69f,.14f,0);
+            drawPart(x,root+.40f*scale,z,side*.30f,0,.21f,
+                    .41f,.18f,.56f,yaw,.36f,.37f,.35f,0);
         }
         float armSwing=(float)Math.sin(walk*1.4f)*.10f;
         drawPart(x,root+1.38f*scale,z,-.65f,armSwing,0,.38f,.90f,.39f,
@@ -243,6 +263,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 yaw+.30f+slash, .23f,.19f,.13f,0);
         drawPart(x,root+1.66f*scale+slash*.42f,z,.79f,0,.40f,.15f,1.08f,.10f,
                 yaw+.30f+slash,.65f,.76f,.80f,foe?.1f:.20f);
+        drawPart(x,root+1.20f*scale+slash*.36f,z,.79f,0,.40f,.50f,.075f,.14f,
+                yaw+.30f+slash,.78f,.63f,.42f,.07f);
+        drawPart(x,root+1.12f*scale,z,.81f,0,.30f,.23f,.28f,.24f,
+                yaw,.32f,.36f,.38f,0);
         if(dodge>0)drawOcta(x,root+.35f,z,.58f,.18f,.58f,.28f,.50f,.59f,.25f,tm*60);
     }
     private void drawPart(float x,float y,float z,float ox,float oy,float oz,
@@ -354,6 +378,31 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return b.mesh();
     }
     private static Mesh makeNeedle(){return makeOcta();}
+    // Layered, asymmetric cloak mesh with weathered embroidery and fraying.
+    private static Mesh makeCape(){
+        Builder b=new Builder();
+        b.quad(v(-.49f,1.85f,-.42f),v(.49f,1.85f,-.42f),
+               v(.76f,.23f,-.79f),v(-.85f,.22f,-.82f),.26f,.34f,.39f);
+        b.tri(v(-.48f,1.84f,-.44f),v(-.08f,1.65f,-.53f),
+              v(-.77f,.29f,-.85f),.40f,.27f,.24f);
+        b.tri(v(.48f,1.84f,-.43f),v(.77f,.29f,-.85f),
+              v(.10f,1.64f,-.53f),.33f,.30f,.32f);
+        b.quad(v(-.82f,.22f,-.86f),v(.76f,.23f,-.82f),
+               v(.79f,.12f,-.89f),v(-.87f,.12f,-.92f),.54f,.35f,.22f);
+        b.tri(v(-.30f,1.38f,-.68f),v(.30f,1.38f,-.68f),
+              v(0,.74f,-.83f),.71f,.71f,.63f);
+        b.tri(v(-.12f,1.25f,-.72f),v(.12f,1.25f,-.72f),
+              v(0,.92f,-.82f),.15f,.24f,.29f);
+        return b.mesh();
+    }
+    private void drawCape(float x,float y,float z,float yaw,
+                          float scale,float r,float g,float b){
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y,z);
+        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+        Matrix.scaleM(model,0,scale,scale,scale);
+        draw(cape,model,r,g,b,0);
+    }
     private Mesh buildWorld(){
         Builder b=new Builder();Random rng=new Random(7249);
         for(int ix=-22;ix<22;ix++){
