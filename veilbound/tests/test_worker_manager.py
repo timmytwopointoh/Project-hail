@@ -71,20 +71,45 @@ class ManagerTests(unittest.TestCase):
         self.assertTrue({"renderer", "performance"}.isdisjoint(p["spawned_roles"]))
         self.assertEqual(2, len(p["review_only"]))
 
-    def test_cloned_tasks_do_not_spawn_same_role_twice(self):
+    def test_multiple_distinct_same_role_tasks_are_isolated_not_deduplicated(self):
         findings = {"tasks": [{"id": "urgent-c", "worker": "combat", "priority": "P0",
                                "repair_guidance": "objective count regression"}]}
         p = manager.plan(self.fixture(), findings, max_workers=6)
         self.assertEqual(6, p["allocated"])
-        self.assertEqual(1, p["spawned_roles"].count("combat"))
+        self.assertEqual(2, p["spawned_roles"].count("combat"))
+        self.assertEqual(6, len(set(x["slot_id"] for x in p["matrix"]["include"])))
+        self.assertIn("urgent-c", [x["task_id"] for x in p["matrix"]["include"]])
 
     def test_rejects_invalid_budget_and_unsafe_inputs(self):
-        for cap in (0, -1, 7, 11, True, "3"):
+        for cap in (0, -1, 51, 100, True, "3"):
             with self.assertRaises(ValueError):
                 manager.plan(self.fixture(), max_workers=cap)
         bad = {"tasks": [{"id": "bad", "role": "script-runner", "goal": "echo hi"},
                           {"id": "bad2", "role": "combat", "goal": 123}]}
         self.assertEqual(0, manager.plan(bad)["allocated"])
+
+    def test_fifty_task_slots_are_unique_and_balanced_across_three_teams(self):
+        roles = ("combat", "animation", "models", "materials", "world", "studio")
+        backlog = {"tasks": [
+            {"id": "TASK-%03d" % i, "role": roles[i % len(roles)],
+             "goal": "Repair unique subsystem item %d" % i, "priority": "P2"}
+            for i in range(60)]}
+        p = manager.plan(backlog, max_workers=50)
+        self.assertEqual(50, p["allocated"])
+        self.assertEqual(3, p["team_count"])
+        self.assertEqual(50, len(set(x["slot_id"] for x in p["matrix"]["include"])))
+        self.assertEqual(50, len(set(x["task_id"] for x in p["matrix"]["include"])))
+        self.assertEqual("w050", p["matrix"]["include"][-1]["slot_id"])
+        counts = {x["team"]: x["child_count"] for x in p["team_matrix"]["include"]}
+        self.assertEqual(50, sum(counts.values()))
+        self.assertTrue(all(0 < value <= 18 for value in counts.values()))
+        self.assertTrue(all(value >= 15 for value in counts.values()))
+
+    def test_duplicate_exact_task_id_is_not_double_billed(self):
+        backlog = {"tasks": [
+            {"id": "DUP", "role": "combat", "goal": "same task", "priority": "P2"},
+            {"id": "DUP", "role": "combat", "goal": "same task", "priority": "P2"}]}
+        self.assertEqual(1, manager.plan(backlog, max_workers=50)["allocated"])
 
     def test_json_matrix_and_ci_output(self):
         with tempfile.TemporaryDirectory() as folder:
