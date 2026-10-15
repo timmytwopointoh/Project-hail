@@ -25,6 +25,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private long previous=0;
     private float qualityClock=0,fps=60;
     private int frames=0;
+    private int drawCalls=0;
+    private int lastGlError=GLES20.GL_NO_ERROR;
     private float cx,cy,cz;
     private final float[] fogColor={.125f,.159f,.189f};
 
@@ -107,7 +109,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         lanternModel=new Mesh(ArtKit.lantern().vertices);
         staticWorld=buildWorld();
         previous=System.nanoTime();
-        Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count);
+        Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count+
+              " actor_verts="+(wardenModel.count+hushedModel.count+bossModel.count)+
+              " mesh_tris="+(wardenModel.count+hushedModel.count+bossModel.count)/3);
     }
     @Override public void onSurfaceChanged(GL10 ignored,int w,int h){
         screenWidth=Math.max(1,w);screenHeight=Math.max(1,h);
@@ -116,11 +120,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     @Override public void onDrawFrame(GL10 ignored){
         long now=System.nanoTime();
-        float dt=Math.max(.001f,Math.min((now-previous)*1e-9f,.044f));
+        float actualDt=Math.max(.0001f,Math.min((now-previous)*1e-9f,.25f));
+        float dt=Math.max(.001f,Math.min(actualDt,.044f));
         previous=now;
         state.update(dt);
-        qualityClock+=dt;frames++;
-        if(qualityClock>1.1f){fps=frames/qualityClock;frames=0;qualityClock=0;}
+        qualityClock+=actualDt;frames++;
+        drawCalls=0;
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
         renderSky();
         float yaw=state.cameraYaw;
@@ -135,8 +140,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform3f(uFog,fogColor[0],fogColor[1],fogColor[2]);
         drawStatic();
         drawAnimatedObjects();
-        if(state.hurtFlash>0){
-            // Hurt feedback remains subtle; native HUD adds stronger warning.
+        // Throttled diagnostics feed automated visual QA without per-frame
+        // logcat overhead or lying about FPS when simulation clamps dt.
+        if(qualityClock>1.35f){
+            fps=frames/qualityClock;
+            frames=0;qualityClock=0;
+            lastGlError=GLES20.glGetError();
+            Log.i(TAG,"FRAME_QA fps="+String.format(java.util.Locale.US,"%.1f",fps)+
+                  " draws="+drawCalls+" static_vertices="+staticWorld.count+
+                  " gl_error="+lastGlError);
         }
     }
     private void renderSky(){
@@ -206,8 +218,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         for(WorldState.Foe foe:state.foes){
             if(!foe.alive||(foe.boss&&!state.bossTriggered))continue;
             float ang=(float)Math.atan2(state.x-foe.x,state.z-foe.z);
+            float tellSwing=foe.windup>0
+                ? .57f*foe.windup/(foe.boss?.92f:.72f):0f;
             drawKnight(foe.x,terrain(foe.x,foe.z),foe.z,ang,true,foe.boss,
-                    tm,foe.phase,0,0);
+                    tm,foe.phase,tellSwing,0);
             if(foe.windup>0){
                 float t=foe.boss?foe.windup/.92f:foe.windup/.72f;
                 float glow=.50f+(1-t)*1.7f;
@@ -294,6 +308,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         mesh.data.position(6);GLES20.glEnableVertexAttribArray(aColor);
         GLES20.glVertexAttribPointer(aColor,3,GLES20.GL_FLOAT,false,36,mesh.data);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,mesh.count);
+        drawCalls++;
         GLES20.glDisableVertexAttribArray(aPos);
         GLES20.glDisableVertexAttribArray(aNormal);
         GLES20.glDisableVertexAttribArray(aColor);
