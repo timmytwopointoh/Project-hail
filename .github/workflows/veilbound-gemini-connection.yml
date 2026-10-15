@@ -1,0 +1,22 @@
+name: VEILBOUND - Gemini Connection Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+# Explicitly manual: one tiny provider call, no game source sent.
+jobs:
+  verify-gemini-key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify Gemini access without displaying the secret
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+        run: python3 veilbound/scripts/gemini_probe.py
