@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
+import xml.etree.ElementTree as ET
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=Path('inspection_output/riftward')
@@ -20,6 +21,38 @@ def adb(*args, timeout=35):
     p=subprocess.run(['adb',*map(str,args)],capture_output=True,check=True,timeout=timeout)
     return p.stdout
 
+def dismiss_system_dialog():
+    """Dismiss safe Android first-launch prompts or the emulator launcher's ANR.
+
+    Never dismiss an application ANR: that indicates a real game failure.
+    """
+    try:
+        adb('shell','uiautomator','dump','/sdcard/riftward-ui.xml',timeout=22)
+        xml=adb('exec-out','cat','/sdcard/riftward-ui.xml',timeout=15)
+        (OUT/'last_ui.xml').write_bytes(xml)
+        root=ET.fromstring(xml)
+        texts=[n.get('text','') for n in root.iter('node')]
+        is_launcher_anr=any(('isn\'t responding' in t.lower() or 'not responding' in t.lower())
+                  and any(name in t.lower() for name in ('quickstep','launcher3','pixel launcher'))
+                  for t in texts)
+        is_immersive_tutorial=any('viewing full screen' in t.lower() for t in texts)
+        if not (is_launcher_anr or is_immersive_tutorial):return False
+        button='got it' if is_immersive_tutorial else 'close app'
+        for node in root.iter('node'):
+            if node.get('text','').strip().lower()!=button:continue
+            match=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',node.get('bounds',''))
+            if not match:continue
+            left,top,right,bottom=map(int,match.groups())
+            adb('shell','input','tap',(left+right)//2,(top+bottom)//2,timeout=15)
+            time.sleep(.8)
+            if is_launcher_anr:
+                adb('shell','am','start','-n',ACTIVITY,timeout=40)
+                time.sleep(2)
+            return True
+    except (subprocess.TimeoutExpired,subprocess.CalledProcessError,ET.ParseError,ValueError):
+        return False
+    return False
+
 def screenshot(name, require_visible=False):
     error=''
     for _ in range(8 if require_visible else 2):
@@ -31,7 +64,12 @@ def screenshot(name, require_visible=False):
                 # A dark Android transition frame is not a verified rendered menu.
                 img=Image.open(BytesIO(data)).convert('RGB')
                 img=img.crop((0,0,w,int(h*.89))).resize((64,110))
-                lit=sum(1 for r,g,b in img.getdata() if r+g+b>360)
+                samples=list(img.getdata())
+                lit=sum(1 for r,g,b in samples if r+g+b>360)
+                white=sum(1 for r,g,b in samples if min(r,g,b)>220)
+                if white>450:
+                    dismiss_system_dialog()
+                    raise ValueError(f'System UI dialog covers game ({white} white samples)')
                 if lit<22:raise ValueError(f'UI not drawn yet ({lit} lit samples)')
             (OUT/name).write_bytes(data)
             return {'file':name,'width':w,'height':h,'bytes':len(data)}
@@ -51,11 +89,19 @@ def main():
             'touch_started':False,'screenshots':[],'status':'failed'}
     try:
         assert APK.is_file(),f'APK missing at {APK}'
+        # Avoid Android's one-time immersive fullscreen tutorial blocking inputs.
+        try:adb('shell','settings','put','secure','immersive_mode_confirmations','confirmed',timeout=15)
+        except (subprocess.CalledProcessError,subprocess.TimeoutExpired):pass
         report['install_output']=adb('install','-r',str(APK),timeout=120).decode('utf-8','replace').strip()
         report['installed']=True
         report['launch_output']=adb('shell','am','start','-W','-n',ACTIVITY,timeout=65).decode('utf-8','replace').strip()
         report['launched']=True
         time.sleep(5)
+        report['launcher_recoveries']=0
+        for _ in range(3):
+            if dismiss_system_dialog():
+                report['launcher_recoveries']+=1
+            else:break
         for _ in range(5):
             report['menu_state']=state()
             if report['menu_state']=='menu':break
@@ -63,6 +109,8 @@ def main():
         if report['menu_state']!='menu':raise AssertionError('Missing menu-ready state: '+str(report['menu_state']))
         first=screenshot('01_menu.png',require_visible=True);report['screenshots'].append(first)
         for fraction in (.70,.72,.68,.75):
+            if dismiss_system_dialog():
+                report['launcher_recoveries']+=1
             x=first['width']//2;y=int(first['height']*fraction)
             adb('shell','input','tap',x,y,timeout=25)
             time.sleep(1)
@@ -73,7 +121,7 @@ def main():
                 break
         if not report['touch_started']:raise AssertionError('Touch did not enter gameplay: '+str(report.get('post_tap_state')))
         time.sleep(2)
-        report['screenshots'].append(screenshot('02_playing.png'))
+        report['screenshots'].append(screenshot('02_playing.png',require_visible=True))
         report['status']='passed'
     except Exception as e:
         report['error']=str(e)

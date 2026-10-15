@@ -35,3 +35,4 @@ No network services, multiplayer, monetization, copyrighted music/assets, app pe
 - Source and workflow changes are committed on the development branch while the successful APK artifact remains recoverable.
 
 - Native Android review found the bottom navigation bar overlap and a false-positive blank startup screenshot. Version 1.1 enables immersive sticky fullscreen and rejects unrendered frames by testing real screenshot brightness.
+- Android first-launch immersive fullscreen tutorial is suppressed where possible and otherwise explicitly dismissed. Both menu and gameplay screenshots must be unobstructed.
