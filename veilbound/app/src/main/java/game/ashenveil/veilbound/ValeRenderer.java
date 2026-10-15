@@ -17,8 +17,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final WorldState state;
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight;
-    private int skyPos,skyClock,detailTexture,uDetail;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor;
+    private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
@@ -48,7 +48,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "varying vec3 vWorld; uniform vec3 uTint; uniform vec3 uEye; "+
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
         "uniform sampler2D uDetail; uniform float uStudioMode; "+
-        "uniform float uStudioMaterial; uniform vec3 uStudioLight; "+
+        "uniform float uStudioMaterial; uniform vec3 uStudioLight; uniform vec3 uStudioKeyColor; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "void main(){vec3 n=normalize(vNormal); "+
         "float sun=max(dot(n,normalize(vec3(-.45,.79,-.28))),0.); "+
@@ -76,8 +76,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "if(uStudioMode>.5){"+
         "float key=max(dot(n,normalize(uStudioLight)),0.);"+
         "float bounce=max(dot(n,normalize(vec3(.3,.35,-.7))),0.);"+
-        "vec3 tint=vec3(.15,.16,.18)+key*vec3(.90,.83,.73)+bounce*vec3(.16,.24,.32);"+
-        "col=vColor*uTint*tint + uGlow*vColor*.30;"+
+        "vec3 tint=vec3(.13,.15,.18)+key*uStudioKeyColor+bounce*vec3(.14,.22,.27);"+
+        "vec3 eye=normalize(uEye-vWorld);"+
+        "float spec=pow(max(dot(reflect(-normalize(uStudioLight),n),eye),0.),28.);"+
+        "float fres=pow(1.-max(dot(n,eye),0.),2.8);"+
+        "float grain=texture2D(uDetail,vWorld.xy*.47).r;"+
+        "col=(vColor*uTint*tint+uGlow*vColor*.30)*(.84+.24*grain)"+
+        "+uStudioKeyColor*spec*.23+vec3(.09,.23,.25)*fres*.24;"+
         "if(uStudioMaterial>.5&&uStudioMaterial<1.5)col=vColor*uTint;"+
         "if(uStudioMaterial>1.5&&uStudioMaterial<2.5)col=vec3(.012,.015,.025);"+
         "if(uStudioMaterial>2.5&&uStudioMaterial<3.5)col=n*.5+.5;"+
@@ -88,9 +93,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "attribute vec2 aPos; varying vec2 vUv; "+
         "void main(){vUv=aPos*.5+.5;gl_Position=vec4(aPos,1.,1.);}";
     private static final String SKY_FRAGMENT=
-        "precision mediump float; varying vec2 vUv;uniform float uTime; "+
+        "precision mediump float; varying vec2 vUv;uniform float uTime;uniform float uIsStudio; "+
         "float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);} "+
-        "void main(){float t=pow(vUv.y,1.18); "+
+        "void main(){if(uIsStudio>.5){"+
+        "float h=pow(clamp(1.-distance(vUv,vec2(.5,.56))*1.55,0.,1.),2.);"+
+        "vec3 room=mix(vec3(.050,.063,.073),vec3(.008,.016,.029),vUv.y);"+
+        "gl_FragColor=vec4(room+vec3(.028,.029,.028)*h,1.);return;}"+
+        "float t=pow(vUv.y,1.18); "+
         "vec3 upper=vec3(.015,.028,.060);vec3 horizon=vec3(.19,.21,.23); "+
         "vec3 sky=mix(horizon,upper,smoothstep(.04,1.,t)); "+
         "vec2 moon=(vUv-vec2(.74,.78))*vec2(1.6,1.);"+
@@ -125,8 +134,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uStudioMode=GLES20.glGetUniformLocation(program,"uStudioMode");
         uStudioMaterial=GLES20.glGetUniformLocation(program,"uStudioMaterial");
         uStudioLight=GLES20.glGetUniformLocation(program,"uStudioLight");
+        uStudioKeyColor=GLES20.glGetUniformLocation(program,"uStudioKeyColor");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
+        skyStudioMode=GLES20.glGetUniformLocation(skyProgram,"uIsStudio");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
         initDetailTexture();
         cube=makeCube();octa=makeOcta();
@@ -179,6 +190,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uStudioMode,0f);
         GLES20.glUniform1f(uStudioMaterial,0f);
         GLES20.glUniform3f(uStudioLight,-.40f,.83f,-.3f);
+        GLES20.glUniform3f(uStudioKeyColor,1.0f,.91f,.77f);
         GLES20.glUniform3f(uFog,fogColor[0],fogColor[1],fogColor[2]);
         drawStatic();
         drawAnimatedObjects();
@@ -255,10 +267,19 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform1f(uStudioMode,1f);
         GLES20.glUniform1f(uStudioMaterial,m.material);
-        if(m.light==0)GLES20.glUniform3f(uStudioLight,-.45f,.82f,.27f);
-        if(m.light==1)GLES20.glUniform3f(uStudioLight,.31f,.74f,-.46f);
-        if(m.light==2)GLES20.glUniform3f(uStudioLight,-.68f,.20f,.60f);
-        if(m.light==3)GLES20.glUniform3f(uStudioLight,.77f,.39f,-.64f);
+        if(m.light==0){
+            GLES20.glUniform3f(uStudioLight,-.45f,.82f,.27f);
+            GLES20.glUniform3f(uStudioKeyColor,1f,.89f,.71f);
+        }else if(m.light==1){
+            GLES20.glUniform3f(uStudioLight,.31f,.74f,-.46f);
+            GLES20.glUniform3f(uStudioKeyColor,.49f,.72f,1.0f);
+        }else if(m.light==2){
+            GLES20.glUniform3f(uStudioLight,-.68f,.20f,.60f);
+            GLES20.glUniform3f(uStudioKeyColor,1.0f,.44f,.19f);
+        }else{
+            GLES20.glUniform3f(uStudioLight,.77f,.39f,-.64f);
+            GLES20.glUniform3f(uStudioKeyColor,.72f,.95f,.84f);
+        }
         GLES20.glUniform3f(uFog,.08f,.11f,.13f);
         GLES20.glUniform1f(uSurface,1f);
         GLES20.glUniform1f(uStudioMaterial,0f);
@@ -368,6 +389,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         skyVertices.position(0);
         GLES20.glVertexAttribPointer(skyPos,2,GLES20.GL_FLOAT,false,8,skyVertices);
         GLES20.glUniform1f(skyClock,state.time);
+        GLES20.glUniform1f(skyStudioMode,"lab".equals(state.snapshot().mode)?1f:0f);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP,0,4);
         GLES20.glDisableVertexAttribArray(skyPos);
         GLES20.glDepthMask(true);
