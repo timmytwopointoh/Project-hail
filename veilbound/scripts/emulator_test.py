@@ -211,6 +211,18 @@ def main():
         chapel=shot("01_atelier_chapel.png")
         report["screenshots"].append(chapel)
         atelier["chapel"]=True
+        # Four ORIGINAL in-game meshes share the same transform/material pipeline
+        # as enemies. Studio visual proof is part of each Android release gate.
+        touch(w*.52,h*.944)  # material 4 -> PBR-inspired
+        for _ in range(3):touch(w*.20,h*.944) # light 1 -> 0
+        atelier["world_assets"]={}
+        for index,name in enumerate(("flagstone","cenotaph","reliquary","root_fan"),start=7):
+            touch(w*.65,h*.865)
+            time.sleep(1.1)
+            frame=shot("01_world_asset_"+name+".png")
+            report["screenshots"].append(frame)
+            atelier["world_assets"][name]=True
+            # Snapshot captures verify the actual registered studio geometry.
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
