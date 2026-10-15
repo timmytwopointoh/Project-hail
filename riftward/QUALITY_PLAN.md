@@ -36,3 +36,4 @@ No network services, multiplayer, monetization, copyrighted music/assets, app pe
 
 - Native Android review found the bottom navigation bar overlap and a false-positive blank startup screenshot. Version 1.1 enables immersive sticky fullscreen and rejects unrendered frames by testing real screenshot brightness.
 - Android first-launch immersive fullscreen tutorial is suppressed where possible and otherwise explicitly dismissed. Both menu and gameplay screenshots must be unobstructed.
+- Cinematic v1.2: world-indexed fractured relics (no scrolling seam), thrust afterimages, prism and boss attack telegraphs, same controls/collisions. Visual-only systems are gated by Effects OFF and object caps.
