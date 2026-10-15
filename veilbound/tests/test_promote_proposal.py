@@ -1,4 +1,5 @@
 """Proposals cannot escape role-owned Java files or bypass approval checks."""
+import difflib
 import importlib.util
 import json
 import tempfile
@@ -59,6 +60,22 @@ class PromoteTests(unittest.TestCase):
             path.symlink_to(Path(p) / "worker_result.json")
             with self.assertRaises(ValueError):
                 promote.load_proposal(p, "combat", SHA)
+
+    def test_rejects_review_patch_that_disagrees_with_actual_source(self):
+        with tempfile.TemporaryDirectory() as rootdir, tempfile.TemporaryDirectory() as artifact:
+            relative = str(promote.JAVA / "WorldState.java")
+            src = Path(rootdir) / relative
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.write_text("old\n")
+            pending = {relative: "new\n"}
+            patch = "".join(difflib.unified_diff(
+                ["old\n"], ["new\n"],
+                fromfile="a/" + relative, tofile="b/" + relative))
+            (Path(artifact) / "changes.patch").write_text(patch)
+            promote.verify_reviewed_patch(rootdir, artifact, pending)
+            (Path(artifact) / "changes.patch").write_text("unrelated code")
+            with self.assertRaises(ValueError):
+                promote.verify_reviewed_patch(rootdir, artifact, pending)
 
     def test_rejects_path_traversal(self):
         with tempfile.TemporaryDirectory() as p:
