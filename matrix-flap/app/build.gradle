@@ -1,0 +1,14 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.trioncompasitor.matrixflap'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.trioncompasitor.matrixflap'
+        minSdk 29
+        targetSdk 29
+        versionCode 1
+        versionName '1.0'
+    }
+}

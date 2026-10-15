@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#040610">
+<title>Matrix Flap — Neon Flight</title>
+<style>
+:root{color-scheme:dark;--lime:#72ff97;--green:#00eb74;--purple:#b467ff;--violet:#813cf7;--ink:#040610}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#040610;color:#ccffda;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body{touch-action:none;user-select:none;-webkit-user-select:none}
+#game{position:relative;height:100vh;height:100dvh;width:100vw;overflow:hidden;isolation:isolate;background:radial-gradient(ellipse at 45% 28%,#08182c 0%,#060917 40%,#040610 100%)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.top{position:absolute;left:0;top:0;width:100%;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 21px) 20px 0;pointer-events:none}
+.brand{line-height:1}.label{font-size:9px;letter-spacing:4px;color:#b77cf1;font-weight:800;text-shadow:0 0 12px #914fff70}
+.brand strong{display:block;margin-top:7px;font-family:ui-monospace,Consolas,monospace;font-size:clamp(21px,5.9vw,30px);letter-spacing:3px;font-weight:900;color:#7cff9f;text-shadow:0 0 9px #00ee75aa,0 0 25px #00ee7555}
+.brand strong span{color:#bc74ff;text-shadow:0 0 15px #a44affaa}
+.stats{display:flex;gap:11px;text-align:center}.stat{min-width:59px;padding:7px 9px 8px;border:1px solid #31664688;border-radius:10px;background:linear-gradient(145deg,#091e18c9,#0b101ec9);box-shadow:inset 0 0 14px #00e66e0b,0 0 13px #00ff660e}
+.stat small{display:block;color:#9f92b6;font-size:9px;letter-spacing:1.5px;font-weight:800}.stat b{display:block;margin-top:2px;color:#adffbc;font-family:ui-monospace,Consolas,monospace;font-size:23px;line-height:1.08}
+.stat.best{border-color:#663c7e88}.stat.best b{color:#c88cff}
+#sheet{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:90px 25px 86px}
+#sheet.hidden{display:none}
+.card{width:min(100%,365px);padding:28px 25px 25px;border-radius:18px;border:1px solid #63ff9280;background:linear-gradient(160deg,rgba(6,23,25,.94),rgba(10,7,26,.95));box-shadow:0 0 0 5px #00ff6508,inset 0 0 36px #08ff7820,0 0 36px #43e89518;text-align:center;backdrop-filter:blur(9px);pointer-events:auto}
+.emblem{width:66px;height:66px;margin:0 auto 14px;display:grid;place-items:center;border:2px solid #8aff9e;border-radius:50%;background:#072518;box-shadow:0 0 25px #44ff8355,inset 0 0 25px #29ff4125;font-family:ui-monospace,Consolas,monospace;color:#98ffab;font-size:31px;transform:rotate(-9deg)}
+.kicker{color:#ae6fff;font-weight:800;letter-spacing:3.7px;font-size:10px}
+.card h1{font-size:clamp(25px,7vw,37px);font-family:ui-monospace,Consolas,monospace;line-height:1.1;margin:9px 0 14px;letter-spacing:2px;color:#79ffa3;text-shadow:0 0 17px #37ff8c88}
+.card p{font-size:14px;line-height:1.55;margin:0 auto 22px;max-width:265px;color:#a5bbae}
+button{display:block;width:100%;min-height:55px;border-radius:9px;border:1px solid #95ffb0;color:#02130b;background:linear-gradient(115deg,#62ff8c,#26e884);box-shadow:0 5px 24px #00ff7663,inset 0 1px 0 #e5ffeb;font-size:15px;font-weight:900;letter-spacing:2px;font-family:ui-monospace,Consolas,monospace;cursor:pointer;touch-action:manipulation}
+button:active{filter:brightness(.82);transform:translateY(1px)}
+.detail{margin-top:15px;color:#ad83d9;font-size:10px;font-weight:700;letter-spacing:1.5px}
+#scoreline{display:none;color:#d3c0ef;margin:0 0 15px;font-size:14px}#scoreline b{font-size:26px;color:#adffba}
+.bottom{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 15px);left:0;width:100%;z-index:2;color:#6cd9a48c;display:flex;justify-content:space-between;padding:0 21px;font:700 9px ui-monospace,Consolas,monospace;letter-spacing:1.8px;pointer-events:none}
+#flash{position:absolute;inset:0;pointer-events:none;background:#ff2875;opacity:0;z-index:4;transition:opacity .13s}
+@media(max-height:575px){.top{padding-top:10px}.brand strong{font-size:18px}.card{padding:15px}.emblem{width:45px;height:45px;margin-bottom:7px;font-size:24px}.card h1{font-size:26px;margin:7px 0}.card p{margin-bottom:13px}.bottom{bottom:8px}}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="board" aria-label="Matrix Flap game area"></canvas>
+  <header class="top">
+    <div class="brand"><div class="label">TRION // ARCADE</div><strong>MATRIX<span>FLAP</span></strong></div>
+    <div class="stats"><div class="stat"><small>SCORE</small><b id="score">00</b></div><div class="stat best"><small>BEST</small><b id="best">00</b></div></div>
+  </header>
+  <section id="sheet" aria-live="polite"><div class="card">
+    <div class="emblem" id="emblem">⟡</div><div class="kicker" id="kicker">SYSTEM ONLINE</div>
+    <h1 id="message">NEON FLIGHT</h1>
+    <p id="helper">Tap to flap. Navigate between the purple gates. How far can you get?</p>
+    <div id="scoreline">FINAL SCORE <b id="finalscore">0</b></div>
+    <button id="action" type="button">▶ INITIALIZE RUN</button>
+    <div class="detail" id="subtext">TAP SCREEN OR PRESS SPACE TO FLY</div>
+  </div></section>
+  <footer class="bottom"><span>OFFLINE // V1.0</span><span>TAP ▸ FLAP</span></footer>
+  <div id="flash"></div>
+</div>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best');
+const sheet=document.getElementById('sheet'),action=document.getElementById('action');
+const message=document.getElementById('message'),helper=document.getElementById('helper');
+const kicker=document.getElementById('kicker'),subtext=document.getElementById('subtext');
+const finalscore=document.getElementById('finalscore'),scoreline=document.getElementById('scoreline');
+const flash=document.getElementById('flash');
+let W=390,H=750,dpr=1,frame=0,last=0,mode='ready',score=0,best=0,pipeClock=0;
+let bird={x:98,y:330,r:14,vy:0,tilt:0},pipes=[],sparks=[],rain=[];
+const ground=64;
+try{best=Math.max(0,Number(localStorage.getItem('matrixFlapBest'))||0)}catch(_){}
+bestEl.textContent=String(best).padStart(2,'0');
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function resize(){
+ const bounds=canvas.getBoundingClientRect();const oldH=H;
+ W=Math.max(250,bounds.width||390);H=Math.max(380,bounds.height||750);
+ dpr=Math.min(window.devicePixelRatio||1,2);
+ canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ bird.x=W*.265;
+ if(mode==='ready')bird.y=H*.46;
+ else bird.y=clamp(bird.y+(H-oldH)*.25,72,H-ground-bird.r);
+ rain=Array.from({length:Math.floor(W/19)+2},(_,i)=>({x:i*19+rand(-6,6),y:rand(-H,H),speed:rand(.6,2.25),chars:Math.floor(rand(5,18)),alpha:rand(.09,.38),kind:i%4===0?'green':'purple'}));
+}
+function writeScore(){scoreEl.textContent=String(score).padStart(2,'0');bestEl.textContent=String(best).padStart(2,'0')}
+function clear(){score=0;pipeClock=38;pipes=[];sparks=[];bird={x:W*.265,y:H*.46,r:Math.max(12,Math.min(15,W*.037)),vy:0,tilt:0};writeScore()}
+function start(){clear();mode='playing';sheet.classList.add('hidden');flap()}
+function flap(){if(mode!=='playing')return;bird.vy=-5.35;bird.tilt=-.48;
+ for(let i=0;i<4;i++)sparks.push({x:bird.x-10,y:bird.y+rand(-8,8),vx:rand(-2.5,-.4),vy:rand(-1.3,1.3),life:25,max:25})}
+function onInteract(){if(mode==='ready'||mode==='over')start();else flap()}
+function end(){if(mode!=='playing')return;mode='over';if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();
+ flash.style.opacity='.16';setTimeout(()=>flash.style.opacity='0',85);
+ kicker.textContent='CONNECTION TERMINATED';message.textContent='SIGNAL LOST';helper.textContent='One collision. One more chance. Dodge the gates and beat your record.';
+ action.textContent='↻ RESTART MISSION';subtext.textContent='TAP TO REBOOT';scoreline.style.display='block';finalscore.textContent=String(score);
+ sheet.classList.remove('hidden');if(navigator.vibrate)try{navigator.vibrate(60)}catch(_){}
+}
+function spawnPipe(){const gap=clamp(H*.265,146,200);const roof=101;const floor=H-ground-28;
+ const center=rand(roof+gap/2+16,Math.max(roof+gap/2+17,floor-gap/2-16));
+ pipes.push({x:W+38,w:clamp(W*.18,62,78),center,gap,passed:false})}
+function step(delta){frame+=delta;
+ for(const c of rain){c.y+=c.speed*delta;if(c.y>H+180)c.y=-rand(60,330)}
+ sparks=sparks.filter(s=>s.life>0);for(const s of sparks){s.x+=s.vx*delta;s.y+=s.vy*delta;s.life-=delta}
+ if(mode==='ready'){bird.y=H*.46+Math.sin(frame*.045)*8;bird.tilt=Math.sin(frame*.034)*.14;return}
+ if(mode!=='playing')return;
+ bird.vy=clamp(bird.vy+.32*delta,-7,7);bird.y+=bird.vy*delta;bird.tilt=clamp(bird.vy/9,-.5,1.1);
+ pipeClock+=delta;if(pipeClock>=99){spawnPipe();pipeClock-=99}
+ const speed=Math.min(3.9,2.55+score*.045);
+ for(const p of pipes){p.x-=speed*delta;
+  if(!p.passed&&p.x+p.w<bird.x-bird.r){p.passed=true;score++;if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();for(let i=0;i<13;i++)sparks.push({x:bird.x+6,y:bird.y,vx:rand(-3,2),vy:rand(-3,3),life:rand(10,27),max:27})}
+  const left=p.x-6,right=p.x+p.w+6,top=p.center-p.gap/2,bottom=p.center+p.gap/2;
+  const overlap=bird.x+bird.r>left&&bird.x-bird.r<right;
+  if(overlap&&(bird.y-bird.r<top||bird.y+bird.r>bottom)){end();break}
+ }
+ pipes=pipes.filter(p=>p.x+p.w>-30);
+ if(bird.y-bird.r<80||bird.y+bird.r>=H-ground)end();
+}
+function hex(col,alpha){ctx.fillStyle=col;ctx.globalAlpha=alpha}
+function drawBackground(){
+ const gradient=ctx.createLinearGradient(0,0,0,H);gradient.addColorStop(0,'#061423');gradient.addColorStop(.7,'#050916');gradient.addColorStop(1,'#02090c');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);
+ ctx.save();ctx.strokeStyle='#1c6d4e';ctx.lineWidth=1;ctx.globalAlpha=.14;
+ for(let x=(frame*.20)%32-32;x<W;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+ for(let y=0;y<H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ ctx.restore();
+ ctx.font='13px ui-monospace,Consolas,monospace';ctx.textAlign='center';ctx.textBaseline='top';
+ for(const c of rain){ctx.fillStyle=c.kind==='green'?'#54ff8e':'#ab56ff';
+  for(let i=0;i<c.chars;i++){const y=c.y-i*17;if(y<0||y>H)continue;ctx.globalAlpha=c.alpha*(1-i/c.chars)*.9;ctx.fillText(((Math.floor(c.x*7+i*13+frame*.14)%2)===0?'0':'1'),c.x,y)}
+ }
+ ctx.globalAlpha=1;
+ const halo=ctx.createRadialGradient(W*.5,H*.42,30,W*.5,H*.42,W*.72);halo.addColorStop(0,'#113f3430');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,W,H);
+}
+function drawPipes(){for(const p of pipes){const top=p.center-p.gap/2,bottom=p.center+p.gap/2;
+   pipeBlock(p.x,0,p.w,top,true);pipeBlock(p.x,bottom,p.w,H-ground-bottom,false);
+}}
+function pipeBlock(x,y,w,h,isTop){if(h<=0)return;
+ ctx.save();ctx.shadowColor='#a155ff';ctx.shadowBlur=16;const gradient=ctx.createLinearGradient(x,0,x+w,0);
+ gradient.addColorStop(0,'#270d49');gradient.addColorStop(.14,'#8947d1');gradient.addColorStop(.48,'#32145b');gradient.addColorStop(.8,'#6129ac');gradient.addColorStop(1,'#281347');
+ ctx.fillStyle=gradient;ctx.fillRect(x,y,w,h);ctx.shadowBlur=0;
+ ctx.strokeStyle='#bc80ff';ctx.lineWidth=2;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+ ctx.strokeStyle='#dcacff55';ctx.lineWidth=1;
+ for(let yy=y+12;yy<y+h-10;yy+=29){ctx.beginPath();ctx.moveTo(x+7,yy);ctx.lineTo(x+w-7,yy);ctx.stroke()}
+ const edgeY=isTop?y+h-18:y;
+ ctx.shadowColor='#b369ff';ctx.shadowBlur=18;ctx.fillStyle='#401575';ctx.fillRect(x-6,edgeY,w+12,18);ctx.strokeStyle='#d6a0ff';ctx.lineWidth=2;ctx.strokeRect(x-6,edgeY,w+12,18);
+ ctx.shadowBlur=0;ctx.fillStyle='#f5cbff';ctx.fillRect(x,edgeY+3,w,2);
+ ctx.restore();
+}
+function drawGround(){
+ const y=H-ground;ctx.save();ctx.shadowBlur=16;ctx.shadowColor='#00ff76';ctx.fillStyle='#0b211d';ctx.fillRect(0,y,W,ground);ctx.fillStyle='#55ff99';ctx.fillRect(0,y,W,2);ctx.shadowBlur=0;
+ ctx.strokeStyle='#1a6b4c';ctx.globalAlpha=.65;
+ for(let x=(frame*1.5)%40-40;x<W;x+=40){ctx.beginPath();ctx.moveTo(x+30,y+11);ctx.lineTo(x,y+ground);ctx.stroke()}
+ ctx.fillStyle='#449167';ctx.globalAlpha=.6;ctx.font='10px ui-monospace,Consolas,monospace';ctx.textAlign='center';ctx.fillText('TRION // SIMULATION ACTIVE',W/2,y+25);ctx.restore();
+}
+function drawBird(){ctx.save();ctx.translate(bird.x,bird.y);ctx.rotate(bird.tilt);
+ ctx.shadowColor='#37ff78';ctx.shadowBlur=24;ctx.fillStyle='#0b3523';ctx.strokeStyle='#adffbc';ctx.lineWidth=2.2;
+ ctx.beginPath();ctx.arc(0,0,bird.r,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.shadowBlur=5;ctx.fillStyle='#3dff83';ctx.beginPath();ctx.moveTo(-5,-4);ctx.lineTo(-bird.r-11,Math.sin(frame*.8)*7+4);ctx.lineTo(-4,8);ctx.closePath();ctx.fill();
+ ctx.beginPath();ctx.moveTo(bird.r-2,-2);ctx.lineTo(bird.r+10,3);ctx.lineTo(bird.r-3,7);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#e9ffef';ctx.beginPath();ctx.arc(5,-5,3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#07150d';ctx.beginPath();ctx.arc(5.8,-5,1.35,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#92ffb4';ctx.font='bold 8px ui-monospace,monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('01',-2,6);
+ ctx.restore();
+}
+function drawSparks(){ctx.save();for(const s of sparks){ctx.globalAlpha=clamp(s.life/s.max,0,1);ctx.shadowColor='#59ff7e';ctx.shadowBlur=9;ctx.fillStyle=s.vx>0?'#bf69ff':'#55ff8b';ctx.fillRect(s.x,s.y,3,3)}ctx.restore()}
+function render(){ctx.clearRect(0,0,W,H);drawBackground();drawPipes();drawSparks();drawBird();drawGround()}
+function loop(t){const delta=Math.min(2,(t-(last||t))/16.6667||1);last=t;step(delta);render();requestAnimationFrame(loop)}
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();onInteract()},{passive:false});
+action.addEventListener('click',e=>{e.stopPropagation();start()});
+window.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(!e.repeat)onInteract()}});
+window.addEventListener('resize',resize);
+window.addEventListener('blur',()=>{last=0});
+resize();clear();requestAnimationFrame(loop);
+// Intentionally expose small, read-only inspection surface for runtime diagnostics.
+window.matrixFlapStatus=()=>({state:mode,score,best,pipes:pipes.length,birdY:Math.round(bird.y)});
+})();
+</script>
+</body>
+</html>
