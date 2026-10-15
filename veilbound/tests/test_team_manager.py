@@ -55,6 +55,36 @@ class TeamManagerTests(unittest.TestCase):
             team.make_hierarchy([child(r) for r in ("combat", "animation", "models",
                                                      "materials", "world", "studio")] + [child("combat")])
 
+    def test_fifty_workers_across_three_managers_and_slot_scoped_handoff(self):
+        roles = ("combat", "animation", "models", "materials", "world", "studio")
+        jobs = [dict(child(roles[i % 6], "TASK-%03d" % i),
+                     slot_id="w%03d" % (i + 1)) for i in range(50)]
+        p = team.make_hierarchy(jobs)
+        self.assertEqual(50, p["worker_count"])
+        self.assertEqual(3, p["team_count"])
+        self.assertLessEqual(max(x["child_count"] for x in p["team_matrix"]["include"]), 18)
+        world = team.review_team(p, "world")
+        entry = world["children"][0]
+        self.assertTrue(team.verify_child(world, "world", entry["role"],
+                                          entry["task_id"], entry["goal"],
+                                          entry["slot_id"]))
+        with self.assertRaises(ValueError):
+            team.verify_child(world, "world", entry["role"], entry["task_id"],
+                              entry["goal"], "w999")
+
+    def test_more_than_eighteen_workers_in_one_team_is_rejected(self):
+        tasks = [dict(child("combat", "A-%d" % i), slot_id="w%03d" % (i + 1))
+                 for i in range(19)]
+        with self.assertRaises(ValueError):
+            team.make_hierarchy(tasks)
+
+    def test_more_than_fifty_total_slots_is_rejected(self):
+        roles = ("combat", "animation", "models", "materials", "world", "studio")
+        tasks = [dict(child(roles[i % 6], "TASK-%d" % i), slot_id="w%03d" % (i + 1))
+                 for i in range(51)]
+        with self.assertRaises(ValueError):
+            team.make_hierarchy(tasks)
+
     def test_tampered_director_assignment_rejected(self):
         p = team.make_hierarchy([child("combat")])
         p["team_matrix"]["include"][0]["child_count"] = 3
