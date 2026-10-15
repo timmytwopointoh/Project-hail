@@ -11,8 +11,8 @@ farm = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(farm)
 
 class EmulatorFarmTests(unittest.TestCase):
-    def test_select_one_two_and_four_separate_emulators(self):
-        for count in (1, 2, 4):
+    def test_select_one_two_four_and_eight_separate_emulators(self):
+        for count in (1, 2, 4, 8):
             p = farm.make_matrix(count)
             self.assertEqual(count, p["count"])
             self.assertEqual(count, len(p["matrix"]["include"]))
@@ -21,7 +21,7 @@ class EmulatorFarmTests(unittest.TestCase):
                                 for x in p["matrix"]["include"]))
 
     def test_invalid_budget_is_rejected(self):
-        for count in (0, 5, -1, True, "4", 50):
+        for count in (0, 9, -1, True, "4", 50):
             with self.assertRaises(ValueError):
                 farm.make_matrix(count)
 
