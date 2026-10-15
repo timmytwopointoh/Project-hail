@@ -104,6 +104,49 @@ def main():
                 if retry==2:raise
         report["screenshots"].append(first);w,h=first["width"],first["height"]
         report["initial_mode"]=diagnostic_state()
+        # Visit the ACTUAL model workshop, inspect its 3D stage and take
+        # orbit/material snapshots before progressing into the existing game.
+        atelier={"open":False,"orbit":False,"asset_switch":False,"lighting":False}
+        report["atelier"]=atelier
+        for attempt in range(3):
+            dismiss_android_overlay()
+            touch(w*.50,h*.826)
+            time.sleep(1.6)
+            if diagnostic_state()=="lab":
+                atelier["open"]=True
+                break
+        if not atelier["open"]:
+            raise AssertionError("Title's MODEL ATELIER button did not open studio")
+        hero=shot("01_atelier_hero.png")
+        report["screenshots"].append(hero)
+        adb("shell","input","swipe",int(w*.54),int(h*.46),
+            int(w*.78),int(h*.40),620,timeout=35)
+        time.sleep(.8)
+        turned=shot("01_atelier_orbit.png")
+        report["screenshots"].append(turned)
+        with Image.open(OUT/"01_atelier_hero.png") as before, Image.open(OUT/"01_atelier_orbit.png") as after:
+            diff=ImageChops.difference(before.convert("RGB").resize((160,90)),
+                                       after.convert("RGB").resize((160,90)))
+            atelier["orbit"]=diff.getbbox() is not None
+        if not atelier["orbit"]:
+            raise AssertionError("Model studio orbit gesture did not change image")
+        touch(w*.65,h*.865)
+        time.sleep(.8)
+        touch(w*.20,h*.944)
+        touch(w*.52,h*.944)
+        time.sleep(.9)
+        detail=shot("01_atelier_material.png")
+        report["screenshots"].append(detail)
+        logs=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",timeout=20).decode("utf-8","replace")
+        atelier["asset_switch"]="item=1" in logs
+        atelier["lighting"]="light=1" in logs and "material=1" in logs
+        if not atelier["asset_switch"] or not atelier["lighting"]:
+            raise AssertionError("Studio model/material/light settings did not change: "+str(atelier))
+        touch(w*.08,h*.08)
+        time.sleep(.7)
+        if diagnostic_state()!="title":
+            raise AssertionError("Studio return control did not restore main menu")
+
         # System's one-time immersive tutorial may cover the first screen.
         for attempt in range(6):
             if diagnostic_state()=="playing":break
