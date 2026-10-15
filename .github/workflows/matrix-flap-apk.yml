@@ -57,6 +57,9 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: bash matrix-flap/scripts/emulator_test.sh
+      - name: Evaluate Matrix Flap quality gate
+        if: always()
+        run: python3 matrix-flap/scripts/quality_gate.py --output inspection_output/matrix_flap
       - name: Upload gameplay screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4

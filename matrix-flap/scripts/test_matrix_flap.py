@@ -58,7 +58,7 @@ def dismiss_launcher_anr():
         button = next((n for n in root.iter("node") if n.get("text") == "Close app"), None)
         if button is None:
             return False
-        m = re.fullmatch(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]", button.get("bounds", ""))
+        m = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", button.get("bounds", ""))
         if not m:
             return False
         left, top, right, bottom = map(int, m.groups())
@@ -126,8 +126,8 @@ def main():
             (first["width"] // 2, int(first["height"] * y))
             for y in (0.60, 0.62, 0.58, 0.65, 0.55)
         ]
-        for x, y in positions:
-            if dismiss_launcher_anr():
+        for attempt, (x, y) in enumerate(positions):
+            if attempt > 0 and dismiss_launcher_anr():
                 report["launcher_recoveries"] += 1
             adb("shell", "input", "tap", x, y, timeout=30)
             report["tap_coordinates"] = [x, y]
