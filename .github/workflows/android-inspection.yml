@@ -44,7 +44,16 @@ jobs:
             if p.is_absolute() or ".." in p.parts or p.suffix.lower()!=".apk" or not p.is_file():
                 sys.exit("Invalid APK_PATH: expected repository-relative existing APK")
             PY
+              python3 inspector/static_inspect.py "$APK_PATH" --output inspection_output
               adb install -r "$APK_PATH" | tee inspection_output/install.txt
+              PACKAGE=$(python3 -c 'import json; print(json.load(open("inspection_output/static_report.json")).get("package") or "")')
+              if [ -n "$PACKAGE" ]; then
+                adb shell monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 | tee inspection_output/launch.txt
+                sleep 3
+                adb shell screencap -p /sdcard/launched.png
+                adb pull /sdcard/launched.png inspection_output/launched.png
+                adb logcat -d -t 500 | tee inspection_output/logcat.txt
+              fi
               adb shell pm list packages -3 | tee inspection_output/packages.txt
               adb shell screencap -p /sdcard/installed.png
               adb pull /sdcard/installed.png inspection_output/after_install.png
