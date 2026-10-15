@@ -6,8 +6,14 @@ on:
         description: 'Maximum independent coding workers (bounded for cost/control)'
         required: true
         type: choice
+        default: '6'
+        options: ['6', '12', '24', '50']
+      max_parallel:
+        description: 'Simultaneous coding jobs (queued jobs wait for a runner)'
+        required: true
+        type: choice
         default: '4'
-        options: ['2', '4', '6']
+        options: ['2', '4', '8', '12']
       emulator_run_id:
         description: 'Optional Android emulator run ID for evidence-driven prioritization'
         required: false
@@ -19,6 +25,7 @@ on:
       - 'veilbound/scripts/worker_manager.py'
       - 'veilbound/scripts/ai_worker.py'
       - 'veilbound/worker_backlog.json'
+      - 'veilbound/scripts/team_manager.py'
   workflow_run:
     workflows: ['VEILBOUND - Native 3D Android RPG']
     types: [completed]
@@ -100,7 +107,7 @@ jobs:
         with:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager
-      - name: Approve two or fewer nonoverlapping child tasks
+      - name: Approve up to eighteen isolated child assignments
         run: |
           python3 veilbound/scripts/team_manager.py \
             --director-plan inspection_output/manager/assignment_plan.json \
@@ -118,12 +125,12 @@ jobs:
     if: >-
       needs.manager.outputs.worker_count != '0' &&
       (github.event_name == 'workflow_dispatch' || vars.ENABLE_AUTO_AI_WORKERS == 'true')
-    name: Independent coder / ${{ matrix.role }}
+    name: Independent coder / ${{ matrix.slot_id }} / ${{ matrix.role }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '4') }}
       matrix: ${{ fromJSON(needs.manager.outputs.matrix) }}
     permissions:
       contents: read
@@ -153,6 +160,7 @@ jobs:
             --verify-child \
             --team "${{ matrix.team }}" \
             --role "${{ matrix.role }}" \
+            --slot-id "${{ matrix.slot_id }}" \
             --task-id "${VEILBOUND_TASK_ID}" \
             --goal "${VEILBOUND_TASK_GOAL}" \
             --output inspection_output/approved-team/team_approval.json
@@ -162,15 +170,16 @@ jobs:
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
           VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
           VEILBOUND_TASK_ID: ${{ matrix.task_id }}
+          VEILBOUND_WORKER_SLOT: ${{ matrix.slot_id }}
         run: |
           python3 veilbound/scripts/ai_worker.py \
             --role "${{ matrix.role }}" \
-            --out "inspection_output/agent-${{ matrix.role }}"
+            --out "inspection_output/agent-${{ matrix.slot_id }}"
       - name: Save immutable source proposal and validation result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: veilbound-coder-${{ matrix.role }}-${{ github.run_attempt }}
-          path: inspection_output/agent-${{ matrix.role }}/
+          name: veilbound-coder-${{ matrix.slot_id }}-${{ github.run_attempt }}
+          path: inspection_output/agent-${{ matrix.slot_id }}/
           if-no-files-found: warn
           retention-days: 14
