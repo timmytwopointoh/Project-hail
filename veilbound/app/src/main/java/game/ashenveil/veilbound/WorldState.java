@@ -125,8 +125,11 @@ public final class WorldState {
         float mx=moveX,my=moveY;
         float len=(float)Math.hypot(mx,my);
         if(len>1){mx/=len;my/=len;len=1;}
-        float dx=(float)(Math.cos(cameraYaw)*mx+Math.sin(cameraYaw)*my);
-        float dz=(float)(-Math.sin(cameraYaw)*mx+Math.cos(cameraYaw)*my);
+        // The chase camera looks FORWARD along (+sin(yaw), +cos(yaw)).
+        // Its screen-right vector is (-cos(yaw), +sin(yaw)), not +X.
+        // Using +cos(yaw) reversed left and right in the user's view.
+        float dx=(float)(-Math.cos(cameraYaw)*mx+Math.sin(cameraYaw)*my);
+        float dz=(float)( Math.sin(cameraYaw)*mx+Math.cos(cameraYaw)*my);
         if(len>.11f)heading=(float)Math.atan2(dx,dz);
         if(rollQueued&&dodge<=0&&stamina>=27){
             stamina-=27;dodge=.48f;invulnerable=.41f;

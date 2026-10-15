@@ -14,6 +14,23 @@ public final class WorldRulesTest {
         for(int i=0;i<30;i++)w.update(.025f);
         w.movement(0,0);
         check(w.z>z+1,"Forward movement must change actual world position");
+        // Regression: the camera initially looks toward +Z, so screen RIGHT
+        // is negative world X; independently verify left/right at 0 and 90 deg.
+        WorldState control=new WorldState();control.start();control.start();
+        control.movement(1,0);
+        for(int i=0;i<12;i++)control.update(.025f);
+        check(control.x<-.9f,"Right joystick must move RIGHT on camera screen (world -X)");
+        control.movement(-1,0);
+        for(int i=0;i<25;i++)control.update(.025f);
+        check(control.x>-.3f,"Left joystick must move LEFT on camera screen (world +X)");
+        control.x=0;control.z=3;control.cameraYaw=(float)(Math.PI/2);
+        control.movement(1,0);
+        for(int i=0;i<12;i++)control.update(.025f);
+        check(control.z>3.8f,"Right at camera yaw 90 must move world +Z");
+        check(Math.abs(control.x)<.10f,"Right at yaw 90 must not move world X");
+        control.movement(0,0);
+        System.out.println("VEILBOUND_CONTROL_MAPPING_PASS yaw0_right_left yaw90_right");
+
         w.x=-4.4f;w.z=11f;w.interact();w.update(.033f);
         check(w.snapshot().shrineLit,"Ember shrine must activate");
         check(w.hp==100,"Shrine restores health");
