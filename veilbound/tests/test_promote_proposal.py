@@ -24,7 +24,7 @@ class PromoteTests(unittest.TestCase):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("class Test {}")
         (root / "worker_result.json").write_text(json.dumps({
-            "role": role, "status": status, "source_commit": SHA,
+            "role": role, "slot_id": "w001", "status": status, "source_commit": SHA,
             "edited_paths": [relative],
             "proposal_requires_human_review": True}))
         return relative
@@ -35,6 +35,15 @@ class PromoteTests(unittest.TestCase):
             got = promote.load_proposal(p, "combat", SHA)
             self.assertEqual([target], list(got))
             self.assertEqual("class Test {}", got[target])
+
+    def test_distinct_worker_slot_prevents_wrong_artifact_promotion(self):
+        with tempfile.TemporaryDirectory() as folder:
+            self.make(folder)
+            self.assertTrue(promote.load_proposal(folder, "combat", SHA, "w001"))
+            with self.assertRaises(ValueError):
+                promote.load_proposal(folder, "combat", SHA, "w002")
+            with self.assertRaises(ValueError):
+                promote.load_proposal(folder, "combat", SHA, "../../unsafe")
 
     def test_rejects_cross_role_files(self):
         with tempfile.TemporaryDirectory() as p:
