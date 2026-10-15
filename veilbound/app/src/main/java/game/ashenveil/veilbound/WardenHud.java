@@ -207,6 +207,7 @@ public final class WardenHud extends View {
         text(c,"◀  BACK",35,47,17,GOLD,true,false);
         text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
+        text(c,"HAND DETAIL",660,158,14,GOLD,true,true);
         text(c,"−",827,159,35,GOLD,true,true);
         text(c,"+",931,159,35,GOLD,true,true);
         text(c,"ZOOM",883,165,12,MIST,true,true);
@@ -290,8 +291,9 @@ public final class WardenHud extends View {
             float x=normX(event.getX(idx)),y=normY(event.getY(idx));
             if(action==MotionEvent.ACTION_DOWN){
                 if(y<100&&x<145){game.exitStudio();invalidate();return true;}
-                if(y>120&&y<213&&x>766){
-                    if(x<874)lab.dolly(.235f);
+                if(y>120&&y<213&&x>570){
+                    if(x<766)lab.focusDetail();
+                    else if(x<874)lab.dolly(.235f);
                     else lab.dolly(-.235f);
                     invalidate();return true;
                 }

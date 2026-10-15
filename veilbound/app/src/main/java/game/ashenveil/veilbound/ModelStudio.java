@@ -35,6 +35,14 @@ public final class ModelStudio {
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
     public synchronized void nextMaterial(){material=(material+1)%MATERIALS.length;}
     public synchronized void toggleTurntable(){autoTurn=!autoTurn;}
+    /** Focus fine geometry—especially hands, knuckles and gauntlets. */
+    public synchronized void focusDetail(){
+        autoTurn=false;
+        yaw=.18f;pitch=.08f;
+        panX=item==2?1.1f:.65f;
+        panY=item==2?-.40f:-.34f;
+        zoom=item==2?1.75f:1.24f;
+    }
     public synchronized void reset(){
         yaw=.50f;pitch=.12f;panX=0;panY=0;
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;

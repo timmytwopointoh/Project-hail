@@ -131,10 +131,10 @@ def main():
         if not atelier["orbit"]:
             raise AssertionError("Model studio orbit gesture did not change image")
         # Extreme close-up camera confirms mesh detail survives full zoom.
-        for _ in range(5):
-            touch(w*.931,h*.265)
-            time.sleep(.14)
-        time.sleep(.7)
+        # Single-tap anatomy detail camera framing: close enough to inspect
+        # the custom-finger geometry rather than merely scaling an entire hero.
+        touch(w*.66,h*.265)
+        time.sleep(1.1)
         close=shot("01_atelier_closeup.png")
         report["screenshots"].append(close)
         atelier["closeup"]=True
