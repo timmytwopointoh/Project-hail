@@ -41,6 +41,22 @@ public final class MainActivity extends Activity {
         }
     }
 
+    @Override @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        if (game != null) {
+            game.evaluateJavascript(
+                "window.matrixFlapBack ? window.matrixFlapBack() : false",
+                handled -> {
+                    if (!"true".equals(handled)) {
+                        runOnUiThread(() -> MainActivity.super.onBackPressed());
+                    }
+                }
+            );
+        } else {
+            super.onBackPressed();
+        }
+    }
+
     @Override protected void onDestroy() {
         if (game != null) {
             game.destroy();
