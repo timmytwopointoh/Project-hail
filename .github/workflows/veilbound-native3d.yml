@@ -1,0 +1,86 @@
+name: VEILBOUND - Native 3D Android RPG
+on:
+  push:
+    branches:
+      - 'feature/veilbound-*'
+      - main
+    paths:
+      - 'veilbound/**'
+      - '.github/workflows/veilbound-native3d.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilbound-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile and test pure RPG rules
+        run: |
+          mkdir -p /tmp/veilbound-unit
+          javac -d /tmp/veilbound-unit veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.WorldRulesTest
+      - name: Build true native-3D Android APK
+        run: gradle -p veilbound :app:assembleDebug --no-daemon
+      - name: Validate game build and scripts
+        run: |
+          python3 -m py_compile veilbound/scripts/emulator_test.py
+          bash -n veilbound/scripts/emulator_test.sh
+          unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
+      - name: Install image quality analyzer
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Native OpenGL render, install and controls on Android 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash veilbound/scripts/emulator_test.sh
+      - name: Upload screenshots, logs and quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-native3d-inspection-report
+          path: inspection_output/veilbound/
+          if-no-files-found: warn
+      - name: Upload candidate APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-native3d-candidate-UNVERIFIED
+          path: veilbound/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+      - name: Upload emulator-verified APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-native3d-android15-TESTED-apk
+          path: veilbound/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
