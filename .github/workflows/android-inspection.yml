@@ -10,12 +10,20 @@ on:
         default: ''
 permissions:
   contents: read
+concurrency:
+  group: apk-vision-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   inspect:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Test visual comparison engine
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --quiet Pillow
+          .venv/bin/python -m unittest discover -s tests -v
       - name: Enable KVM acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -61,6 +69,7 @@ jobs:
             sleep 2
             adb shell screencap -p /sdcard/after-swipe.png
             adb pull /sdcard/after-swipe.png inspection_output/after_swipe.png
+            .venv/bin/python inspector/visual_compare.py inspection_output/emulator_home.png inspection_output/after_swipe.png --output inspection_output
             adb shell settings put system accelerometer_rotation 0
             adb shell settings put system user_rotation 1
             sleep 3
@@ -104,7 +113,7 @@ jobs:
             python3 - <<'PY'
             import json,os,pathlib
             out=pathlib.Path("inspection_output")
-            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
+            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"visual_comparison_generated":(out/"visual_comparison.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
             PY
       - name: Collect failure diagnostics
         if: failure()
