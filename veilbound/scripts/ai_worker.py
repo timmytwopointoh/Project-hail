@@ -166,7 +166,10 @@ def draft_code(role, out):
     source_sha = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=ROOT,
         text=True, capture_output=True, timeout=10, check=True).stdout.strip()
-    return {"role": role, "status": status, "source_commit": source_sha,
+    return {"role": role,
+            "slot_id": os.environ.get("VEILBOUND_WORKER_SLOT", ""),
+            "task_id": os.environ.get("VEILBOUND_TASK_ID", ""),
+            "status": status, "source_commit": source_sha,
             "summary": proposal.get("summary", ""),
             "edited_paths": list(replacement), "risks": proposal.get("risks", []),
             "gemini": dict(LAST_RESPONSE_META),
