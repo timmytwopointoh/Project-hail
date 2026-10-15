@@ -16,6 +16,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Enable KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
       - name: Create report directory
         run: mkdir -p inspection_output
       - name: Emulator smoke test and optional APK installation
@@ -37,11 +43,12 @@ jobs:
           script: |
             set -euo pipefail
             adb wait-for-device
+            adb shell input keyevent KEYCODE_WAKEUP || true
             for attempt in $(seq 1 60); do
-              [ "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1" ] && break
+              [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && break
               sleep 5
             done
-            test "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1"
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
             adb shell getprop sys.boot_completed | tee inspection_output/boot_completed.txt
             adb shell getprop ro.build.version.release | tee inspection_output/android_version.txt
             adb devices -l | tee inspection_output/adb_devices.txt
@@ -99,6 +106,12 @@ jobs:
             out=pathlib.Path("inspection_output")
             (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
             PY
+      - name: Collect failure diagnostics
+        if: failure()
+        run: |
+          mkdir -p inspection_output
+          adb devices -l > inspection_output/adb_failure.txt 2>&1 || true
+          adb logcat -d -t 300 > inspection_output/logcat_failure.txt 2>&1 || true
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
