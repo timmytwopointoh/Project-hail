@@ -20,6 +20,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight;
     private int skyPos,skyClock,detailTexture,uDetail;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
+    private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -196,7 +197,24 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * Isolated model inspection stage with independent camera and materials.
      * Switching here does not simulate combat or alter the RPG world.
      */
+    private void initStudioHighDetail(){
+        if(studioWarden!=null)return;
+        long start=System.nanoTime();
+        studioWarden=new Mesh(DetailArtKit.bellwarden().vertices);
+        studioHushed=new Mesh(DetailArtKit.hushed().vertices);
+        studioBoss=new Mesh(DetailArtKit.ashKnight().vertices);
+        studioSword=new Mesh(DetailArtKit.sword().vertices);
+        studioGreatsword=new Mesh(DetailArtKit.greatsword().vertices);
+        studioLantern=new Mesh(DetailArtKit.lantern().vertices);
+        int triangles=(studioWarden.count+studioHushed.count+studioBoss.count+
+                       studioSword.count+studioGreatsword.count+studioLantern.count)/3;
+        long timeMs=(System.nanoTime()-start)/1000000L;
+        Log.i("VEILBOUND_STUDIO","DETAIL_MESH_READY triangles="+triangles+
+              " bellwarden_vertices="+studioWarden.count+
+              " ash_knight_vertices="+studioBoss.count+" time_ms="+timeMs);
+    }
     private void renderStudio(){
+        initStudioHighDetail();
         ModelStudio.Snapshot m=state.studio.snapshot();
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
@@ -225,12 +243,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uSurface,0f);
         Mesh chosen;
         switch(m.item){
-            case 0:chosen=wardenModel;break;
-            case 1:chosen=hushedModel;break;
-            case 2:chosen=bossModel;break;
-            case 3:chosen=swordModel;break;
-            case 4:chosen=greatswordModel;break;
-            case 5:chosen=lanternModel;break;
+            case 0:chosen=studioWarden;break;
+            case 1:chosen=studioHushed;break;
+            case 2:chosen=studioBoss;break;
+            case 3:chosen=studioSword;break;
+            case 4:chosen=studioGreatsword;break;
+            case 5:chosen=studioLantern;break;
             default:chosen=studioChapel;
         }
         Matrix.setIdentityM(model,0);
@@ -243,7 +261,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             drawCube(3.30f,.30f,0,1.1f,.6f,1.1f,.42f,.43f,.45f,0,0);
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,3.3f,.9f,0);
-            draw(m.item==2?greatswordModel:swordModel,model,1,1,1,.08f);
+            draw(m.item==2?studioGreatsword:studioSword,model,1,1,1,.08f);
         }
     }
     private Mesh buildStudioStage(){
@@ -282,6 +300,25 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             }
         }
         for(int i=0;i<3;i++)b.chapelWindow(2.39f,2.65f,-2.2f+i*2.0f);
+        // Hand-laid overlapping slate tiles and worn eaves.
+        for(int side=-1;side<=1;side+=2){
+            for(int row=0;row<12;row++){
+                for(int col=0;col<24;col++){
+                    float zz=-3.86f+(col+.5f)*.335f;
+                    float xx=side*(.17f+row*.246f);
+                    float yy=6.65f-row*.187f;
+                    float lift=.016f*(float)Math.sin(row*1.82f+col*2.38f);
+                    b.box(xx,yy+lift,zz,.29f,.046f,.39f,
+                        .31f+row*.004f,.34f,.39f);
+                }
+            }
+        }
+        for(int k=0;k<16;k++){
+            float a=k*(float)(2*Math.PI/16);
+            b.branch(.71f*(float)Math.cos(a),4.1f+.71f*(float)Math.sin(a),3.89f,
+                .71f*(float)Math.cos(a+.39f),4.1f+.71f*(float)Math.sin(a+.39f),3.89f,
+                .060f,.77f,.62f,.39f);
+        }
         b.box(0,2.1f,3.73f,2.0f,3.4f,.22f,.35f,.38f,.41f);
         b.column(-1.2f,0,3.87f,.20f,3.9f,.53f,.54f,.55f);
         b.column(1.2f,0,3.87f,.20f,3.9f,.53f,.54f,.55f);
