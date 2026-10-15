@@ -33,6 +33,8 @@ jobs:
           mkdir -p /tmp/veilbound-unit
           javac -d /tmp/veilbound-unit \
             veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/CombatMotion.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/CharacterRig.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ModelStudio.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/DetailArtKit.java \
@@ -41,6 +43,9 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ObjMeshLoader.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialTextures.java \
             veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java \
+            veilbound/tests/game/ashenveil/veilbound/CombatMotionTest.java \
+            veilbound/tests/game/ashenveil/veilbound/CharacterRigTest.java \
+            veilbound/tests/game/ashenveil/veilbound/CombatGameplayTest.java \
             veilbound/tests/game/ashenveil/veilbound/ModelStudioTest.java \
             veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java \
             veilbound/tests/game/ashenveil/veilbound/DetailArtKitTest.java \
@@ -50,6 +55,9 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/MaterialTexturesTest.java
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ModelStudioTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.WorldRulesTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatMotionTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CharacterRigTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatGameplayTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArtKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.DetailArtKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CinematicArtKitTest
