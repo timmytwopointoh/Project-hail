@@ -344,7 +344,42 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         void quad(float[] p,float[] q,float[] r,float[] s,float cr,float cg,float cb){
             tri(p,q,r,cr,cg,cb);tri(p,r,s,cr,cg,cb);
         }
-        // Octagonal columns use facets instead of squared voxel silhouettes.
+        /** Organic tapered twig cylinder between arbitrary 3D endpoints. */
+        void branch(float ax,float ay,float az,float bx,float by,float bz,
+                    float radius,float r,float g,float blue){
+            float dx=bx-ax,dy=by-ay,dz=bz-az;
+            float length=(float)Math.sqrt(dx*dx+dy*dy+dz*dz);
+            if(length<.01f)return;
+            dx/=length;dy/=length;dz/=length;
+            float ux=-dz,uy=0,uz=dx;
+            float un=(float)Math.sqrt(ux*ux+uy*uy+uz*uz);
+            if(un<.05f){ux=1;uy=0;uz=0;}
+            else{ux/=un;uz/=un;}
+            float vx=dy*uz-dz*uy,vy=dz*ux-dx*uz,vz=dx*uy-dy*ux;
+            for(int i=0;i<7;i++){
+                float a=(float)(2*Math.PI*i/7),bb=(float)(2*Math.PI*(i+1)/7);
+                float c0=(float)Math.cos(a),s0=(float)Math.sin(a);
+                float c1=(float)Math.cos(bb),s1=(float)Math.sin(bb);
+                float ra=radius,rb=radius*.58f;
+                float[] p=v(ax+(ux*c0+vx*s0)*ra,ay+(uy*c0+vy*s0)*ra,az+(uz*c0+vz*s0)*ra);
+                float[] q=v(bx+(ux*c0+vx*s0)*rb,by+(uy*c0+vy*s0)*rb,bz+(uz*c0+vz*s0)*rb);
+                float[] r0=v(bx+(ux*c1+vx*s1)*rb,by+(uy*c1+vy*s1)*rb,bz+(uz*c1+vz*s1)*rb);
+                float[] s=v(ax+(ux*c1+vx*s1)*ra,ay+(uy*c1+vy*s1)*ra,az+(uz*c1+vz*s1)*ra);
+                quad(p,q,r0,s,r*(.80f+.03f*i),g*(.82f+.02f*i),blue*(.80f+.025f*i));
+            }
+        }
+        /** Small sculpted Gothic window, two pointed panes and copper tracery. */
+        void chapelWindow(float x,float y,float z){
+            // x is the side wall coordinate; all panels lie in a Y/Z plane.
+            quad(v(x,y-.85f,z-.54f),v(x,y-.85f,z+.54f),
+                 v(x,y+.57f,z+.54f),v(x,y+.57f,z-.54f),.11f,.17f,.20f);
+            quad(v(x+.02f,y-.70f,z-.39f),v(x+.02f,y-.70f,z+.39f),
+                 v(x+.02f,y+.44f,z+.39f),v(x+.02f,y+.44f,z-.39f),.67f,.50f,.24f);
+            branch(x+.05f,y-.78f,z,x+.05f,y+.66f,z,.045f,.39f,.43f,.46f);
+            branch(x+.05f,y+.66f,z,x+.05f,y+.28f,z-.45f,.052f,.44f,.49f,.52f);
+            branch(x+.05f,y+.66f,z,x+.05f,y+.28f,z+.45f,.052f,.44f,.49f,.52f);
+        }
+                // Octagonal columns use facets instead of squared voxel silhouettes.
         void column(float x,float baseY,float z,float rad,float height,
                     float red,float green,float blue){
             int sides=8;
@@ -506,9 +541,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         for(int j=0;j<3;j++){
             float zz=6.4f+j*2.55f;
-            b.box(-5.90f,3.20f,zz,.13f,1.28f,.56f,.36f,.44f,.48f);
-            b.box(-5.79f,3.19f,zz,.13f,.92f,.20f,.65f,.51f,.29f);
-            b.box(-5.73f,3.59f,zz,.20f,.08f,.68f,.60f,.62f,.64f);
+            b.box(-5.90f,3.20f,zz,.13f,1.50f,1.20f,.33f,.36f,.40f);
+            b.chapelWindow(-5.78f,3.20f,zz);
         }
         for(int s=-1;s<=1;s+=2){
             b.box(-8+s*2.3f,6.5f,6.8f,.76f,2.4f,.86f,.51f,.51f,.55f);
@@ -518,19 +552,37 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float x=(rng.nextBoolean()?1:-1)*(5f+rng.nextFloat()*15f);
             float z=rng.nextFloat()*72;
             float ht=.6f+rng.nextFloat()*1.25f;
-            b.box(x,terrain(x,z)+ht*.5f-.35f,z,.47f,ht,.19f,
-                .37f+rng.nextFloat()*.12f,.42f,.46f);
-            if(i%5==0)b.box(x,terrain(x,z)+ht*.72f-.35f,z,.91f,.21f,.27f,.44f,.46f,.47f);
+            if(i%4==0){
+                b.column(x,terrain(x,z)-.40f,z,.26f,ht,.42f,.46f,.48f);
+                b.box(x,terrain(x,z)+ht-.20f,z,.76f,.17f,.32f,.51f,.53f,.54f);
+            }else{
+                b.box(x,terrain(x,z)+ht*.5f-.35f,z,.47f,ht,.19f,
+                      .37f+rng.nextFloat()*.12f,.42f,.46f);
+                if(i%5==0)b.box(x,terrain(x,z)+ht*.72f-.35f,z,
+                              .91f,.21f,.27f,.44f,.46f,.47f);
+            }
         }
-        // The withered grove: trunks, branch candelabra, and wind-torn leaves.
+        // Hand-authored branching grammar for 52 dead, gnarled trees.
+        // Tapered trunks and forked twigs replace three right-angle cuboids.
         for(int i=0;i<52;i++){
             float x=(rng.nextBoolean()?1:-1)*(7+rng.nextFloat()*15);
             float z=-3+rng.nextFloat()*79;
             float ht=2.7f+rng.nextFloat()*3.2f;
-            float y=terrain(x,z)+ht*.5f-.28f;
-            b.box(x,y,z,.25f,ht,.26f,.29f,.235f,.20f);
-            b.box(x+.65f,y+ht*.28f,z,.10f,.14f,1.6f,.28f,.24f,.22f);
-            b.box(x-.50f,y+ht*.16f,z,.95f,.14f,.11f,.26f,.22f,.19f);
+            float root=terrain(x,z)-.34f;
+            float bend=(rng.nextFloat()-.5f)*.70f;
+            b.branch(x,root,z,x+bend,root+ht,z+.31f,.19f,.24f,.21f,.19f);
+            for(int arm=0;arm<4;arm++){
+                float angle=arm*1.58f+i*.8f;
+                float sy=root+ht*(.48f+arm*.115f);
+                float bx=x+bend*(sy-root)/ht;
+                float ex=bx+(float)Math.cos(angle)*(1.15f+arm*.19f);
+                float ez=z+.31f+(float)Math.sin(angle)*(1.25f+arm*.17f);
+                float ey=sy+.68f+arm*.10f;
+                b.branch(bx,sy,z+.20f,ex,ey,ez,.085f,.28f,.25f,.23f);
+                b.branch(ex,ey,ez,ex+(float)Math.cos(angle+.7f)*.59f,
+                         ey+.75f,ez+(float)Math.sin(angle+.7f)*.62f,
+                         .048f,.31f,.28f,.25f);
+            }
         }
         // Monumental rubble, funerary pillars and collapsed bell fragments.
         for(int i=0;i<32;i++){
@@ -550,7 +602,19 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 if((i+z)%3!=0)b.box(x,4.25f,z+i,1.9f,1.0f,.85f,.43f,.44f,.47f);
             }
         }
-        // Broken monoliths and tapered basalt outcrops frame the bridge.
+        // Scattered two-triangle grass/ash clumps: tiny silhouettes catch side light.
+        for(int i=0;i<320;i++){
+            float z=-7+rng.nextFloat()*83f;
+            float x=(rng.nextBoolean()?1:-1)*(3.25f+rng.nextFloat()*18f);
+            float y=terrain(x,z)-.40f;
+            float t=.16f+rng.nextFloat()*.32f;
+            float dr=.30f+rng.nextFloat()*.12f;
+            b.tri(v(x-.14f,y,z),v(x,y+t,z+.06f),v(x+.13f,y,z),
+                  dr*.65f,dr*.81f,dr*.65f);
+            if(i%3==0)b.tri(v(x,y,z-.12f),v(x+.04f,y+t*.76f,z),
+                            v(x+.10f,y,z+.17f),.37f,.39f,.31f);
+        }
+                // Broken monoliths and tapered basalt outcrops frame the bridge.
         for(int i=0;i<48;i++){
             float zz=8f+rng.nextFloat()*73f;
             float xx=(rng.nextBoolean()?1:-1)*(12f+rng.nextFloat()*12f);
