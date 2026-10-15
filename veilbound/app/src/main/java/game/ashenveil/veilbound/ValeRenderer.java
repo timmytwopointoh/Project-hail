@@ -521,9 +521,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float red=moss>.48f?.25f:.42f;
             float green=moss>.48f?.33f:.39f;
             float blue=moss>.48f?.26f:.36f;
-            b.box(rx,terrain(rx,rz)-.32f+height*.5f,rz,
-                  .15f+rng.nextFloat()*.72f,height,.17f+rng.nextFloat()*.63f,
-                  red,green,blue);
+            b.rock(rx,terrain(rx,rz)-.38f,rz,
+                   .16f+rng.nextFloat()*.72f,height*2.6f,
+                   red,green,blue);
         }
         // Worn paving broken across the pilgrimage road, including deliberate gaps.
         for(int z=4;z<69;z+=3){
@@ -574,7 +574,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         // A broken chapel to the left, chimney spires and exterior buttresses.
         b.box(-8,2.2f,9,4.1f,5.5f,8.8f,.47f,.47f,.47f);
-        b.box(-8,5.2f,9,5f,.55f,9.3f,.38f,.39f,.42f);
+        b.pitchedRoof(-8,5.24f,9,6.05f,10.2f,2.35f,.25f,.28f,.32f);
+        b.box(-8,5.21f,9,5.8f,.24f,10.2f,.40f,.41f,.43f);
         // Masonry buttresses and inset honey-colored windows on the chapel.
         for(int i=0;i<4;i++){
             float zz=5.6f+i*2.2f;
@@ -630,6 +631,14 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 if((i+z)%3!=0)b.box(x,4.25f,z+i,1.9f,1.0f,.85f,.43f,.44f,.47f);
             }
         }
+        // Broken monoliths and tapered basalt outcrops frame the bridge.
+        for(int i=0;i<48;i++){
+            float zz=8f+rng.nextFloat()*73f;
+            float xx=(rng.nextBoolean()?1:-1)*(12f+rng.nextFloat()*12f);
+            float rr=.44f+rng.nextFloat()*1.2f;
+            b.rock(xx,terrain(xx,zz)-.44f,zz,rr,.6f+rr*1.1f,
+                   .31f,.35f,.39f);
+        }
         // Broad mountains at distance painted with coarse geometric silhouettes.
         for(int i=0;i<22;i++){
             float x=-95+i*9.2f;
@@ -659,7 +668,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float stone=.49f;
         for(int sign=-1;sign<=1;sign+=2){
             float px=x+sign*width*.5f;
-            b.box(px,height*.47f,z,1.5f,height,1.8f,
+            b.column(px,-.40f,z,.88f,height,
                 stone,.51f,.53f);
             b.box(px,height+.42f,z,2.2f,.76f,2.2f,.36f,.39f,.43f);
             for(int k=0;k<4;k++){
