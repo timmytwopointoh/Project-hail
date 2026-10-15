@@ -34,10 +34,13 @@ jobs:
           javac -d /tmp/veilbound-unit \
             veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialTextures.java \
             veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java \
-            veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java
+            veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java \
+            veilbound/tests/game/ashenveil/veilbound/MaterialTexturesTest.java
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.WorldRulesTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArtKitTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.MaterialTexturesTest
       - name: Build true native-3D Android APK
         run: gradle -p veilbound :app:assembleDebug --no-daemon
       - name: Validate game build and scripts
@@ -70,7 +73,7 @@ jobs:
           script: bash veilbound/scripts/emulator_test.sh
       - name: Analyze screenshots, renderer logs and resource budget
         if: always()
-        run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound || true
+        run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
       - name: Upload screenshots, logs and quality report
         if: always()
         uses: actions/upload-artifact@v4

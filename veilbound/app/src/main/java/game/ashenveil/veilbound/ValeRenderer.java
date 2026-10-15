@@ -18,7 +18,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
-    private int skyPos,skyClock;
+    private int skyPos,skyClock,detailTexture,uDetail;
     private Mesh staticWorld,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
@@ -44,11 +44,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
         "varying vec3 vWorld; uniform vec3 uTint; uniform vec3 uEye; "+
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
+        "uniform sampler2D uDetail; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "void main(){vec3 n=normalize(vNormal); "+
         "float sun=max(dot(n,normalize(vec3(-.45,.79,-.28))),0.); "+
         "float fill=max(dot(n,normalize(vec3(.72,.32,.29))),0.); "+
         "float wear=mix(1.,.84+.21*grit(floor(vWorld*5.5)),uSurface); "+
+        "if(uSurface>.5){vec3 an=abs(n);vec2 uv=an.y>.65?vWorld.xz*.28:"+
+        "(an.x>an.z?vWorld.zy*.28:vWorld.xy*.28);"+
+        "float detail=texture2D(uDetail,uv).r;"+
+        "wear*=.55+detail*1.15;} "+
         "float seam=step(.966,fract(vWorld.y*2.5)); "+
         "wear*=1.-uSurface*seam*.13; "+
         "float rim=pow(1.-max(dot(n,normalize(uEye-vWorld)),0.),2.)*.18; "+
@@ -56,8 +61,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "vec3 cold=vec3(.46,.65,.88)*fill*.18; "+
         "vec3 col=vColor*uTint*wear*(vec3(.27,.32,.37)+warmth+cold+rim); "+
         "col+=uGlow*vColor*uTint*.65; "+
+        "vec3 ember=vWorld-vec3(-4.4,1.4,11.);"+
+        "float warmth=1./(1.+dot(ember,ember)*.23);"+
+        "col+=vec3(.85,.28,.08)*warmth*.90; "+
         "float d=distance(uEye,vWorld); "+
         "float fog=clamp((d-13.)/67.,0.,.87); "+
+        "fog+=clamp((2.-vWorld.y)*.045,0.,.13)*clamp(d/27.,0.,1.);"+
+        "fog=clamp(fog,0.,.90); "+
         "fog=fog*fog*(3.-2.*fog); "+
         "gl_FragColor=vec4(mix(col,uFog,fog),1.);}";
     private static final String SKY_VERTEX=
@@ -97,9 +107,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uGlow=GLES20.glGetUniformLocation(program,"uGlow");
         uFog=GLES20.glGetUniformLocation(program,"uFog");
         uSurface=GLES20.glGetUniformLocation(program,"uSurface");
+        uDetail=GLES20.glGetUniformLocation(program,"uDetail");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
+        initDetailTexture();
         cube=makeCube();octa=makeOcta();
         wardenModel=new Mesh(ArtKit.bellwarden().vertices);
         hushedModel=new Mesh(ArtKit.hushed().vertices);
@@ -136,6 +148,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 state.z+1.6f,0,1,0);
         Matrix.multiplyMM(vp,0,projection,0,view,0);
         GLES20.glUseProgram(program);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
+        GLES20.glUniform1i(uDetail,0);
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform3f(uFog,fogColor[0],fogColor[1],fogColor[2]);
         drawStatic();
@@ -313,7 +328,31 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(aNormal);
         GLES20.glDisableVertexAttribArray(aColor);
     }
-    private static int shader(int type,String code){
+    private void initDetailTexture(){
+        byte[] rgba=MaterialTextures.stoneRgba();
+        ByteBuffer pixels=ByteBuffer.allocateDirect(rgba.length)
+            .order(ByteOrder.nativeOrder());
+        pixels.put(rgba);pixels.position(0);
+        int[] handles=new int[1];
+        GLES20.glGenTextures(1,handles,0);
+        detailTexture=handles[0];
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MIN_FILTER,
+                             GLES20.GL_LINEAR_MIPMAP_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MAG_FILTER,
+                             GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_S,
+                             GLES20.GL_REPEAT);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_T,
+                             GLES20.GL_REPEAT);
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_RGBA,
+                            MaterialTextures.SIZE,MaterialTextures.SIZE,0,
+                            GLES20.GL_RGBA,GLES20.GL_UNSIGNED_BYTE,pixels);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+        Log.i(TAG,"STONE_MATERIAL size="+MaterialTextures.SIZE+
+                  " gpu_bytes="+(rgba.length*4/3));
+    }
+        private static int shader(int type,String code){
         int id=GLES20.glCreateShader(type);
         GLES20.glShaderSource(id,code);GLES20.glCompileShader(id);
         int[] ok=new int[1];GLES20.glGetShaderiv(id,GLES20.GL_COMPILE_STATUS,ok,0);
