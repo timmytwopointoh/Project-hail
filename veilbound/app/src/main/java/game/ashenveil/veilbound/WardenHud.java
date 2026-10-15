@@ -21,6 +21,7 @@ public final class WardenHud extends View {
     private float stickX=0,stickY=0,prevCamX=0;
     private float labLastX=0,labLastY=0,labPinchDistance=0;
     private int labDragPointer=-1;
+    private long lastStudioDiagnosticUptime=0;
     private long lastDiagnostic=0;
     private float paintAlpha=1;
     private static final int GOLD=Color.rgb(229,192,139);
@@ -224,8 +225,8 @@ public final class WardenHud extends View {
         text(c,"RESET",920,565,14,PALE,true,true);
         // Orientation marker: a calibrated studio model, not a combat arena.
         text(c,"0°  —  90°  —  180°  —  270°",500,456,12,MIST,false,true);
-        if(android.os.SystemClock.uptimeMillis()-lastDiagnostic>1150){
-            lastDiagnostic=android.os.SystemClock.uptimeMillis();
+        if(android.os.SystemClock.uptimeMillis()-lastStudioDiagnosticUptime>1150){
+            lastStudioDiagnosticUptime=android.os.SystemClock.uptimeMillis();
             Log.i("VEILBOUND_STUDIO","item="+m.item+" name="+ModelStudio.ITEMS[m.item]+
                 " light="+m.light+" material="+m.material+
                 " yaw="+m.yaw+" pitch="+m.pitch+" zoom="+m.zoom);
