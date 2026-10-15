@@ -1,15 +1,63 @@
-# VEILBOUND — Master Worker Manager and Concurrent Development
+# VEILBOUND — Hierarchical AI Teams and Concurrent Development
 
 This infrastructure lives on `feature/veilbound-parallel-ai-qa` and is
 submitted through draft PR #2. It is additive to the native Android game.
 No game code, user controls, Android SDK or Model Atelier is replaced.
+
+## Management hierarchy (verified in GitHub Actions)
+
+The **director manager** creates only the team-manager jobs actually needed
+by the queue (up to **3**). Each team manager validates the director's
+immutable `assignment_plan.json`, checks its two-child budget, and publishes
+`team_approval.json`. Each child code worker is blocked until its matching
+team approval artifact exists and exactly matches the worker role, task ID and
+goal. Team managers and code workers execute as **separate GitHub Actions jobs**,
+not sequential functions in a single Python process:
+
+```text
+Director / QA backlog priority
+  ├─ Gameplay team manager  ── Combat worker + Animation worker
+  ├─ Art team manager       ── Models worker + Materials worker
+  └─ World team manager     ── World worker + Studio worker
+                 ↓
+    Scoped patch + trusted Java tests
+                 ↓
+    Human-reviewed promotion to draft PR
+                 ↓
+    Full Android emulator / physical device tests before merge
+```
+
+The hierarchy is *bounded, depth two* (director -> team manager -> worker).
+It can vary the number of **active managers** and workers dynamically, but
+cannot create unrestricted recursive managers, bypass source ownership, or
+run extra model calls outside the chosen six-worker cap.
+
+## Gemini integration
+
+The `gemini_client.py` module implements Google's `generateContent` HTTP
+API with native JSON-schema patch outputs, prompt/image size limits,
+short retry/backoff for temporary failures, explicit HTTP error statuses,
+and per-worker model/token usage metadata. Real code workers remain gated
+by the `GEMINI_API_KEY` GitHub Actions secret.
+
+The default model is `gemini-3.8-flash`, configurable through the
+`GEMINI_MODEL` Actions repository variable. Run the *manual*
+**VEILBOUND - Gemini Connection Check** workflow after configuring the key.
+It checks a tiny, non-source health prompt, not game code, to verify Gemini
+credentials and model access. This call can incur model usage charges.
+
+Model source edits are still **untrusted code**. They are isolated in
+temporary copies for Java validation, promoted only after explicit review,
+and never automatically merged into the game. The PR promoter also
+verifies that the reviewed text patch exactly matches replacement files.
+
 
 ## Execution layers
 
 1. **Master AI Worker Manager** is a real GitHub Actions planner. Every
    cycle assigns an independently scoped task matrix from
    `veilbound/worker_backlog.json` and, where supplied, the actual Android
-   emulator `task_plan.json`. It dynamically creates up to **six independent
+   emulator `task_plan.json`. It dynamically creates up to **three independent team managers and six
    concurrent code-proposal jobs**, limited by a selected budget of 2, 4 or 6.
    No two concurrent roles own the same source file.
 2. **Parallel Worker QA** runs existing deterministic Java combat and
