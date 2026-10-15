@@ -40,7 +40,7 @@ public final class WardenHud extends View {
         fill(c,color,1);p.setTypeface(bold?android.graphics.Typeface.create("serif",1):
                        android.graphics.Typeface.create("sans-serif",0));
         p.setTextSize(size);
-        if(centered)p.setTextAlign(Paint.Align.CENTER);
+        p.setTextAlign(centered?Paint.Align.CENTER:Paint.Align.LEFT);
         p.setShadowLayer(bold?9:2,0,1,Color.argb(115,0,0,0));
         c.drawText(value,x,y,p);p.clearShadowLayer();
     }
@@ -141,14 +141,14 @@ public final class WardenHud extends View {
     }
     private void drawGameplay(Canvas c,WorldState.Snapshot s){
         pane(c,20,18,350,110,6);
-        text(c,"THE LAST BELLWARDEN",38,40,17,GOLD,true,false);
+        text(c,"THE LAST BELLWARDEN",39,40,16,GOLD,true,false);
         text(c,"LIFE",39,65,12,PALE,true,false);
         bar(c,94,54,235,s.health/100f,Color.rgb(176,57,56));
         text(c,"VIGOR",39,91,12,MIST,true,false);
         bar(c,94,80,235,s.stamina/100f,Color.rgb(125,178,139));
         pane(c,582,18,982,91,6);
-        text(c,"MOURNING VALE   •   CHAPTER I",602,42,15,GOLD,true,false);
-        text(c,s.objective,602,75,15,PALE,false,false);
+        text(c,"MOURNING VALE  /  CHAPTER I",602,42,14,GOLD,true,false);
+        text(c,s.objective.length()>36?s.objective.substring(0,36):s.objective,602,75,14,PALE,false,false);
         if(s.bossAlive&&s.z>46){
             text(c,"ASH KNIGHT",500,42,18,PALE,true,true);
             bar(c,403,56,194,s.bossHealth/260f,EMBER);
@@ -158,7 +158,21 @@ public final class WardenHud extends View {
             text(c,s.message.length()>54?s.message.substring(0,54):s.message,
                     500,151,15,GOLD,true,true);
         }
-        fill(c,PALE,.28f);p.setStrokeWidth(.9f);p.setStyle(Paint.Style.STROKE);
+        // Subtle location compass and narrative chapter seal.
+        fill(c,GOLD,.37f);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.3f);
+        c.drawCircle(501,38,21,p);
+        c.drawLine(501,12,501,20,p);c.drawLine(501,56,501,64,p);
+        text(c,"N",501,43,14,GOLD,true,true);
+        for(int i=0;i<5;i++){
+            float x=379+i*60;
+            thinLine(c,x,21,x,25,i==2?GOLD:MIST,i==2?.75f:.35f,1);
+        }
+        // Stronger vignette-like corner ornaments, without covering touch zones.
+        thinLine(c,10,198,10,157,GOLD,.24f,1.4f);
+        thinLine(c,10,198,29,198,GOLD,.24f,1.4f);
+        thinLine(c,991,194,991,161,GOLD,.24f,1.4f);
+        thinLine(c,991,194,972,194,GOLD,.24f,1.4f);
+                fill(c,PALE,.28f);p.setStrokeWidth(.9f);p.setStyle(Paint.Style.STROKE);
         c.drawCircle(500,300,7,p);c.drawLine(486,300,493,300,p);c.drawLine(507,300,514,300,p);
         // Left thumb movement zone.
         fill(c,Color.rgb(5,15,20),.49f);c.drawCircle(123,487,83,p);
@@ -167,7 +181,7 @@ public final class WardenHud extends View {
         fill(c,PALE,.22f);c.drawCircle(123+stickX*48,487+stickY*48,34,p);
         fill(c,PALE,.45f);p.setStyle(Paint.Style.STROKE);
         c.drawCircle(123+stickX*48,487+stickY*48,34,p);
-        text(c,"MOVE",123,586,11,MIST,true,true);
+        text(c,"MOVE",123,587,12,MIST,true,true);
         control(c,905,484,51,"✦","ATTACK",GOLD);
         control(c,806,520,41,"↝","DODGE",MIST);
         control(c,908,365,33,"✧","INTERACT",EMBER);
