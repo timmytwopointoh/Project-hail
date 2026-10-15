@@ -1,3 +1,5 @@
+> **Latest architecture:** See [HIERARCHICAL_CI_AND_EMULATORS.md](HIERARCHICAL_CI_AND_EMULATORS.md) for the director → 3 division managers → 6 specialist managers → 50 worker hierarchy and optional 1/2/4/8-emulator farm.
+
 # VEILBOUND — Hierarchical AI Teams and Concurrent Development
 
 This infrastructure lives on `feature/veilbound-parallel-ai-qa` and is
@@ -6,19 +8,13 @@ No game code, user controls, Android SDK or Model Atelier is replaced.
 
 ## Management hierarchy (verified in GitHub Actions)
 
-The **director manager** creates only the team-manager jobs actually needed
-by the queue (up to **3**). Each team manager validates the director's
-immutable `assignment_plan.json`, checks its 18-child budget, and publishes
-`team_approval.json`. Each child code worker is blocked until its matching
-team approval artifact exists and exactly matches the worker role, task ID and
-goal. Team managers and code workers execute as **separate GitHub Actions jobs**,
-not sequential functions in a single Python process:
+The director creates only the division and specialist manager jobs needed by the queue. Up to **three division managers** independently review the director's plan; up to **six specialist managers** receive a division-approved assignment and each controls no more than **ten children**. Workers verify their exact approved team, role, task ID and slot before Gemini is called. Every level is a separate GitHub Actions job:
 
 ```text
 Director / QA backlog priority
-  ├─ Gameplay team manager  ── Combat worker + Animation worker
-  ├─ Art team manager       ── Models worker + Materials worker
-  └─ World team manager     ── World worker + Studio worker
+  ├─ Game Systems division → Combat manager + Animation manager
+  ├─ Visual Art division   → Models manager + Materials manager
+  └─ World Tools division  → Environment manager + Studio manager
                  ↓
     Scoped patch + trusted Java tests
                  ↓
@@ -27,7 +23,7 @@ Director / QA backlog priority
     Full Android emulator / physical device tests before merge
 ```
 
-The hierarchy is *bounded, depth two* (director -> team manager -> worker).
+The hierarchy is *bounded, depth three* (director -> division manager -> specialist manager -> worker).
 It can vary the number of **active managers** and workers dynamically, but
 cannot create unrestricted recursive managers, bypass allowed Java file ownership, or
 run more than the selected 50-worker ceiling.
@@ -40,8 +36,8 @@ The repository includes **50 concrete improvement tasks** in
 only the highest-ranked subset. Selecting **50** allocates all fifty task
 slots (provided no higher-priority QA evidence replaces assignments).
 
-The director distributes assignments fairly across six specialties and
-three separate team-manager jobs, each with no more than 18 children.
+The director distributes assignments fairly across six specialties, three
+division-manager jobs and six specialist-manager jobs, each with at most ten children.
 Workers that share a Java specialty are **alternative independent proposals**:
 they do not concurrently edit one shared branch. Each has an immutable
 checkout, unique `w001` through `w050` slot ID, its own artifact and
