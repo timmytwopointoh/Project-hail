@@ -361,6 +361,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,surfaceTexture);
         GLES20.glUniform1i(uSurfaceAtlas,2);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
         GLES20.glUniform1f(uStudioMaterial,m.material);
         if(m.light==0){
             GLES20.glUniform3f(uStudioLight,-.45f,.82f,.27f);

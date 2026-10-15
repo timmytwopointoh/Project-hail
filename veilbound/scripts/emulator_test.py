@@ -59,27 +59,38 @@ def dismiss_android_overlay():
             return
 
 def shot(name):
-    content=adb("exec-out","screencap","-p",timeout=55)
-    if not content.startswith(bytes.fromhex("89504e470d0a1a0a")):
-        raise AssertionError("Screenshot missing PNG signature")
-    p=OUT/name;p.write_bytes(content)
-    with Image.open(p) as image:
-        image.load()
-        rgb=image.convert("RGB")
-        std=ImageStat.Stat(rgb.resize((120,80))).stddev
-        colors=len(rgb.resize((60,40)).getcolors(2400) or [])
-        quality={"path":name,"width":rgb.width,"height":rgb.height,
-                 "bytes":len(content),"stddev":list(map(lambda n:round(n,2),std)),
-                 "distinct_colors":colors}
-    sample=rgb.resize((120,68))
-    samples=list(sample.getdata())
-    bright=sum(1 for r,g,b in samples if min(r,g,b)>218)/len(samples)
-    quality["near_white_coverage"]=round(bright,4)
-    if bright>.08:
-        raise AssertionError("System dialog still obscures the native 3D scene; white coverage="+str(round(bright,3)))
-    if min(quality["width"],quality["height"])<500 or max(std)<8:
-        raise AssertionError("Renderer frame is blank, obscured or too small: "+str(quality))
-    return quality
+    # Large mesh/texture uploads can coincide with a transient Android
+    # Quickstep launcher ANR. Only dismiss known system dialogs.
+    for attempt in range(7):
+        if attempt:
+            dismiss_android_overlay()
+            time.sleep(1.35)
+        content=adb("exec-out","screencap","-p",timeout=55)
+        if not content.startswith(bytes.fromhex("89504e470d0a1a0a")):
+            raise AssertionError("Screenshot missing PNG signature")
+        with Image.open(__import__("io").BytesIO(content)) as image:
+            image.load()
+            rgb=image.convert("RGB")
+            std=ImageStat.Stat(rgb.resize((120,80))).stddev
+            colors=len(rgb.resize((60,40)).getcolors(2400) or [])
+            sample=rgb.resize((120,68))
+            samples=list(sample.getdata())
+            white=sum(1 for r,g,b in samples if min(r,g,b)>218)/len(samples)
+            quality={"path":name,"width":rgb.width,"height":rgb.height,
+                     "bytes":len(content),"stddev":list(map(lambda n:round(n,2),std)),
+                     "distinct_colors":colors,
+                     "near_white_coverage":round(white,4),
+                     "dialog_retries":attempt}
+        if white>.08:
+            if attempt==6:
+                (OUT/"obscured_last_frame.png").write_bytes(content)
+                raise AssertionError("System overlay persists after seven retries; coverage="+str(round(white,3)))
+            continue
+        if min(quality["width"],quality["height"])<500 or max(std)<8:
+            raise AssertionError("Renderer frame is blank, obscured or too small: "+str(quality))
+        (OUT/name).write_bytes(content)
+        return quality
+    raise AssertionError("No clear Android frame captured")
 
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
