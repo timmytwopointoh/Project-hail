@@ -11,9 +11,12 @@ from pathlib import Path
 
 PRIORITY = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 RECOMMENDATIONS = {
-    "emulator-smoke": ("P0", "combat", "Android gameplay acceptance failed",
-        "Repair the failing emulator input/state transition; preserve screenshots and logcat.",
+    "emulator-smoke": ("P0", "qa", "Android gameplay acceptance failed",
+        "Inspect the failing emulator input/state transition; preserve screenshots and logcat.",
         "Rebuild APK, install on Android 15 emulator, rerun full touch gameplay."),
+    "studio-orbit": ("P1", "studio", "Model Atelier orbit control not visibly responding",
+        "Check real touch orbit gesture, GL draw readiness and studio camera framing.",
+        "Repeat real ADB swipe 3 times and assert quantifiable scene pixel movement."),
     "missing-qa": ("P1", "qa", "No machine-readable visual QA report",
         "Make sure qa_analyze.py executes after the emulator and always uploads reports.",
         "Run emulator workflow and confirm visual_quality_metrics.json is uploaded."),
@@ -68,8 +71,12 @@ def create_plan(emulator=None, visual=None, *, commit=None):
                        "repair_guidance": fix, "required_test": test,
                        "confidence": "measurement" if code not in ("unknown-warning", "slow-emulator", "lock-untested") else "needs-verification"}
     if emulator.get("status") != "passed":
-        add("emulator-smoke", "emulator_report.status=" + str(emulator.get("status", "missing")) +
-            "; error=" + str(emulator.get("error", "not recorded"))[:240])
+        error = str(emulator.get("error", "not recorded"))[:240]
+        if "studio orbit" in error.lower() or "model studio orbit" in error.lower():
+            add("studio-orbit", "emulator_report.status=failed; error=" + error)
+        else:
+            add("emulator-smoke", "emulator_report.status=" + str(emulator.get("status", "missing")) +
+                "; error=" + error)
     if visual is None:
         add("missing-qa", "visual_quality_metrics.json absent, invalid or not a JSON object")
     else:
@@ -131,7 +138,7 @@ def create_plan(emulator=None, visual=None, *, commit=None):
 
 def markdown(plan):
     lines = ["# VEILBOUND — automatic QA repair queue", "",
-             "Source commit: \`" + str(plan["source_commit"]) + "\`  ",
+             "Source commit: `" + str(plan["source_commit"]) + "`  ",
              "Emulator result: **" + str(plan["emulator_status"]) + "**  ",
              "Release gate: **" + plan["release_gate"] + "**", "",
              "| Priority | Worker | Finding |", "|---|---|---|"]
