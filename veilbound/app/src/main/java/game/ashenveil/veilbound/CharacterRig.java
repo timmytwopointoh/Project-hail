@@ -19,8 +19,8 @@ public final class CharacterRig {
             shoulderX=sx;shoulderY=sy;hipX=hx;hipY=hy;
         }
         public int vertices(){
-            return torso.vertexCount()+leftArm.vertexCount()+rightArm.vertexCount()
-                +leftLeg.vertexCount()+rightLeg.vertexCount();
+            return (torso.vertices.length+leftArm.vertices.length+rightArm.vertices.length
+                +leftLeg.vertices.length+rightLeg.vertices.length)/9;
         }
     }
     private static final class Accumulator {
