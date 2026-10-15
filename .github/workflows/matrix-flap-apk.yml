@@ -30,6 +30,11 @@ jobs:
           gradle-version: '8.9'
       - name: Build original Matrix Flap APK
         run: gradle -p matrix-flap :app:assembleDebug --no-daemon
+      - name: Verify compiled launcher icon
+        run: |
+          unzip -l matrix-flap/app/build/outputs/apk/debug/app-debug.apk | grep -E 'res/drawable-nodpi.*/ic_cinematic[.]webp'
+          SDK_TOOLS=$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          "$SDK_TOOLS/aapt" dump badging matrix-flap/app/build/outputs/apk/debug/app-debug.apk | grep 'icon='
       - name: Validate test scripts
         run: |
           bash -n matrix-flap/scripts/emulator_test.sh
