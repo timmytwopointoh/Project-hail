@@ -21,6 +21,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int skyPos,skyClock,detailTexture,uDetail;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
+    private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
+    private boolean studioLinePrimitive=false;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -78,7 +80,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "col=vColor*uTint*tint + uGlow*vColor*.30;"+
         "if(uStudioMaterial>.5&&uStudioMaterial<1.5)col=vColor*uTint;"+
         "if(uStudioMaterial>1.5&&uStudioMaterial<2.5)col=vec3(.012,.015,.025);"+
-        "if(uStudioMaterial>2.5)col=n*.5+.5;"+
+        "if(uStudioMaterial>2.5&&uStudioMaterial<3.5)col=n*.5+.5;"+
+        "if(uStudioMaterial>3.5)col=vec3(.21,.92,.78);"+
         "gl_FragColor=vec4(col,1.);return;}"+
         "gl_FragColor=vec4(mix(col,uFog,fog),1.);}";
     private static final String SKY_VERTEX=
@@ -213,6 +216,26 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
               " bellwarden_vertices="+studioWarden.count+
               " ash_knight_vertices="+studioBoss.count+" time_ms="+timeMs);
     }
+    /**
+     * Convert a triangle mesh to an actual GL_LINES mesh. ES2 lacks polygon
+     * mode, so each edge is explicit. Build lazily and reuse every frame.
+     */
+    private static Mesh edgesOf(Mesh src){
+        float[] triangles=new float[src.count*9];
+        src.data.position(0);
+        src.data.get(triangles);
+        src.data.position(0);
+        float[] lines=new float[triangles.length*2];
+        int idx=0;
+        for(int i=0;i<triangles.length;i+=27){
+            for(int edge=0;edge<3;edge++){
+                int a=i+edge*9,b=i+((edge+1)%3)*9;
+                System.arraycopy(triangles,a,lines,idx,9);idx+=9;
+                System.arraycopy(triangles,b,lines,idx,9);idx+=9;
+            }
+        }
+        return new Mesh(lines);
+    }
     private void renderStudio(){
         initStudioHighDetail();
         ModelStudio.Snapshot m=state.studio.snapshot();
@@ -238,9 +261,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(m.light==3)GLES20.glUniform3f(uStudioLight,.77f,.39f,-.64f);
         GLES20.glUniform3f(uFog,.08f,.11f,.13f);
         GLES20.glUniform1f(uSurface,1f);
+        GLES20.glUniform1f(uStudioMaterial,0f);
         Matrix.setIdentityM(model,0);
         draw(studioWorld,model,1,1,1,0f);
         GLES20.glUniform1f(uSurface,0f);
+        GLES20.glUniform1f(uStudioMaterial,m.material);
         Mesh chosen;
         switch(m.item){
             case 0:chosen=studioWarden;break;
@@ -255,7 +280,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(m.item==3||m.item==4)Matrix.translateM(model,0,0,.35f,0);
         else if(m.item==5)Matrix.scaleM(model,0,2.4f,2.4f,2.4f);
         else if(m.item==2)Matrix.scaleM(model,0,1.12f,1.12f,1.12f);
+        if(m.material==4){
+            if(studioWireMeshes[m.item]==null)
+                studioWireMeshes[m.item]=edgesOf(chosen);
+            chosen=studioWireMeshes[m.item];
+            studioLinePrimitive=true;
+        }
         draw(chosen,model,1,1,1,.06f);
+        studioLinePrimitive=false;
+        GLES20.glUniform1f(uStudioMaterial,0f);
         if(m.item<3){
             // Paired weapon on a measured side pedestal; compare material scale.
             drawCube(3.30f,.30f,0,1.1f,.6f,1.1f,.42f,.43f,.45f,0,0);
@@ -481,7 +514,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glVertexAttribPointer(aNormal,3,GLES20.GL_FLOAT,false,36,mesh.data);
         mesh.data.position(6);GLES20.glEnableVertexAttribArray(aColor);
         GLES20.glVertexAttribPointer(aColor,3,GLES20.GL_FLOAT,false,36,mesh.data);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,mesh.count);
+        GLES20.glDrawArrays(studioLinePrimitive?GLES20.GL_LINES:GLES20.GL_TRIANGLES,0,mesh.count);
         drawCalls++;
         GLES20.glDisableVertexAttribArray(aPos);
         GLES20.glDisableVertexAttribArray(aNormal);

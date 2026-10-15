@@ -10,7 +10,7 @@ public final class ModelStudio {
         "BELLWARDEN","HUSHED REVENANT","ASH KNIGHT",
         "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK"};
     public static final String[] LIGHTS={"STUDIO","MOONLIT","EMBER","RIM LIGHT"};
-    public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW"};
+    public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
     public static final class Snapshot {
         public final int item,light,material;

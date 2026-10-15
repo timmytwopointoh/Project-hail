@@ -14,6 +14,8 @@ public final class ModelStudioTest {
         s.dolly(300);ok(s.snapshot().zoom<=24.0f,"Camera max range");
         s.pan(999,-999);ok(Math.abs(s.snapshot().panX)<=4.2f,"Pan X safe");
         ok(Math.abs(s.snapshot().panY)<=3.2f,"Pan Y safe");
+        for(int i=0;i<ModelStudio.MATERIALS.length;i++)s.nextMaterial();
+        ok(s.snapshot().material==0,"Materials must cycle all supported inspection modes");
         s.nextMaterial();s.nextLight();
         ok(s.snapshot().material==1&&s.snapshot().light==1,"Studio lighting and material");
         float old=s.snapshot().yaw;s.toggleTurntable();s.tick(.3f);
