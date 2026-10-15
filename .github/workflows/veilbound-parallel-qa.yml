@@ -36,7 +36,9 @@ jobs:
         run: python3 veilbound/scripts/qa_workers.py --role "${{ matrix.role }}" --out "inspection_output/worker-${{ matrix.role }}"
       - name: Test priority and repair queue classifier
         if: matrix.role == 'integrity'
-        run: python3 -m unittest discover -s veilbound/tests -p 'test_qa_coordinator.py' -v
+        run: |
+          python3 -m unittest discover -s veilbound/tests -p 'test_qa_coordinator.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_worker_manager.py' -v
       - name: Keep independent QA evidence
         if: always()
         uses: actions/upload-artifact@v4
