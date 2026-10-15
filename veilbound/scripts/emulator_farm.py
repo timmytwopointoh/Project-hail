@@ -13,12 +13,16 @@ CONFIGS = (
     {"id": "android34_pixel7", "api": 34, "profile": "pixel_7"},
     {"id": "android35_pixel4", "api": 35, "profile": "pixel_4"},
     {"id": "android33_pixel5", "api": 33, "profile": "pixel_5"},
+    {"id": "android34_pixel6", "api": 34, "profile": "pixel_6"},
+    {"id": "android33_pixel4", "api": 33, "profile": "pixel_4"},
+    {"id": "android35_pixel7", "api": 35, "profile": "pixel_7"},
+    {"id": "android33_pixel6", "api": 33, "profile": "pixel_6"},
 )
 MAX_EMULATORS = len(CONFIGS)
 
 def make_matrix(count):
     if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= MAX_EMULATORS:
-        raise ValueError("Requested emulator capacity must be 1, 2, 3 or 4")
+        raise ValueError("Requested emulator capacity must be between 1 and 8")
     chosen = [dict(item) for item in CONFIGS[:count]]
     return {"matrix": {"include": chosen}, "count": count,
             "min_required": count,
