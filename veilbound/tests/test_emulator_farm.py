@@ -51,6 +51,30 @@ class EmulatorFarmTests(unittest.TestCase):
             self.assertEqual(1, result["passed"])
             self.assertEqual("missing", result["instances"][1]["result"])
 
+    def test_cross_platform_studio_failure_clusters_without_hiding_failures(self):
+        with tempfile.TemporaryDirectory() as root:
+            for cfg in farm.CONFIGS[:2]:
+                path = Path(root) / ("veilbound-emulator-" + cfg["id"] + "-inspection")
+                path.mkdir()
+                (path / "emulator_report.json").write_text(json.dumps({
+                    "status": "failed", "screenshots": [{} for i in range(11)]}))
+                (path / "visual_quality_metrics.json").write_text("{}")
+                (path / "task_plan.json").write_text(json.dumps({
+                    "tasks": [{"id": "VB-STUDIO-ORBIT", "priority": "P1",
+                               "worker": "studio", "title": "Orbit gesture inactive"}]}))
+            result = farm.summarize(root, 2)
+            self.assertFalse(result["success"])
+            self.assertEqual(1, len(result["findings"]))
+            self.assertEqual("cross-emulator", result["findings"][0]["scope"])
+            self.assertEqual(2, len(result["findings"][0]["affected_emulators"]))
+
+    def test_missing_failure_plan_is_prioritized_for_review(self):
+        with tempfile.TemporaryDirectory() as root:
+            result = farm.summarize(root, 1)
+            self.assertFalse(result["success"])
+            self.assertEqual("VB-EMULATOR-EVIDENCE-MISSING", result["findings"][0]["id"])
+            self.assertEqual("P0", result["findings"][0]["priority"])
+
     def test_qa_failure_or_too_few_screenshots_blocks_aggregate(self):
         with tempfile.TemporaryDirectory() as root:
             cfg = farm.CONFIGS[0]
