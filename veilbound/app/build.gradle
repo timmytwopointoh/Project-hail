@@ -1,0 +1,18 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'game.ashenveil.veilbound'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'game.ashenveil.veilbound'
+        minSdk 26
+        targetSdk 29
+        versionCode 1
+        versionName '0.1.0-prologue'
+    }
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+}
