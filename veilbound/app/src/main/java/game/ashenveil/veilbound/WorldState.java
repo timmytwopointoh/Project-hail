@@ -36,6 +36,7 @@ public final class WorldState {
     public float swing=0, dodge=0, invulnerable=0, attackTime=0, time=0f;
     public float hurtFlash=0, impactFlash=0, walkPhase=0f;
     public String mode="title", message="THE BELLS REMEMBER", checkpointMessage="";
+    public final ModelStudio studio=new ModelStudio();
     public boolean shrineLit=false, bossTriggered=false;
     public int fragments=0,totalKills=0;
     public final Foe[] foes={
@@ -64,6 +65,8 @@ public final class WorldState {
     public synchronized void roll(){rollQueued=true;}
     public synchronized void interact(){interactQueued=true;}
 
+    public synchronized void enterStudio(){mode="lab";studio.reset();}
+    public synchronized void exitStudio(){mode="title";}
     public synchronized void start(){
         if(mode.equals("title")){mode="story";message="A kingdom held its breath. One bell still calls to you.";messageTimer=1000;}
         else if(mode.equals("story")){mode="playing";message="FIND THE LAST EMBER";messageTimer=5;}
@@ -106,6 +109,7 @@ public final class WorldState {
     public synchronized void update(float dt){
         dt=Math.max(0,Math.min(dt,.045f));
         time+=dt;
+        if(mode.equals("lab"))studio.tick(dt);
         if(!mode.equals("playing")){orbitDelta=0;return;}
         cameraYaw+=orbitDelta;orbitDelta=0;
         if(cameraYaw>6.283f)cameraYaw-=6.283f;
