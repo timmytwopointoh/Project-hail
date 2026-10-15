@@ -105,6 +105,15 @@ class ManagerTests(unittest.TestCase):
         self.assertTrue(all(0 < value <= 18 for value in counts.values()))
         self.assertTrue(all(value >= 15 for value in counts.values()))
 
+    def test_live_fifty_task_backlog_covers_every_slot(self):
+        path = MANAGER_PATH.parents[1] / "worker_backlog.json"
+        backlog = manager.load_object(path)
+        self.assertEqual(50, len(backlog["tasks"]))
+        actual = manager.plan(backlog, max_workers=50)
+        self.assertEqual(50, actual["allocated"])
+        self.assertEqual(3, actual["team_count"])
+        self.assertEqual("w050", actual["matrix"]["include"][-1]["slot_id"])
+
     def test_duplicate_exact_task_id_is_not_double_billed(self):
         backlog = {"tasks": [
             {"id": "DUP", "role": "combat", "goal": "same task", "priority": "P2"},
