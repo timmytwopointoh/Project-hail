@@ -19,7 +19,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                           model=new float[16],mvp=new float[16];
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
     private int skyPos,skyClock;
-    private Mesh staticWorld,cube,octa,needle,cape;
+    private Mesh staticWorld,cube,octa,needle,cape,armorTorso;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -98,7 +98,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
-        cube=makeCube();octa=makeOcta();needle=makeNeedle();cape=makeCape();
+        cube=makeCube();octa=makeOcta();needle=makeNeedle();cape=makeCape();armorTorso=makeArmorTorso();
         staticWorld=buildWorld();
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count);
@@ -237,8 +237,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawCape(x,root,z,yaw,scale,foe?.62f:.79f,foe?.55f:.77f,foe?.63f:.82f);
         drawPart(x,root+1.25f*scale,z,0,0,-.24f,.82f,1.45f,.23f,
                 yaw,foe?.12f:.08f,foe?.16f:.21f,foe?.19f:.30f,0);
-        drawPart(x,root+1.35f*scale,z,0,0,0,.88f,.97f,.56f,
-                yaw,c,g,b,0);
+        drawTorso(x,root+1.35f*scale,z,yaw,scale,c,g,b);
         drawPart(x,root+1.88f*scale,z,0,0,0,.95f,.20f,.72f,
                 yaw,foe?.65f:.77f,foe?.36f:.66f,foe?.30f:.57f,.15f);
         // Head and winged helmet; visor darkness makes a readable silhouette.
@@ -373,6 +372,54 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         void quad(float[] p,float[] q,float[] r,float[] s,float cr,float cg,float cb){
             tri(p,q,r,cr,cg,cb);tri(p,r,s,cr,cg,cb);
         }
+        // Octagonal columns use facets instead of squared voxel silhouettes.
+        void column(float x,float baseY,float z,float rad,float height,
+                    float red,float green,float blue){
+            int sides=8;
+            for(int i=0;i<sides;i++){
+                float a=i*(float)(2*Math.PI/sides),angle2=(i+1)*(float)(2*Math.PI/sides);
+                float ca=(float)Math.cos(a),sa=(float)Math.sin(a);
+                float cb=(float)Math.cos(angle2),sb=(float)Math.sin(angle2);
+                float tint=.88f+.12f*(float)Math.sin(i*1.9+z*.2f);
+                quad(v(x+ca*rad,baseY,z+sa*rad),
+                     v(x+ca*rad*.89f,baseY+height,z+sa*rad*.89f),
+                     v(x+cb*rad*.89f,baseY+height,z+sb*rad*.89f),
+                     v(x+cb*rad,baseY,z+sb*rad),
+                     red*tint,green*tint,blue*tint);
+            }
+            box(x,baseY+height+.10f,z,rad*2.22f,.23f,rad*2.22f,
+                red*.88f,green*.91f,blue*.93f);
+            box(x,baseY+.13f,z,rad*2.3f,.24f,rad*2.3f,
+                red*.85f,green*.86f,blue*.89f);
+        }
+        void rock(float x,float groundY,float z,float rad,float height,
+                  float red,float green,float blue){
+            int sides=6;
+            float apexX=x+rad*.14f,apexZ=z-rad*.24f;
+            for(int i=0;i<sides;i++){
+                float a=i*(float)(2*Math.PI/sides),next=(i+1)*(float)(2*Math.PI/sides);
+                float radius=rad*(.72f+.22f*(float)Math.sin(i*2.71f+x*.03f));
+                float nextRad=rad*(.72f+.22f*(float)Math.sin((i+1)*2.71f+x*.03f));
+                float[] p=v(x+(float)Math.cos(a)*radius,groundY,
+                    z+(float)Math.sin(a)*radius);
+                float[] q=v(x+(float)Math.cos(next)*nextRad,groundY,
+                    z+(float)Math.sin(next)*nextRad);
+                float[] top=v(apexX,groundY+height,apexZ);
+                float light=.75f+i*.055f;
+                tri(p,top,q,red*light,green*light,blue*light);
+            }
+        }
+        void pitchedRoof(float x,float y,float z,float width,float depth,float rise,
+                         float red,float green,float blue){
+            float l=x-width*.5f,r=x+width*.5f,n=z-depth*.5f,f=z+depth*.5f;
+            quad(v(l,y,n),v(l,y,f),v(x,y+rise,f),v(x,y+rise,n),red,green,blue);
+            quad(v(x,y+rise,n),v(x,y+rise,f),v(r,y,f),v(r,y,n),
+                 red*.87f,green*.90f,blue*.97f);
+            tri(v(l,y,n),v(x,y+rise,n),v(r,y,n),
+                red*.68f,green*.67f,blue*.64f);
+            tri(v(r,y,f),v(x,y+rise,f),v(l,y,f),
+                red*.72f,green*.68f,blue*.66f);
+        }
         void box(float x,float y,float z,float w,float h,float d,float red,float green,float blue){
             float l=x-w*.5f,r=x+w*.5f,b=y-h*.5f,t=y+h*.5f,n=z-d*.5f,f=z+d*.5f;
             // Visible exterior faces wound consistently counterclockwise.
@@ -411,6 +458,33 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         b.tri(v(-.12f,1.25f,-.72f),v(.12f,1.25f,-.72f),
               v(0,.92f,-.82f),.15f,.24f,.29f);
         return b.mesh();
+    }
+    private static Mesh makeArmorTorso(){
+        Builder b=new Builder();
+        // Sloping shoulders taper to the waist; hand-forged breastplate relief.
+        float[] fl=v(-.30f,-.49f,.32f),fr=v(.30f,-.49f,.32f);
+        float[] tl=v(-.49f,.48f,.35f),tr=v(.49f,.48f,.35f);
+        float[] bl=v(-.30f,-.49f,-.30f),br=v(.30f,-.49f,-.30f);
+        float[] ul=v(-.49f,.48f,-.36f),ur=v(.49f,.48f,-.36f);
+        b.quad(fl,fr,tr,tl,.89f,.91f,.93f);
+        b.quad(br,bl,ul,ur,.60f,.63f,.66f);
+        b.quad(bl,fl,tl,ul,.72f,.74f,.80f);
+        b.quad(fr,br,ur,tr,.77f,.79f,.84f);
+        b.quad(tl,tr,ur,ul,.90f,.87f,.76f);
+        b.quad(bl,br,fr,fl,.55f,.57f,.59f);
+        b.tri(v(-.24f,.36f,.378f),v(.24f,.36f,.378f),
+              v(0,-.33f,.349f),.51f,.66f,.73f);
+        b.tri(v(-.11f,.24f,.384f),v(.11f,.24f,.384f),
+              v(0,-.17f,.36f),.80f,.69f,.40f);
+        return b.mesh();
+    }
+    private void drawTorso(float x,float y,float z,float yaw,float scale,
+                           float red,float green,float blue){
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y,z);
+        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+        Matrix.scaleM(model,0,.93f*scale,1.05f*scale,.80f*scale);
+        draw(armorTorso,model,red,green,blue,0);
     }
     private void drawCape(float x,float y,float z,float yaw,
                           float scale,float r,float g,float b){
