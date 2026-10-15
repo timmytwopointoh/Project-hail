@@ -65,3 +65,35 @@ compatibility; later ES3/Vulkan path can be adopted if profiling warrants.
 Renderer builds static geometry once and keeps dynamic drawcalls bounded.
 Android recommends GLSurfaceView and Renderer as the starting point for Java GL.
 Reference: https://developer.android.com/develop/ui/views/graphics/opengl/about-opengl
+
+## M0.4–M0.6 visual improvement iteration (October 2026)
+
+- **Gameplay defect fixed:** camera-relative joystick right vector is
+  `(-cos(yaw), +sin(yaw))`. Regression tests cover default and 90° cameras.
+- **M0.4 native mesh kit:** new pure-Java procedural `ArtKit` generates Bellwarden,
+  Hushed revenant, Ash Knight, longsword, greatsword and lanterns. Silhouette,
+  triangle-budget, normals, finite-value and vertex-color preflight tests run on
+  the JVM without starting Android.
+- **Renderer cleanup:** retire >25 cube draw calls per character and unused
+  old cloth/torso builders. Render each fused actor with a separate animated weapon.
+- **M0.5 environment:** branching taper-cylinder dead trees, Gothic window
+  tracery, varied grave markers, atmospheric ash vegetation and modular stone.
+  Static geometry is batched to one draw call.
+- **M0.6 atmosphere:** GPU lighting/fog preserved, shrine effects, combat
+  telegraphs and performance diagnostics sampled at most once per ~1.35 seconds.
+- **New QA gate:** `qa_analyze.py` generates image brightness/detail/contrast
+  measurements, identifies GL runtime errors and extracts frame/drawcall stats.
+  This is an automated risk signal, not proof of premium visual quality.
+- **Release rule:** accept only a passing Android emulator workflow and
+  keep M0.3 available as rollback. M0.7 proper skeletal rigging and animation,
+  full authored PBR texture assets, dynamic global illumination and
+  professional art direction remain future work.
+
+## Performance budget
+
+- Actor meshes: each ≤1,800 triangles; total six kit meshes ≤6,500 triangles.
+- OpenGL ES2-compatible materials and lighting, one static batched world mesh.
+- Avoid per-frame mesh generation. Use render telemetry to verify draw-call
+  reductions; emulator FPS is not a real-phone measurement.
+- Frame pacing: consider Android Game Development Kit Swappy after native
+  integration and profiling; no unsupported claim of Swappy integration.

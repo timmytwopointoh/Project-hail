@@ -31,13 +31,18 @@ jobs:
       - name: Compile and test pure RPG rules
         run: |
           mkdir -p /tmp/veilbound-unit
-          javac -d /tmp/veilbound-unit veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java
+          javac -d /tmp/veilbound-unit \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/WorldState.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
+            veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java \
+            veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.WorldRulesTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArtKitTest
       - name: Build true native-3D Android APK
         run: gradle -p veilbound :app:assembleDebug --no-daemon
       - name: Validate game build and scripts
         run: |
-          python3 -m py_compile veilbound/scripts/emulator_test.py
+          python3 -m py_compile veilbound/scripts/emulator_test.py veilbound/scripts/qa_analyze.py
           bash -n veilbound/scripts/emulator_test.sh
           unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
       - name: Install image quality analyzer
@@ -63,6 +68,9 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: bash veilbound/scripts/emulator_test.sh
+      - name: Analyze screenshots, renderer logs and resource budget
+        if: always()
+        run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound || true
       - name: Upload screenshots, logs and quality report
         if: always()
         uses: actions/upload-artifact@v4
