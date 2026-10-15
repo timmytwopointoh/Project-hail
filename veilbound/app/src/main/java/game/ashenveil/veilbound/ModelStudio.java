@@ -15,16 +15,16 @@ public final class ModelStudio {
     public static final class Snapshot {
         public final int item,light,material;
         public final float yaw,pitch,zoom,panX,panY;
-        public final boolean autoTurn;
+        public final boolean autoTurn,ultraMesh;
         Snapshot(ModelStudio s){
             item=s.item;light=s.light;material=s.material;
             yaw=s.yaw;pitch=s.pitch;zoom=s.zoom;
-            panX=s.panX;panY=s.panY;autoTurn=s.autoTurn;
+            panX=s.panX;panY=s.panY;autoTurn=s.autoTurn;ultraMesh=s.ultraMesh;
         }
     }
     private int item=0,light=0,material=0;
     private float yaw=.50f,pitch=.12f,zoom=4.50f,panX=0,panY=0;
-    private boolean autoTurn=false;
+    private boolean autoTurn=false,ultraMesh=true;
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
     public synchronized Snapshot snapshot(){return new Snapshot(this);}
     public synchronized void nextItem(int step){
@@ -36,6 +36,7 @@ public final class ModelStudio {
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
     public synchronized void nextMaterial(){material=(material+1)%MATERIALS.length;}
     public synchronized void toggleTurntable(){autoTurn=!autoTurn;}
+    public synchronized void toggleMeshDetail(){ultraMesh=!ultraMesh;}
     /** Focus fine geometry—especially hands, knuckles and gauntlets. */
     public synchronized void focusDetail(){
         autoTurn=false;

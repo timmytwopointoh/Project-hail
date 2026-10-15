@@ -23,6 +23,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
+    private boolean lastMeshUltra=true;
     private boolean studioLinePrimitive=false;
     private Mesh studioImported;
     private final java.util.concurrent.atomic.AtomicReference<ArtKit.Model> importQueue=
@@ -261,11 +262,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private void initStudioHighDetail(){
         if(studioWarden!=null)return;
         long start=System.nanoTime();
-        studioWarden=new Mesh(DetailArtKit.bellwarden().vertices);
-        studioHushed=new Mesh(DetailArtKit.hushed().vertices);
-        studioBoss=new Mesh(DetailArtKit.ashKnight().vertices);
-        studioSword=new Mesh(DetailArtKit.sword().vertices);
-        studioGreatsword=new Mesh(DetailArtKit.greatsword().vertices);
+        studioWarden=new Mesh(CinematicArtKit.bellwarden().vertices);
+        studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
+        studioBoss=new Mesh(CinematicArtKit.ashKnight().vertices);
+        studioSword=new Mesh(CinematicArtKit.sword().vertices);
+        studioGreatsword=new Mesh(CinematicArtKit.greatsword().vertices);
         studioLantern=new Mesh(DetailArtKit.lantern().vertices);
         int triangles=(studioWarden.count+studioHushed.count+studioBoss.count+
                        studioSword.count+studioGreatsword.count+studioLantern.count)/3;
@@ -332,6 +333,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             Log.i("VEILBOUND_STUDIO","IMPORTED_OBJ_READY triangles="+pending.triangleCount);
         }
         ModelStudio.Snapshot m=state.studio.snapshot();
+        if(lastMeshUltra!=m.ultraMesh){
+            for(int i=0;i<studioWireMeshes.length;i++)studioWireMeshes[i]=null;
+            lastMeshUltra=m.ultraMesh;
+        }
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
         float targetY=(m.item==2?2.72f:(m.item==6?3.50f:2.12f))+m.panY;
@@ -379,12 +384,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uStudioMaterial,m.material);
         Mesh chosen;
         switch(m.item){
-            case 0:chosen=studioWarden;break;
-            case 1:chosen=studioHushed;break;
-            case 2:chosen=studioBoss;break;
-            case 3:chosen=studioSword;break;
-            case 4:chosen=studioGreatsword;break;
-            case 5:chosen=studioLantern;break;
+            case 0:chosen=m.ultraMesh?studioWarden:wardenModel;break;
+            case 1:chosen=m.ultraMesh?studioHushed:hushedModel;break;
+            case 2:chosen=m.ultraMesh?studioBoss:bossModel;break;
+            case 3:chosen=m.ultraMesh?studioSword:swordModel;break;
+            case 4:chosen=m.ultraMesh?studioGreatsword:greatswordModel;break;
+            case 5:chosen=m.ultraMesh?studioLantern:lanternModel;break;
             case 6:chosen=studioChapel;break;
             default:chosen=studioImported!=null?studioImported:studioWarden;
         }
@@ -408,7 +413,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             drawCube(3.30f,.30f,0,1.1f,.6f,1.1f,.42f,.43f,.45f,0,0);
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,3.3f,.9f,0);
-            draw(m.item==2?studioGreatsword:studioSword,model,1,1,1,.08f);
+            draw(m.item==2?(m.ultraMesh?studioGreatsword:greatswordModel):(m.ultraMesh?studioSword:swordModel),model,1,1,1,.08f);
         }
     }
     private Mesh buildStudioStage(){

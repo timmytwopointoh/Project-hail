@@ -210,6 +210,7 @@ public final class WardenHud extends View {
         text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
         text(c,"IMPORT OBJ",170,158,14,GOLD,true,true);
+        text(c,m.ultraMesh?"SCULPT: ULTRA":"SCULPT: LITE",429,158,14,GOLD,true,true);
         text(c,"HAND DETAIL",660,158,14,GOLD,true,true);
         text(c,"−",827,159,35,GOLD,true,true);
         text(c,"+",931,159,35,GOLD,true,true);
@@ -301,6 +302,9 @@ public final class WardenHud extends View {
                 if(y>120&&y<213&&x<310){
                     if(importAction!=null)importAction.run();
                     return true;
+                }
+                if(y>120&&y<213&&x>310&&x<567){
+                    lab.toggleMeshDetail();invalidate();return true;
                 }
                 if(y>120&&y<213&&x>570){
                     if(x<766)lab.focusDetail();
