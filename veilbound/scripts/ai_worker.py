@@ -23,19 +23,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 JAVA = Path("veilbound/app/src/main/java/game/ashenveil/veilbound")
 TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
+# Disjoint file ownership makes real concurrent proposal jobs safe to combine.
+# Native renderer/HUD require dedicated cross-system acceptance tests before AI edit.
 ROLES = {
-    "combat": ["CombatMotion.java", "CharacterRig.java", "WorldState.java"],
-    "models": ["ArtKit.java", "CinematicArtKit.java", "DetailArtKit.java",
-               "MaterialTextures.java", "SurfaceAtlas.java", "ObjMeshLoader.java"],
-    "world": ["EnvironmentKit.java", "ModelStudio.java"],
+    "combat": ["WorldState.java"],
+    "animation": ["CombatMotion.java", "CharacterRig.java"],
+    "models": ["CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "materials": ["ArtKit.java", "MaterialTextures.java", "SurfaceAtlas.java"],
+    "world": ["EnvironmentKit.java"],
+    "studio": ["ModelStudio.java"],
 }
+assert len({file for names in ROLES.values() for file in names}) == sum(map(len, ROLES.values())), "Overlapping worker ownership"
 SCREENSHOTS = ["01_atelier_hero.png", "01_world_asset_flagstone.png",
                "02_exploration.png", "03_sword_sweep.png"]
 MAX_CHANGES = 3
 MAX_SOURCE = 55000
 
 def ask_gemini(prompt, photos=None):
-    key = os.environ.get("GEMINI_API_KEY", "")
+    # Drop the external-model key BEFORE parsing or compiling any model-authored
+    # code. Validation sub-processes never inherit this secret.
+    key = os.environ.pop("GEMINI_API_KEY", "")
     if not key:
         return None
     model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
@@ -85,10 +92,12 @@ def draft_code(role, out):
         budget -= len(clip)
         if budget <= 0:
             break
+    task_goal = os.environ.get("VEILBOUND_TASK_GOAL", "").strip()[:750]
     prompt = (
         "You are one isolated Android native OpenGL RPG Java repair worker. "
         "Task: make one small meaningful corrective improvement to " + role +
-        " logic or materials. Preserve behavior, offline game play and GLES2 compatibility. "
+        " logic or materials. Priority goal: " + task_goal +
+        ". Preserve behavior, offline game play and GLES2 compatibility. "
         "Do not invent tests, measurements or new files. Allowed files: " +
         ", ".join(map(str, allowed)) + ". "
         "Return ONLY valid JSON of shape "
@@ -150,7 +159,13 @@ def draft_code(role, out):
             cmd = ["javac", "-d", str(classes)]
             cmd += [str(staging / (c + ".java")) for c in pure]
             cmd += [str(ROOT / TESTS / (c + "Test.java")) for c in suites]
-            check = subprocess.run(cmd, text=True, capture_output=True, timeout=180)
+            # Source proposals are untrusted: no GitHub, Gemini or other secret
+            # may appear in subprocess environments. The CI job itself has
+            # only read-only repository permissions and no checkout credentials.
+            child_env = {k: v for k, v in os.environ.items()
+                         if k in ("PATH", "JAVA_HOME", "HOME", "LANG", "LC_ALL", "TMPDIR")}
+            check = subprocess.run(cmd, text=True, capture_output=True, timeout=180,
+                                   env=child_env)
             if check.returncode:
                 status = "proposed_change_failed_compile"
                 (out / "validation.txt").write_text(check.stdout[-3000:] + check.stderr[-9000:])
@@ -158,7 +173,7 @@ def draft_code(role, out):
                 for c in suites:
                     test = subprocess.run(
                         ["java", "-cp", str(classes), "game.ashenveil.veilbound." + c + "Test"],
-                        text=True, capture_output=True, timeout=35)
+                        text=True, capture_output=True, timeout=35, env=child_env)
                     if test.returncode:
                         status = "proposed_change_failed_tests"
                         (out / "validation.txt").write_text(
