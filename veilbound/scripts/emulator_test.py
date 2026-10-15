@@ -254,7 +254,9 @@ def main():
         # Real ADB swipe on left control + attack + dodge buttons.
         adb("shell","input","swipe",int(w*.12),int(h*.81),
             int(w*.15),int(h*.57),1100,timeout=35)
-        touch(w*.905,h*.806);time.sleep(.35)
+        touch(w*.905,h*.806);time.sleep(.12)
+        attack_frame=shot("03_sword_sweep.png")
+        report["screenshots"].append(attack_frame)
         touch(w*.805,h*.866);time.sleep(2)
         dismiss_android_overlay()
         third=shot("03_combat_controls.png");report["screenshots"].append(third)
@@ -265,6 +267,18 @@ def main():
             report["screen_changed"]=bbox is not None
         if not report["screen_changed"]:
             raise AssertionError("Touch and movement did not alter visible frame")
+        # Reach an encounter, test real LOCK button tap and capture its HUD.
+        # No artificial gameplay teleport or debug-only cheat is introduced.
+        adb("shell","input","swipe",int(w*.123),int(h*.81),
+            int(w*.123),int(h*.56),3200,timeout=40)
+        touch(w*.791,h*.645)
+        time.sleep(1.5)
+        report["screenshots"].append(shot("04_target_lock.png"))
+        states=adb("logcat","-d","-s","VEILBOUND_STATE:I","*:S",
+                   timeout=25).decode("utf-8","replace")
+        found=re.findall(r"\\block=(-?\\d+)",states)
+        report["lock_target_diagnostic"]=int(found[-1]) if found else None
+        report["lock_button_exercised"]=True
         report["status"]="passed"
     except Exception as exc:
         report["status"]="failed";report["error"]=repr(exc)
