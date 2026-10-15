@@ -43,7 +43,7 @@ public final class ModelStudio {
         yaw=.18f;pitch=.08f;
         panX=item==2?1.1f:.65f;
         panY=item==2?-.40f:-.34f;
-        zoom=item==2?1.75f:1.24f;
+        zoom=item==2?2.90f:2.45f;
     }
     public synchronized void reset(){
         yaw=.50f;pitch=.12f;panX=0;panY=0;

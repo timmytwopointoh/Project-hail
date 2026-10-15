@@ -28,7 +28,7 @@ public final class ModelStudioTest {
         float old=s.snapshot().yaw;s.toggleTurntable();s.tick(.3f);
         ok(s.snapshot().yaw!=old,"Turntable must rotate");
         s.focusDetail();
-        ok(s.snapshot().zoom<2f,"Close inspection must frame hand geometry");
+        ok(s.snapshot().zoom>1.80f&&s.snapshot().zoom<3f,"Detail framing should capture full glove without clipping");
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         System.out.println("VEILBOUND_MODEL_STUDIO_PASS camera, zoom, pan, selector, lights, shaders, turntable");

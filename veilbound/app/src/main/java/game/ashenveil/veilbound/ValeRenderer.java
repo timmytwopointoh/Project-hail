@@ -108,7 +108,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "}"+
         "float ndl=max(dot(n,light),0.);"+
         "float bounce=max(dot(n,normalize(vec3(.39,.34,-.76))),0.);"+
-        "vec3 amb=vec3(.21,.25,.29)+bounce*vec3(.16,.23,.27);"+
+        "vec3 amb=vec3(.43,.48,.53)+bounce*vec3(.14,.19,.23);"+
         "vec3 halfV=normalize(eye+light);"+
         "float nh=max(dot(n,halfV),0.);"+
         "float hv=max(dot(eye,halfV),0.);"+
@@ -121,11 +121,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "vec3 fresnel=f0+(vec3(1.)-f0)*pow(1.-hv,5.);"+
         "vec3 diffuse=base*(1.-metallic)/3.14159;"+
         "vec3 spec=fresnel*(d*vis*.27);"+
-        "col=(diffuse+spec)*ndl*uStudioKeyColor*2.6"+
-        "+base*amb*ao*(1.-metallic*.68);"+
+        "col=(diffuse+spec)*ndl*uStudioKeyColor*3.1"+
+        "+base*amb*ao*(1.-metallic*.33);"+
         "col+=vec3(.09,.21,.24)*pow(1.-ndv,3.)*.21;"+
         "col+=uGlow*base*.25;"+
-        "col=col/(vec3(1.)+col*.19);"+
+        "col=pow(max(col/(vec3(1.)+col*.12),vec3(.001)),vec3(.79));"+
         "if(uStudioMaterial>.5&&uStudioMaterial<1.5)col=vColor*uTint;"+
         "if(uStudioMaterial>1.5&&uStudioMaterial<2.5)col=vec3(.012,.015,.025);"+
         "if(uStudioMaterial>2.5&&uStudioMaterial<3.5)col=n*.5+.5;"+

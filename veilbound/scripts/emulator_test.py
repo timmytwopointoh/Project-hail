@@ -128,6 +128,17 @@ def main():
                 break
         if not atelier["open"]:
             raise AssertionError("Title's MODEL ATELIER button did not open studio")
+        # The HUD renders on Android's UI thread and can display LAB before
+        # the GL thread has finished constructing its dense sculpture/atlas.
+        # Wait for the GL upload signal, then for a completed rendered frame.
+        for ready_try in range(20):
+            studio_ready=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",timeout=20).decode("utf-8","replace")
+            if "SURFACE_MAPS_READY" in studio_ready and "DETAIL_MESH_READY" in studio_ready:
+                break
+            time.sleep(.6)
+        else:
+            raise AssertionError("Atelier GL high-poly / atlas initialization never completed")
+        time.sleep(2.5)
         hero=shot("01_atelier_hero.png")
         report["screenshots"].append(hero)
         adb("shell","input","swipe",int(w*.54),int(h*.46),
