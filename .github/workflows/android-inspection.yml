@@ -76,13 +76,14 @@ jobs:
             adb shell screencap -p /sdcard/after-swipe.png
             adb pull /sdcard/after-swipe.png inspection_output/after_swipe.png
             .venv/bin/python inspector/visual_compare.py inspection_output/emulator_home.png inspection_output/settings_screen.png --output inspection_output
-            adb shell settings put system accelerometer_rotation 0
-            adb shell settings put system user_rotation 1
+            adb shell settings put system accelerometer_rotation 0 || true
+            adb shell settings put system user_rotation 1 || true
             sleep 3
             adb shell screencap -p /sdcard/landscape.png
             adb pull /sdcard/landscape.png inspection_output/landscape.png
-            adb shell settings put system user_rotation 0
-            adb shell settings put system accelerometer_rotation 1
+            python3 inspector/navigate.py inspector/smoke_plan.json --output inspection_output/navigation
+            adb shell settings put system user_rotation 0 || true
+            adb shell settings put system accelerometer_rotation 1 || true
             python3 - <<'PY'
             import pathlib,struct,json
             folder=pathlib.Path("inspection_output")
@@ -119,7 +120,7 @@ jobs:
             python3 - <<'PY'
             import json,os,pathlib
             out=pathlib.Path("inspection_output")
-            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"visual_comparison_generated":(out/"visual_comparison.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
+            (out/"report.json").write_text(json.dumps({"api_level":35,"emulator_booted":(out/"boot_completed.txt").read_text().strip()=="1","screenshots_validated":(out/"screen_checks.json").exists(),"visual_comparison_generated":(out/"visual_comparison.json").exists(),"navigation_report_generated":(out/"navigation"/"navigation_report.json").exists(),"apk_requested":bool(os.getenv("APK_PATH"))},indent=2))
             PY
       - name: Collect failure diagnostics
         if: failure()
