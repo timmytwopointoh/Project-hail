@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "description": "Independent next-sprint VEILBOUND coding work. These are design goals, not confirmed defects.",
+  "tasks": [
+    {
+      "id": "VB-ROADMAP-COMBAT",
+      "role": "combat",
+      "priority": "P1",
+      "goal": "Correct objective counters so completed objectives never display overflow such as 3/2; verify lock-on target acquisition and combat state invariants in WorldState."
+    },
+    {
+      "id": "VB-ROADMAP-ANIMATION",
+      "role": "animation",
+      "priority": "P1",
+      "goal": "Improve sword swing phases, fluid forward attack arc and clear impact timing while preserving dodge, idle and stamina behavior in CombatMotion and CharacterRig."
+    },
+    {
+      "id": "VB-ROADMAP-MODELS",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Improve hero and enemy silhouettes, armor layering, hands and boots, and reduce blocky geometry with efficient deterministic mesh structures."
+    },
+    {
+      "id": "VB-ROADMAP-MATERIALS",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Add controlled roughness, metal and leather detail and more believable material sampling within native GLES2 texture and atlas budgets."
+    },
+    {
+      "id": "VB-ROADMAP-WORLD",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Improve flagstone and ruins geometry variation, terrain details and static asset batching without increasing runtime mesh regeneration."
+    },
+    {
+      "id": "VB-ROADMAP-STUDIO",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Refine the Model Atelier asset registry, camera framing and orbit controls with testable, stable real-emulator navigation."
+    }
+  ]
+}
