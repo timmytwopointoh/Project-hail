@@ -41,6 +41,7 @@ jobs:
           python3 -m unittest discover -s veilbound/tests -p 'test_worker_manager.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_ai_worker_roles.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_promote_proposal.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_gemini_client.py' -v
       - name: Verify coding and promotion pipeline without an external AI
         if: matrix.role == 'integrity'
         run: |
