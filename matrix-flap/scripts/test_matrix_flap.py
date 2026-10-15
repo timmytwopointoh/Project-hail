@@ -42,6 +42,10 @@ def state():
     result = re.search(r"\b(ready|playing|over|unavailable)\b", lines[-1])
     return result.group(1) if result else None
 
+def hierarchy():
+    adb("shell", "uiautomator", "dump", "/sdcard/matrix-flap-system-ui.xml", timeout=45)
+    return ET.fromstring(adb("exec-out", "cat", "/sdcard/matrix-flap-system-ui.xml"))
+
 def dismiss_launcher_anr():
     """Recover from transient Pixel Launcher ANR without masking game crashes."""
     try:
