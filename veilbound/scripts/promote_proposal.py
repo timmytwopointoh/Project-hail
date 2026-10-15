@@ -6,6 +6,7 @@ files against role allowlists, the immutable source commit and artifact
 metadata, then stages the contents for a reviewable draft pull request.
 """
 import argparse
+import difflib
 import json
 import os
 import re
@@ -59,6 +60,27 @@ def load_proposal(root, role, expected_sha):
         pending[path] = contents
     return pending
 
+def verify_reviewed_patch(root, artifact, pending):
+    """The human-reviewed diff must describe exactly the files to be committed.
+
+    A valid source replacement with an unrelated or forged changes.patch must
+    be rejected rather than silently promoting different code.
+    """
+    manifest = Path(artifact) / "changes.patch"
+    if not manifest.is_file() or manifest.is_symlink():
+        raise ValueError("Missing regular reviewed changes.patch")
+    expected = []
+    for path, proposed in pending.items():
+        original = (Path(root) / path).read_text(encoding="utf-8")
+        expected.extend(difflib.unified_diff(
+            original.splitlines(keepends=True),
+            proposed.splitlines(keepends=True),
+            fromfile="a/" + path, tofile="b/" + path))
+    actual = manifest.read_text(encoding="utf-8")
+    if not actual or actual != "".join(expected):
+        raise ValueError("Reviewed patch does not match promoted Java source replacements")
+
+
 def stage_proposal(root, artifact, role, expected_sha, dry_run=False):
     root = Path(root)
     actual = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
@@ -73,6 +95,7 @@ def stage_proposal(root, artifact, role, expected_sha, dry_run=False):
             raise ValueError("Original path absent or symlinked: " + name)
         if target.read_text(encoding="utf-8") == content:
             raise ValueError("No change supplied in source: " + name)
+    verify_reviewed_patch(root, artifact, pending)
     if not dry_run:
         for name, content in pending.items():
             (root / name).write_text(content, encoding="utf-8")
