@@ -16,7 +16,8 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 from team_manager import make_hierarchy
 
-MAX_WORKERS = 6
+MAX_WORKERS = 50
+DEFAULT_WORKERS = 6
 ROLE_ORDER = ("combat", "animation", "models", "materials", "world", "studio")
 ALLOWED = set(ROLE_ORDER)
 P_SCORE = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
@@ -57,7 +58,7 @@ def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None
     if isinstance(max_workers, bool) or not isinstance(max_workers, int):
         raise ValueError("Worker cap must be an integer")
     if not 1 <= max_workers <= MAX_WORKERS:
-        raise ValueError("Worker cap must be between 1 and 6")
+        raise ValueError("Worker cap must be between 1 and 50")
     findings = findings if isinstance(findings, dict) else {}
     roadmap = roadmap if isinstance(roadmap, dict) else {}
     # A failed native build with no machine-readable report is a high-priority
@@ -78,18 +79,32 @@ def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None
     candidate.sort(key=lambda x: (P_SCORE[x["priority"]],
                    0 if x["source"] == "measured-qa" else 1,
                    ROLE_ORDER.index(x["role"]), x["task_id"]))
-    selected = []
-    claimed = set()
-    for item in candidate:
-        if missing_failure_evidence:
+    # Each job gets its own immutable checkout and emits an isolated patch.
+    # Multiple workers may explore different tasks within one source domain,
+    # but no worker changes or merges the live game branch automatically.
+    unique = {}
+    for task in candidate:
+        unique.setdefault((task["role"], task["task_id"]), task)
+    queues = {role: [] for role in ROLE_ORDER}
+    for task in unique.values():
+        queues[task["role"]].append(task)
+    from team_manager import ROLE_TEAM, MAX_CHILDREN_PER_MANAGER
+    selected, counts = [], {role: 0 for role in ROLE_ORDER}
+    team_load = {name: 0 for name in set(ROLE_TEAM.values())}
+    while not missing_failure_evidence and len(selected) < max_workers:
+        eligible = [role for role in ROLE_ORDER if queues[role]
+                    and team_load[ROLE_TEAM[role]] < MAX_CHILDREN_PER_MANAGER]
+        if not eligible:
             break
-        if item["role"] in claimed:
-            continue
-        claimed.add(item["role"])
-        selected.append(item)
-        if len(selected) >= max_workers:
-            break
-    selected.sort(key=lambda x: ROLE_ORDER.index(x["role"]))
+        role = min(eligible, key=lambda name: (
+            P_SCORE[queues[name][0]["priority"]],
+            0 if queues[name][0]["source"] == "measured-qa" else 1,
+            counts[name], ROLE_ORDER.index(name)))
+        task = dict(queues[role].pop(0))
+        task["slot_id"] = "w%03d" % (len(selected) + 1)
+        selected.append(task)
+        counts[role] += 1
+        team_load[ROLE_TEAM[role]] += 1
     ignored = []
     for row in findings.get("tasks", []) if isinstance(findings.get("tasks", []), list) else []:
         if isinstance(row, dict) and row.get("worker") in OBSERVATION_ONLY:
@@ -114,8 +129,8 @@ def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None
             "team_count": hierarchy["team_count"],
             "max_manager_depth": hierarchy["max_depth"],
             "review_only": ignored,
-            "note": "Every worker edits separate allowlisted files in an isolated job. "
-                    "No source files, branches or PRs are changed automatically."}
+            "note": "Same-role workers may propose alternate patches, but each job "
+                    "uses a separate immutable checkout; auto-merge remains disabled."}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -123,7 +138,7 @@ def main():
                         default=Path("veilbound/worker_backlog.json"))
     parser.add_argument("--findings", type=Path,
                         default=Path("inspection_output/veilbound/task_plan.json"))
-    parser.add_argument("--max-workers", type=int, default=4)
+    parser.add_argument("--max-workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--workflow-conclusion", default="")
     parser.add_argument("--out", type=Path,
                         default=Path("inspection_output/manager"))
@@ -140,8 +155,8 @@ def main():
              + str(result["max_workers"]) + " requested", "",
              "| Team | Worker | Priority | Work assignment |", "|---|---|---|---|"]
     for entry in result["matrix"]["include"]:
-        lines.append("| " + entry["team"] + " | " + entry["role"] + " | " + entry["priority"] + " | "
-                     + entry["goal"].replace("|", "/") + " |")
+        lines.append("| " + entry["team"] + " | " + entry["role"] + " #" + entry["slot_id"] +
+                     " | " + entry["priority"] + " | " + entry["goal"].replace("|", "/") + " |")
     if result["paused_for_missing_failure_evidence"]:
         lines += ["", "**Automatic work paused:** failed native build with no usable "
                   "repair report. Inspect the Android build logs first.", ""]
