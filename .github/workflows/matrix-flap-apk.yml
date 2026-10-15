@@ -1,0 +1,73 @@
+name: Matrix Flap - Real APK Emulator Test
+on:
+  push:
+    branches:
+      - main
+      - feature/matrix-flap-android-test
+    paths:
+      - 'matrix-flap/**'
+      - '.github/workflows/matrix-flap-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: matrix-flap-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build original Matrix Flap APK
+        run: gradle -p matrix-flap :app:assembleDebug --no-daemon
+      - name: Validate test scripts
+        run: |
+          bash -n matrix-flap/scripts/emulator_test.sh
+          python3 -m py_compile matrix-flap/scripts/test_matrix_flap.py
+      - name: Install image comparison dependency
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Enable KVM for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Android 15 install and gameplay test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash matrix-flap/scripts/emulator_test.sh
+      - name: Upload gameplay screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-flap-gameplay-report
+          path: inspection_output/matrix_flap/
+          if-no-files-found: warn
+      - name: Upload tested Matrix Flap APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-flap-android15-tested-apk
+          path: matrix-flap/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
