@@ -42,6 +42,25 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual("GL-bug", row["task_id"])
         self.assertEqual(3, p["allocated"])
 
+    def test_failed_build_without_report_pauses_speculative_coders(self):
+        p = manager.plan(self.fixture(), {}, max_workers=6,
+                         workflow_conclusion="failure")
+        self.assertEqual(0, p["allocated"])
+        self.assertTrue(p["paused_for_missing_failure_evidence"])
+        self.assertEqual("VB-CI-FAILURE-NO-ARTIFACT",
+                         p["review_only"][0]["task_id"])
+
+    def test_failed_emulator_with_specific_studio_issue_dispatches_studio(self):
+        findings = {"tasks": [
+            {"id": "VB-STUDIO-ORBIT", "worker": "studio", "priority": "P1",
+             "repair_guidance": "Investigate real touch orbit mismatch"}]}
+        p = manager.plan(self.fixture(), findings, max_workers=2,
+                         workflow_conclusion="failure")
+        self.assertFalse(p["paused_for_missing_failure_evidence"])
+        self.assertIn("studio", p["spawned_roles"])
+        self.assertEqual("measured-qa", next(x["source"] for x in
+                         p["matrix"]["include"] if x["role"] == "studio"))
+
     def test_unsafe_roles_never_reach_code_job(self):
         findings = {"tasks": [
             {"id": "renderer", "worker": "renderer", "priority": "P0",
