@@ -22,6 +22,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
+    private Rigged playerRig,revenantRig,knightRig;
+    private Mesh verdigrisPool;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
     private boolean lastMeshUltra=true;
     private boolean studioLinePrimitive=false;
@@ -193,6 +195,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         swordModel=new Mesh(ArtKit.sword().vertices);
         greatswordModel=new Mesh(ArtKit.greatsword().vertices);
         lanternModel=new Mesh(ArtKit.lantern().vertices);
+        // Premium sculpt details from the atelier, with GPU-friendly rigid bones.
+        playerRig=new Rigged(CharacterRig.split(DetailArtKit.bellwarden(),false,false));
+        revenantRig=new Rigged(CharacterRig.split(DetailArtKit.hushed(),false,true));
+        knightRig=new Rigged(CharacterRig.split(DetailArtKit.ashKnight(),true,false));
+        verdigrisPool=buildVerdigrisPool();
         staticWorld=buildWorld();
         studioWorld=buildStudioStage();
         studioChapel=buildStudioChapel();
@@ -539,17 +546,29 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         // Relic runes and occasional blue motes invite exploration.
         drawOcta(6.1f,terrain(6.1f,19)+1.9f,19,.21f,.46f,.21f,.28f,.8f,1f,1.7f,tm*9);
+        drawBloodOnStone(tm);
         // Fused custom character models with distinct armor, skeletal and boss silhouettes;
         // weapon pivot is animated independently to keep attack timing readable.
         drawKnight(state.x,terrain(state.x,state.z),state.z,state.heading,
-                false,false,tm,state.walkPhase,state.swing,state.dodge);
+                false,false,tm,state.walkPhase,state.swing,state.dodge,
+                state.motionBlend,state.exertion,state.hurtFlash,0f);
         for(WorldState.Foe foe:state.foes){
             if(!foe.alive||(foe.boss&&!state.bossTriggered))continue;
             float ang=(float)Math.atan2(state.x-foe.x,state.z-foe.z);
             float tellSwing=foe.windup>0
-                ? .57f*foe.windup/(foe.boss?.92f:.72f):0f;
+                ? CombatMotion.DURATION*(.97f-.17f*(1f-foe.windup/(foe.boss?.92f:.72f)))
+                :foe.attackPose;
             drawKnight(foe.x,terrain(foe.x,foe.z),foe.z,ang,true,foe.boss,
-                    tm,foe.phase,tellSwing,0);
+                    tm,foe.phase,tellSwing,0,foe.moving,foe.boss?.35f:.16f,
+                    foe.stagger,foe.windup);
+            if(state.lockTarget>=0 && state.foes[state.lockTarget]==foe){
+                drawOcta(foe.x,terrain(foe.x,foe.z)+(foe.boss?4.82f:3.05f)
+                    +.08f*(float)Math.sin(tm*4f),foe.z,
+                    .23f,.32f,.23f,.91f,.81f,.45f,1.65f,tm*62f);
+                drawOcta(foe.x,terrain(foe.x,foe.z)+.045f,foe.z,
+                    foe.boss?1.05f:.66f,.045f,foe.boss?1.05f:.66f,
+                    .78f,.65f,.28f,.45f,tm*24f);
+            }
             if(foe.windup>0){
                 float t=foe.boss?foe.windup/.92f:foe.windup/.72f;
                 float glow=.50f+(1-t)*1.7f;
