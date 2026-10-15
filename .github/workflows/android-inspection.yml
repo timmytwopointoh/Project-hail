@@ -45,7 +45,7 @@ jobs:
           heap-size: 512M
           disk-size: 4096M
           profile: pixel_6
-          disable-animations: true
+          disable-animations: false
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: |
@@ -57,11 +57,17 @@ jobs:
               sleep 5
             done
             test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+            sleep 10
             adb shell getprop sys.boot_completed | tee inspection_output/boot_completed.txt
             adb shell getprop ro.build.version.release | tee inspection_output/android_version.txt
             adb devices -l | tee inspection_output/adb_devices.txt
             adb shell screencap -p /sdcard/home.png
             adb pull /sdcard/home.png inspection_output/emulator_home.png
+            adb shell am start -W -a android.settings.SETTINGS | tee inspection_output/settings_launch.txt
+            sleep 3
+            adb shell screencap -p /sdcard/settings.png
+            adb pull /sdcard/settings.png inspection_output/settings_screen.png
+            adb shell input keyevent KEYCODE_HOME
             adb shell wm size | tee inspection_output/display_size.txt
             adb shell wm density | tee inspection_output/display_density.txt
             adb shell input keyevent KEYCODE_HOME
@@ -69,7 +75,7 @@ jobs:
             sleep 2
             adb shell screencap -p /sdcard/after-swipe.png
             adb pull /sdcard/after-swipe.png inspection_output/after_swipe.png
-            .venv/bin/python inspector/visual_compare.py inspection_output/emulator_home.png inspection_output/after_swipe.png --output inspection_output
+            .venv/bin/python inspector/visual_compare.py inspection_output/emulator_home.png inspection_output/settings_screen.png --output inspection_output
             adb shell settings put system accelerometer_rotation 0
             adb shell settings put system user_rotation 1
             sleep 3
@@ -81,7 +87,7 @@ jobs:
             import pathlib,struct,json
             folder=pathlib.Path("inspection_output")
             checks={}
-            for name in ("emulator_home.png","after_swipe.png","landscape.png"):
+            for name in ("emulator_home.png","settings_screen.png","after_swipe.png","landscape.png"):
                 data=(folder/name).read_bytes()
                 assert data[:8]==bytes.fromhex("89504e470d0a1a0a"), name
                 width,height=struct.unpack(">II",data[16:24])
@@ -119,8 +125,8 @@ jobs:
         if: failure()
         run: |
           mkdir -p inspection_output
-          adb devices -l > inspection_output/adb_failure.txt 2>&1 || true
-          adb logcat -d -t 300 > inspection_output/logcat_failure.txt 2>&1 || true
+          timeout 15s adb devices -l > inspection_output/adb_failure.txt 2>&1 || true
+          timeout 15s adb logcat -d -t 300 > inspection_output/logcat_failure.txt 2>&1 || true
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
