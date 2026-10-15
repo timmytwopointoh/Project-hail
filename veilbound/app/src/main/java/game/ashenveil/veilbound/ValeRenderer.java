@@ -17,7 +17,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final WorldState state;
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
     private int skyPos,skyClock;
     private Mesh staticWorld,cube,octa,needle;
     private FloatBuffer skyVertices;
@@ -26,7 +26,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private float qualityClock=0,fps=60;
     private int frames=0;
     private float cx,cy,cz;
-    private final float[] fogColor={.105f,.143f,.185f};
+    private final float[] fogColor={.125f,.159f,.189f};
 
     public ValeRenderer(WorldState s){state=s;}
     public float currentFps(){return fps;}
@@ -41,15 +41,21 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final String FRAGMENT=
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
         "varying vec3 vWorld; uniform vec3 uTint; uniform vec3 uEye; "+
-        "uniform vec3 uFog; uniform float uGlow; "+
+        "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
+        "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "void main(){vec3 n=normalize(vNormal); "+
-        "float sun=max(dot(n,normalize(vec3(-0.42,0.84,-0.31))),0.); "+
-        "float rim=pow(1.-max(dot(n,normalize(uEye-vWorld)),0.),2.)*.11; "+
-        "float ambient=.32+max(n.y,0.)*.11; "+
-        "vec3 col=vColor*uTint*(ambient+sun*.70+rim); "+
-        "col+=uGlow*vColor*uTint*.55; "+
+        "float sun=max(dot(n,normalize(vec3(-.45,.79,-.28))),0.); "+
+        "float fill=max(dot(n,normalize(vec3(.72,.32,.29))),0.); "+
+        "float wear=mix(1.,.84+.21*grit(floor(vWorld*5.5)),uSurface); "+
+        "float seam=step(.966,fract(vWorld.y*2.5)); "+
+        "wear*=1.-uSurface*seam*.13; "+
+        "float rim=pow(1.-max(dot(n,normalize(uEye-vWorld)),0.),2.)*.18; "+
+        "vec3 warmth=vec3(1.12,.91,.70)*sun*.72; "+
+        "vec3 cold=vec3(.46,.65,.88)*fill*.18; "+
+        "vec3 col=vColor*uTint*wear*(vec3(.27,.32,.37)+warmth+cold+rim); "+
+        "col+=uGlow*vColor*uTint*.65; "+
         "float d=distance(uEye,vWorld); "+
-        "float fog=clamp((d-15.)/78.,0.,.86); "+
+        "float fog=clamp((d-13.)/67.,0.,.87); "+
         "fog=fog*fog*(3.-2.*fog); "+
         "gl_FragColor=vec4(mix(col,uFog,fog),1.);}";
     private static final String SKY_VERTEX=
@@ -88,6 +94,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uEye=GLES20.glGetUniformLocation(program,"uEye");
         uGlow=GLES20.glGetUniformLocation(program,"uGlow");
         uFog=GLES20.glGetUniformLocation(program,"uFog");
+        uSurface=GLES20.glGetUniformLocation(program,"uSurface");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
@@ -141,7 +148,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private void drawStatic(){
         Matrix.setIdentityM(model,0);
+        GLES20.glUniform1f(uSurface,1f);
         draw(staticWorld,model,1,1,1,0);
+        GLES20.glUniform1f(uSurface,0f);
     }
 
     private static float terrain(float x,float z) {
