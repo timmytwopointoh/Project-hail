@@ -13,7 +13,7 @@ public final class WorldState {
         public float x,z,hp;
         public final float maxHp;
         public final boolean boss;
-        public float windup,recovery,stagger,phase,moving,bleed;
+        public float windup,recovery,stagger,phase,moving,bleed,attackPose;
         public boolean alive=true,counted=false;
         Foe(String name,float x,float z,float hp,boolean boss){
             this.name=name;this.x=x;this.z=z;this.hp=hp;this.maxHp=hp;this.boss=boss;
@@ -202,7 +202,10 @@ public final class WorldState {
         invulnerable=Math.max(0,invulnerable-dt);
         hurtFlash=Math.max(0,hurtFlash-dt*2.5f);
         impactFlash=Math.max(0,impactFlash-dt*2.4f);
-        for(Foe f:foes)f.bleed=Math.max(0,f.bleed-dt);
+        for(Foe f:foes){
+            f.bleed=Math.max(0,f.bleed-dt);
+            f.attackPose=Math.max(0,f.attackPose-dt);
+        }
         float oldSwing=swing;
         swing=Math.max(0,swing-dt);
         attackTime=Math.max(0,attackTime-dt);
@@ -281,6 +284,7 @@ public final class WorldState {
             if(f.windup>0){
                 f.windup-=dt;f.moving*=.82f;
                 if(f.windup<=0){
+                    f.attackPose=.35f; // visible follow-through at the impact beat
                     if(dist(x,z,f.x,f.z)<(f.boss?3.6f:2.6f)&&invulnerable<=0){
                         hp-=f.boss?29:16;
                         hurtFlash=.65f;invulnerable=.68f;
