@@ -49,7 +49,7 @@ def dismiss_android_overlay():
                 button=next((n for n in nodes if n.get("text","")=="Wait"),None)
             if button is None:
                 return
-            m=re.fullmatch(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]",button.get("bounds",""))
+            m=re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",button.get("bounds",""))
             if m is None:return
             x1,y1,x2,y2=map(int,m.groups())
             touch((x1+x2)//2,(y1+y2)//2)
