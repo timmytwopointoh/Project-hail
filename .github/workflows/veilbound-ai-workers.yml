@@ -33,7 +33,7 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.head_repository.full_name == github.repository &&
-       github.event.workflow_run.conclusion == 'success')
+       contains(fromJSON('["success","failure"]'), github.event.workflow_run.conclusion))
     runs-on: ubuntu-latest
     timeout-minutes: 6
     outputs:
@@ -56,11 +56,13 @@ jobs:
           path: inspection_output/veilbound
           run-id: ${{ github.event.workflow_run.id || inputs.emulator_run_id }}
           github-token: ${{ github.token }}
+        continue-on-error: true
       - name: Spawn worker assignments from measured QA and roadmap
         id: plan
         run: |
           python3 veilbound/scripts/worker_manager.py \
             --max-workers "${{ inputs.max_workers || '6' }}" \
+            --workflow-conclusion "${{ github.event.workflow_run.conclusion || '' }}" \
             --github-output "${GITHUB_OUTPUT}" \
             --out inspection_output/manager
           cat inspection_output/manager/assignment_plan.md >> "${GITHUB_STEP_SUMMARY}"
