@@ -71,6 +71,12 @@ def shot(name):
         quality={"path":name,"width":rgb.width,"height":rgb.height,
                  "bytes":len(content),"stddev":list(map(lambda n:round(n,2),std)),
                  "distinct_colors":colors}
+    sample=rgb.resize((120,68))
+    samples=list(sample.getdata())
+    bright=sum(1 for r,g,b in samples if min(r,g,b)>218)/len(samples)
+    quality["near_white_coverage"]=round(bright,4)
+    if bright>.08:
+        raise AssertionError("System dialog still obscures the native 3D scene; white coverage="+str(round(bright,3)))
     if min(quality["width"],quality["height"])<500 or max(std)<8:
         raise AssertionError("Renderer frame is blank, obscured or too small: "+str(quality))
     return quality
@@ -88,7 +94,14 @@ def main():
         time.sleep(6)
         dismiss_android_overlay()
         time.sleep(1.5)
-        first=shot("01_menu.png")
+        for retry in range(3):
+            dismiss_android_overlay()
+            time.sleep(.75)
+            try:
+                first=shot("01_menu.png")
+                break
+            except AssertionError:
+                if retry==2:raise
         report["screenshots"].append(first);w,h=first["width"],first["height"]
         report["initial_mode"]=diagnostic_state()
         # System's one-time immersive tutorial may cover the first screen.
@@ -116,6 +129,8 @@ def main():
         if not report["touch_started"]:
             raise AssertionError("Real touch input did not start native game: "+str(report["mode_after_start"]))
         time.sleep(1)
+        dismiss_android_overlay()
+        time.sleep(.6)
         second=shot("02_exploration.png");report["screenshots"].append(second)
         report["gpu_scene_visible"]=True
         # Real ADB swipe on left control + attack + dodge buttons.
@@ -123,6 +138,7 @@ def main():
             int(w*.15),int(h*.57),1100,timeout=35)
         touch(w*.905,h*.806);time.sleep(.35)
         touch(w*.805,h*.866);time.sleep(2)
+        dismiss_android_overlay()
         third=shot("03_combat_controls.png");report["screenshots"].append(third)
         with Image.open(OUT/"02_exploration.png") as a,Image.open(OUT/"03_combat_controls.png") as b:
             small_a=a.convert("RGB").resize((160,90))

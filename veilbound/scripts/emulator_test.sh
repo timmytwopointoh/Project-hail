@@ -2,6 +2,10 @@
 set -euo pipefail
 mkdir -p inspection_output/veilbound
 adb wait-for-device
+# Lower software GPU load on CI without changing actual phone rendering.
+adb shell wm size 1280x720
+adb shell wm density 240
+sleep 3
 test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
 APK="veilbound/app/build/outputs/apk/debug/app-debug.apk"
 SDK_TOOLS=$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
