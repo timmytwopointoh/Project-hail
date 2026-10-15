@@ -1,0 +1,44 @@
+name: VEILBOUND - Parallel Worker QA
+on:
+  push:
+    branches:
+      - 'feature/veilbound-*'
+    paths:
+      - 'veilbound/**'
+      - '.github/workflows/veilbound-parallel-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+# Deliberately no cancel-in-progress: each commit gets an immutable test report,
+# even when artists/developers are already editing the next commit.
+jobs:
+  worker-qa:
+    name: QA worker / ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        role: [combat, assets, integrity]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Execute isolated QA worker
+        run: python3 veilbound/scripts/qa_workers.py --role "${{ matrix.role }}" --out "inspection_output/worker-${{ matrix.role }}"
+      - name: Keep independent QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-worker-${{ matrix.role }}-${{ github.run_attempt }}
+          path: inspection_output/worker-${{ matrix.role }}/*.json
+          if-no-files-found: warn
+          retention-days: 14
