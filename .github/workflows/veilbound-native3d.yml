@@ -5,7 +5,15 @@ on:
       - 'feature/veilbound-*'
       - main
     paths:
-      - 'veilbound/**'
+      # Only game/runtime and emulator analysis changes need a costly full APK run.
+      # Manager task plans and docs are covered by fast parallel QA instead.
+      - 'veilbound/app/**'
+      - 'veilbound/build.gradle'
+      - 'veilbound/settings.gradle'
+      - 'veilbound/scripts/emulator_test.py'
+      - 'veilbound/scripts/emulator_test.sh'
+      - 'veilbound/scripts/qa_analyze.py'
+      - 'veilbound/scripts/qa_coordinator.py'
       - '.github/workflows/veilbound-native3d.yml'
   workflow_dispatch:
 permissions:
