@@ -254,7 +254,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawPart(x,root+.93f*scale,z,0,0,.20f,.93f,.19f,.66f,
                 yaw,.28f,.22f,.18f,0);
         drawPart(x,root+1.21f*scale,z,0,0,.44f,.16f,.28f,.08f,
-                yaw,foe?.73f:.82f,.58f,.68f,.35f,.1f);
+                yaw,foe?.73f:.82f,.58f,.68f,.1f);
         for(int side=-1;side<=1;side+=2){
             drawPart(x,root+2.63f*scale,z,side*.30f,0,0,.23f,.38f,.26f,
                     yaw,c*.65f,g*.75f,b*.90f,0);
