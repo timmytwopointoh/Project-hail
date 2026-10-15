@@ -17,9 +17,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final WorldState state;
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight;
     private int skyPos,skyClock,detailTexture,uDetail;
-    private Mesh staticWorld,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
+    private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -44,7 +44,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
         "varying vec3 vWorld; uniform vec3 uTint; uniform vec3 uEye; "+
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
-        "uniform sampler2D uDetail; "+
+        "uniform sampler2D uDetail; uniform float uStudioMode; "+
+        "uniform float uStudioMaterial; uniform vec3 uStudioLight; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "void main(){vec3 n=normalize(vNormal); "+
         "float sun=max(dot(n,normalize(vec3(-.45,.79,-.28))),0.); "+
@@ -69,6 +70,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "fog+=clamp((2.-vWorld.y)*.045,0.,.13)*clamp(d/27.,0.,1.);"+
         "fog=clamp(fog,0.,.90); "+
         "fog=fog*fog*(3.-2.*fog); "+
+        "if(uStudioMode>.5){"+
+        "float key=max(dot(n,normalize(uStudioLight)),0.);"+
+        "float bounce=max(dot(n,normalize(vec3(.3,.35,-.7))),0.);"+
+        "vec3 tint=vec3(.15,.16,.18)+key*vec3(.90,.83,.73)+bounce*vec3(.16,.24,.32);"+
+        "col=vColor*uTint*tint + uGlow*vColor*.30;"+
+        "if(uStudioMaterial>.5&&uStudioMaterial<1.5)col=vColor*uTint;"+
+        "if(uStudioMaterial>1.5&&uStudioMaterial<2.5)col=vec3(.012,.015,.025);"+
+        "if(uStudioMaterial>2.5)col=n*.5+.5;"+
+        "gl_FragColor=vec4(col,1.);return;}"+
         "gl_FragColor=vec4(mix(col,uFog,fog),1.);}";
     private static final String SKY_VERTEX=
         "attribute vec2 aPos; varying vec2 vUv; "+
@@ -108,6 +118,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uFog=GLES20.glGetUniformLocation(program,"uFog");
         uSurface=GLES20.glGetUniformLocation(program,"uSurface");
         uDetail=GLES20.glGetUniformLocation(program,"uDetail");
+        uStudioMode=GLES20.glGetUniformLocation(program,"uStudioMode");
+        uStudioMaterial=GLES20.glGetUniformLocation(program,"uStudioMaterial");
+        uStudioLight=GLES20.glGetUniformLocation(program,"uStudioLight");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
@@ -120,6 +133,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         greatswordModel=new Mesh(ArtKit.greatsword().vertices);
         lanternModel=new Mesh(ArtKit.lantern().vertices);
         staticWorld=buildWorld();
+        studioWorld=buildStudioStage();
+        studioChapel=buildStudioChapel();
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count+
               " actor_verts="+(wardenModel.count+hushedModel.count+bossModel.count)+
@@ -140,6 +155,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawCalls=0;
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
         renderSky();
+        if("lab".equals(state.snapshot().mode)){
+            renderStudio();
+            sampleFrameQuality();
+            return;
+        }
         float yaw=state.cameraYaw;
         cx=state.x-(float)Math.sin(yaw)*8.4f;
         cy=terrain(state.x,state.z)+4.35f;
@@ -152,9 +172,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
         GLES20.glUniform1i(uDetail,0);
         GLES20.glUniform3f(uEye,cx,cy,cz);
+        GLES20.glUniform1f(uStudioMode,0f);
+        GLES20.glUniform1f(uStudioMaterial,0f);
+        GLES20.glUniform3f(uStudioLight,-.40f,.83f,-.3f);
         GLES20.glUniform3f(uFog,fogColor[0],fogColor[1],fogColor[2]);
         drawStatic();
         drawAnimatedObjects();
+        sampleFrameQuality();
+    }
+    private void sampleFrameQuality(){
         // Throttled diagnostics feed automated visual QA without per-frame
         // logcat overhead or lying about FPS when simulation clamps dt.
         if(qualityClock>1.35f){
