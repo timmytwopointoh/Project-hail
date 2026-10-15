@@ -39,8 +39,32 @@ def analyze(folder):
     perf=[{"fps":float(f),"draw_calls":int(d),"static_vertices":int(v),
            "gl_error":int(e)} for f,d,v,e in matches]
     issue_codes=sorted(set(p["gl_error"] for p in perf if p["gl_error"]!=0))
+    # Independent screenshots of each world asset. Compare central 3D stage,
+    # not only text labels, to detect missing geometry and scene regressions.
+    from PIL import ImageChops
+    asset_names=("flagstone","cenotaph","reliquary","root_fan")
+    asset_files=[folder/("01_world_asset_"+name+".png") for name in asset_names]
+    asset_comparisons=[]
+    if all(p.is_file() for p in asset_files):
+        previous=None
+        for name,path in zip(asset_names,asset_files):
+            with Image.open(path) as im:
+                rgb=im.convert("RGB")
+                ww,hh=rgb.size
+                stage=rgb.crop((int(ww*.29),int(hh*.23),
+                                int(ww*.73),int(hh*.72))).resize((170,110))
+                if previous is not None:
+                    diff=ImageChops.difference(stage,previous)
+                    delta=round(sum(ImageStat.Stat(diff).mean)/3,2)
+                    asset_comparisons.append({
+                        "asset":name,"stage_mean_absolute_change":delta})
+                previous=stage
     warnings=[]
     if not metrics:warnings.append("No emulator PNG screenshots available")
+    if any(not p.is_file() for p in asset_files):
+        warnings.append("Studio asset screenshot(s) missing")
+    if any(a["stage_mean_absolute_change"]<1.25 for a in asset_comparisons):
+        warnings.append("Two distinct world assets look nearly identical in the studio")
     if report.get("status")!="passed":
         warnings.append("Android gameplay acceptance test did not pass")
     if issue_codes:warnings.append("Non-zero OpenGL error codes: "+str(issue_codes))
@@ -51,6 +75,7 @@ def analyze(folder):
     if len(perf)==0:warnings.append("No FPS samples in tail log; check renderer log retention")
     result={"emulator_test":report.get("status","missing"),
             "screenshots":metrics,"performance_samples":perf,
+            "world_asset_stage_comparisons":asset_comparisons,
             "observed_fps_range":[round(min(x["fps"] for x in perf),1),
                                   round(max(x["fps"] for x in perf),1)] if perf else None,
             "warnings":warnings}
@@ -62,6 +87,10 @@ def analyze(folder):
         lines.append("| "+image["file"]+" | "+", ".join(map(str,image["mean_rgb"]))+
                      " | "+str(image["edge_energy"])+" |")
     lines+=["","Frame samples: **"+str(len(perf))+"**", ""]
+    lines+=["## World asset stage comparisons (pixel mean absolute delta)",""]
+    for diff in asset_comparisons:
+        lines.append("- "+diff["asset"]+": "+str(diff["stage_mean_absolute_change"]))
+    lines.append("")
     if result["observed_fps_range"]:
         lines.append("Emulator FPS range: **"+str(result["observed_fps_range"])+"**")
     lines+=["","## Warnings"]+["- "+v for v in warnings]
