@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Validate emulator Bash script
+        run: bash -n scripts/emulator_smoke.sh
       - name: Test visual comparison engine
         run: |
           python3 -m venv .venv
