@@ -276,7 +276,7 @@ def main():
         report["screenshots"].append(shot("04_target_lock.png"))
         states=adb("logcat","-d","-s","VEILBOUND_STATE:I","*:S",
                    timeout=25).decode("utf-8","replace")
-        found=re.findall(r"\\block=(-?\\d+)",states)
+        found=re.findall(r"\block=(-?\d+)",states)
         report["lock_target_diagnostic"]=int(found[-1]) if found else None
         report["lock_button_exercised"]=True
         report["status"]="passed"
