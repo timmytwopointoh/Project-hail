@@ -10,6 +10,12 @@ import json
 import os
 from pathlib import Path
 
+# Team managers are separate bounded CI jobs and approve each worker's scope.
+import sys
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from team_manager import make_hierarchy
+
 MAX_WORKERS = 6
 ROLE_ORDER = ("combat", "animation", "models", "materials", "world", "studio")
 ALLOWED = set(ROLE_ORDER)
@@ -95,13 +101,18 @@ def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None
                            "priority": "P0", "action": "inspect-native-build-logs",
                            "reason": "Native workflow failed without a usable task_plan.json; "
                                      "automatic code proposals are paused for this cycle"})
-    return {"schema_version": 1,
+    hierarchy = make_hierarchy(selected)
+    return {"schema_version": 2,
             "max_workers": max_workers,
             "workflow_conclusion": workflow_conclusion or "unspecified",
             "paused_for_missing_failure_evidence": missing_failure_evidence,
             "allocated": len(selected),
             "spawned_roles": [x["role"] for x in selected],
-            "matrix": {"include": selected},
+            "matrix": hierarchy["worker_matrix"],
+            "team_matrix": hierarchy["team_matrix"],
+            "worker_matrix": hierarchy["worker_matrix"],
+            "team_count": hierarchy["team_count"],
+            "max_manager_depth": hierarchy["max_depth"],
             "review_only": ignored,
             "note": "Every worker edits separate allowlisted files in an isolated job. "
                     "No source files, branches or PRs are changed automatically."}
@@ -123,12 +134,13 @@ def main():
                   workflow_conclusion=args.workflow_conclusion)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "assignment_plan.json").write_text(json.dumps(result, indent=2) + "\n")
-    lines = ["# VEILBOUND master worker allocation", "",
+    lines = ["# VEILBOUND hierarchical development manager", "",
+             "Team managers spawned: **" + str(result["team_count"]) + "** / 3  ",
              "Concurrent workers: **" + str(result["allocated"]) + "** / "
              + str(result["max_workers"]) + " requested", "",
-             "| Role | Priority | Work assignment |", "|---|---|---|"]
+             "| Team | Worker | Priority | Work assignment |", "|---|---|---|---|"]
     for entry in result["matrix"]["include"]:
-        lines.append("| " + entry["role"] + " | " + entry["priority"] + " | "
+        lines.append("| " + entry["team"] + " | " + entry["role"] + " | " + entry["priority"] + " | "
                      + entry["goal"].replace("|", "/") + " |")
     if result["paused_for_missing_failure_evidence"]:
         lines += ["", "**Automatic work paused:** failed native build with no usable "
@@ -141,6 +153,8 @@ def main():
         with args.github_output.open("a", encoding="utf-8") as file:
             file.write("matrix=" + matrix + "\n")
             file.write("worker_count=" + str(result["allocated"]) + "\n")
+            file.write("team_count=" + str(result["team_count"]) + "\n")
+            file.write("team_matrix=" + json.dumps(result["team_matrix"], separators=(",", ":")) + "\n")
     print(json.dumps({"allocated": result["allocated"],
                       "roles": result["spawned_roles"],
                       "review_only": result["review_only"]}, indent=2))
