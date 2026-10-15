@@ -68,11 +68,85 @@ button:active{filter:brightness(.82);transform:translateY(1px)}
 @media(max-width:340px){.top{padding-inline:10px}.brand strong{font-size:18px;letter-spacing:1px}.stats{gap:4px}.stat{min-width:45px;padding:6px}.stat b{font-size:19px}.label{letter-spacing:2px}.hud-status{left:11px}}
 @media(max-height:590px){.hud-status{top:65px}.tools{top:64px}.fps{top:115px}.modal{padding:45px 12px}.card{padding:17px}.card:before{display:none}}
 @media(prefers-reduced-motion:reduce){.card,button{scroll-behavior:auto}}
+
+/* CINEMATIC V1.2 — GPU-conscious CSS depth, with motion accessibility. */
+#game{perspective:950px}
+#game::before{content:"";position:absolute;inset:-12%;z-index:1;pointer-events:none;
+ background:radial-gradient(ellipse at 67% 29%,rgba(139,78,242,.11),transparent 33%),
+ radial-gradient(ellipse at 18% 73%,rgba(34,253,147,.10),transparent 43%);
+ animation:auroraDrift 12s ease-in-out infinite alternate}
+#game::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,rgba(157,255,220,.012) 6px,transparent 7px);
+ opacity:.65}
+#sceneLight{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+#sceneLight .ray{position:absolute;top:-24%;width:20%;height:140%;
+ background:linear-gradient(90deg,transparent,rgba(102,255,195,.046),transparent);
+ transform:rotate(19deg);animation:rayShift 11s ease-in-out infinite alternate}
+#sceneLight .ray:nth-child(1){left:5%;animation-delay:-4s}
+#sceneLight .ray:nth-child(2){left:60%;width:12%;transform:rotate(-14deg);
+ background:linear-gradient(90deg,transparent,rgba(187,121,255,.07),transparent);animation-delay:-7s}
+#sceneLight .horizon{position:absolute;inset:auto -30% 13% -30%;height:2px;
+ background:linear-gradient(90deg,transparent,#3bffbd66,#d58cff8f,transparent);
+ box-shadow:0 0 36px 10px #5f83ef18;animation:horizonGlint 7s ease-in-out infinite}
+#sheet{perspective:850px}
+#sheet .card{position:relative;transform-style:preserve-3d;
+ background:linear-gradient(149deg,rgba(7,31,30,.96) 0%,rgba(5,15,31,.98) 45%,rgba(24,9,47,.97) 100%);
+ border-color:#85ffd4be;box-shadow:inset 0 1px 0 #ccffe269,inset 0 0 70px #2affac11,
+ 0 12px 0 -7px #1f6b59,0 23px 0 -13px #14362e,0 34px 70px #000a1fec,0 0 45px #38fdb51e;
+ animation:deckLevitate 6.5s ease-in-out infinite}
+#sheet .card:after{top:0;width:76%;left:12%;height:2px;animation:deckGlint 5.4s ease-in-out infinite}
+.deckHud{position:absolute;inset:7px;pointer-events:none;border:1px solid #67ff9a20;border-radius:16px;
+ background:linear-gradient(#90ffce9a,#90ffce9a) top left/22px 2px no-repeat,
+ linear-gradient(#90ffce9a,#90ffce9a) top left/2px 22px no-repeat,
+ linear-gradient(#b97dfcb0,#b97dfcb0) bottom right/22px 2px no-repeat,
+ linear-gradient(#b97dfcb0,#b97dfcb0) bottom right/2px 22px no-repeat}
+.deckHud .sideCode{position:absolute;top:36%;right:-4px;writing-mode:vertical-rl;
+ color:#a0ffbe61;font:700 7px ui-monospace,monospace;letter-spacing:3px}
+#sheet .emblem{position:relative;isolation:isolate;background:radial-gradient(circle at 32% 23%,#184e38,#041d16 60%,#040e17);
+ border:2px solid #9cffc6;animation:emblemHover 5s ease-in-out infinite;
+ box-shadow:0 0 0 7px #20ffa910,0 0 34px #62ff9e81,inset 0 0 23px #22ffb044}
+#sheet .emblem::before,#sheet .emblem::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+#sheet .emblem::before{inset:-13px;border:1px dashed #8decca79;animation:orbit 18s linear infinite}
+#sheet .emblem::after{inset:-24px;border:1px solid #a874fd30;border-left-color:#b57bffb8;border-right-color:#62ffab7a;
+ animation:orbit 13s linear infinite reverse}
+#sheet .kicker{text-shadow:0 0 16px #9868ff77}
+#sheet h1{background:linear-gradient(90deg,#5affc1,#cbfff1 48%,#be7bff 90%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+ text-shadow:none;filter:drop-shadow(0 0 12px #37ff9b3c)}
+#action{position:relative;overflow:hidden;background:linear-gradient(112deg,#57ffac 6%,#b7fff1 37%,#21e87c 68%,#69ffd1 100%);
+ background-size:240% 100%;animation:buttonFlow 6s ease-in-out infinite;
+ box-shadow:0 6px 0 -1px #118453,0 14px 34px #00ff7870,inset 0 1px 0 #fff}
+#action:focus-visible,#menuSettings:focus-visible,.tool:focus-visible{outline:3px solid #d6fff5;outline-offset:3px}
+#sheet .minor{border-color:#c494f6a2;background:linear-gradient(135deg,#29103e,#0b2531 55%,#19102f);
+ box-shadow:inset 0 1px 0 #c7a3ff63,0 8px 20px #1207227e}
+.stat{backdrop-filter:blur(3px);box-shadow:inset 0 0 16px #00e66e1b,0 5px 19px #000b19a3}
+.stat b.scored{animation:scoreFlash .62s ease-out}
+.hud-status{background:#031b2080;border-left:2px solid #59ffa6;padding:6px 9px;border-radius:2px 9px 9px 2px}
+@keyframes auroraDrift{0%{transform:translate(-2%,-1%) scale(1)}100%{transform:translate(3%,2%) scale(1.08)}}
+@keyframes rayShift{0%{opacity:.30;transform:translateX(-25%) rotate(19deg)}
+ 100%{opacity:.90;transform:translateX(22%) rotate(12deg)}}
+@keyframes horizonGlint{0%,100%{opacity:.45}45%{opacity:1}}
+@keyframes deckLevitate{0%,100%{transform:translateY(2px) rotateX(.6deg)}
+ 50%{transform:translateY(-5px) rotateX(1.5deg)}}
+@keyframes deckGlint{0%,100%{opacity:.35;transform:scaleX(.6)}
+ 50%{opacity:1;transform:scaleX(1)}}
+@keyframes emblemHover{0%,100%{transform:translateY(2px)}50%{transform:translateY(-3px)}}
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes buttonFlow{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes scoreFlash{0%{transform:scale(1);filter:brightness(1)}
+ 35%{transform:scale(1.42);filter:brightness(1.7)}100%{transform:scale(1);filter:brightness(1)}}
+@media(max-width:345px){#sheet .card{padding-inline:17px}.deckHud{inset:6px}.deckHud .sideCode{display:none}}
+@media(max-height:600px){#sheet .card{animation:none}.deckHud .sideCode{display:none}#sheet .emblem::after{display:none}}
+@media(prefers-reduced-motion:reduce){#game::before,#sceneLight .ray,#sceneLight .horizon,
+ #sheet .card,#sheet .card:after,#sheet .emblem,#sheet .emblem::before,#sheet .emblem::after,#action{animation:none!important}}
+.fx-off #game::before,.fx-off #sceneLight{display:none}
+
 </style>
 </head>
 <body>
 <div id="game">
   <canvas id="board" aria-label="Matrix Flap game area"></canvas>
+  <div id="sceneLight" aria-hidden="true"><i class="ray"></i><i class="ray"></i><i class="horizon"></i></div>
   <header class="top">
     <div class="brand"><div class="label">TRION // ARCADE</div><strong>MATRIX<span>FLAP</span></strong></div>
     <div class="stats"><div class="stat"><small>SCORE</small><b id="score">00</b></div><div class="stat best"><small>BEST</small><b id="best">00</b></div></div>
@@ -81,6 +155,7 @@ button:active{filter:brightness(.82);transform:translateY(1px)}
   <div class="tools"><button id="pauseBtn" class="tool hidden" type="button" aria-label="Pause game">Ⅱ</button><button id="settingsBtn" class="tool purple" type="button" aria-label="Open settings">⚙</button></div>
   <div id="fps" class="fps hidden" aria-label="Frames per second">60 FPS</div>
   <section id="sheet" aria-live="polite"><div class="card">
+    <div class="deckHud" aria-hidden="true"><span class="sideCode">FLIGHT // 012 · SYSTEM ONLINE</span></div>
     <div class="emblem" id="emblem">⟡</div><div class="kicker" id="kicker">SYSTEM ONLINE</div>
     <h1 id="message">NEON FLIGHT</h1>
     <p id="helper">Tap to flap. Navigate between the purple gates. How far can you get?</p>
@@ -105,7 +180,7 @@ button:active{filter:brightness(.82);transform:translateY(1px)}
     <button id="restartBtn" class="minor" type="button">↻ RESTART RUN</button>
     <button id="homeBtn" class="minor" type="button">⌂ MAIN MENU</button>
   </div></section>
-  <footer class="bottom"><span>OFFLINE // V1.1</span><span>TRION • NEON FLIGHT</span></footer>
+  <footer class="bottom"><span>OFFLINE // V1.2</span><span>TRION • NEON FLIGHT</span></footer>
   <div id="flash"></div>
 </div>
 <script>
@@ -128,6 +203,65 @@ let overlay='none',averageFps=60,fpsSamples=0,fpsAccumulator=0,runSeconds=0,pass
 let perfQuality=1.1,lowFpsWindows=0;
 let audioContext=null,shipPulse=0,viewTime=0;
 const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let scorePulse=0,gateHalo=0,stars=[];
+function drawCelestial(){
+ ctx.save();
+ // Deep sky stars move at a fraction of the gate speed: visual parallax only.
+ for(const st of stars){
+  const x=(st.x-frame*st.speed% (W+20)+W+20)%(W+20);
+  const twinkle=reduceMotion?1:.65+.35*Math.sin(frame*.023+st.phase);
+  ctx.globalAlpha=st.opacity*twinkle;
+  ctx.fillStyle=st.purple?'#c494ff':'#a2fff0';
+  ctx.fillRect(x,st.y,st.size,st.size);
+ }
+ if(settings.effects){
+  const px=W*.77+Math.sin(viewTime*.003)*W*.012,py=H*.27;
+  const r=Math.min(W*.19,78);
+  const grad=ctx.createRadialGradient(px-r*.33,py-r*.3,1,px,py,r);
+  grad.addColorStop(0,'#8c74c5');grad.addColorStop(.43,'#3b3e7b');
+  grad.addColorStop(.72,'#172d59');grad.addColorStop(1,'#080e26');
+  ctx.globalAlpha=.30;ctx.fillStyle=grad;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='#c68efb';
+  ctx.globalAlpha=.18+.07*Math.sin(frame*.02);
+  ctx.beginPath();ctx.ellipse(px,py,r*1.34,r*.31,-.26,0,Math.PI*2);ctx.stroke();
+  ctx.strokeStyle='#75ffd9';ctx.globalAlpha=.13;
+  ctx.beginPath();ctx.ellipse(px,py,r*1.49,r*.38,-.26,0,Math.PI*2);ctx.stroke();
+  // Beacons and distant high-altitude transit paths.
+  for(let i=0;i<3;i++){
+   let x=(W*(.15+i*.36)-frame*(.12+i*.03)%(W+90)+W+90)%(W+90);
+   let y=H*(.34+i*.08);
+   ctx.globalAlpha=.20;ctx.strokeStyle=i===1?'#bc83f9':'#40fdbe';
+   ctx.beginPath();ctx.moveTo(x-30,y);ctx.lineTo(x+19,y);ctx.stroke();
+   ctx.globalAlpha=.68;ctx.fillStyle='#b0ffe0';ctx.fillRect(x+16,y-1,3,2);
+  }
+ }
+ ctx.restore();
+}
+function drawTrail(){
+ if(!settings.effects||mode==='over')return;
+ ctx.save();ctx.translate(bird.x,bird.y);
+ const drift=mode==='ready'?Math.sin(frame*.04)*2:bird.vy*.5;
+ for(let i=3;i>=0;i--){
+  const len=bird.r*(1.25+i*.72+shipPulse*.5);
+  ctx.globalAlpha=(.23-i*.045)*(mode==='ready'?.42:1);
+  ctx.strokeStyle=i%2?'#be8bff':'#70ffca';ctx.lineWidth=3-i*.48;
+  ctx.beginPath();ctx.moveTo(-bird.r*.8,drift+(i-1.5)*4);
+  ctx.quadraticCurveTo(-len*.65,(i-1.5)*7,-len,Math.sin(frame*.09+i)*3);ctx.stroke();
+ }
+ ctx.restore();
+}
+function drawEnergyFeedback(){
+ if(scorePulse<=0||!settings.effects)return;
+ const t=1-scorePulse;
+ ctx.save();ctx.globalAlpha=scorePulse*.67;ctx.strokeStyle='#6bffca';
+ ctx.lineWidth=2.5*scorePulse;ctx.shadowColor='#54ffcb';ctx.shadowBlur=12;
+ ctx.beginPath();ctx.arc(bird.x,bird.y,bird.r+5+t*W*.21,0,Math.PI*2);ctx.stroke();
+ ctx.globalAlpha=scorePulse*.45;ctx.strokeStyle='#be8bff';ctx.lineWidth=1;
+ ctx.beginPath();ctx.arc(bird.x,bird.y,bird.r+14+t*W*.30,0,Math.PI*2);ctx.stroke();
+ ctx.restore();
+}
+
 function playTone(frequency=440,duration=.065,kind='sine',volume=.06){
  if(!settings.sound)return;
  try{audioContext=audioContext||new (window.AudioContext||window.webkitAudioContext)();
@@ -145,6 +279,7 @@ function syncSettings(){
   button.textContent=settings[key]?'ON':'OFF';button.setAttribute('aria-pressed',String(!!settings[key]));
  }
  fpsEl.classList.toggle('hidden',!settings.fps);
+ document.documentElement.classList.toggle('fx-off',!settings.effects);
  try{localStorage.setItem('matrixFlapSettings',JSON.stringify(settings))}catch(_){}
 }
 function updateHud(){
@@ -184,6 +319,7 @@ function resize(){
  bird.x=W*.285;bird.r=clamp(W*.051,16,23);
  if(mode==='ready')bird.y=H*.46;
  else bird.y=clamp(bird.y+(H-oldH)*.25,72,H-ground-bird.r);
+ stars=Array.from({length:Math.min(45,Math.ceil(W/12))},(_,i)=>({x:((i*79+23)%101)/101*W,y:((i*43+17)%97)/97*H*.67,speed:.01+(i%4)*.018,opacity:.18+(i%5)*.11,size:i%9===0?2:1,purple:i%5===0,phase:i*1.37}));
  rain=Array.from({length:Math.floor(W/19)+2},(_,i)=>({x:i*19+rand(-6,6),y:rand(-H,H),speed:rand(.6,2.25),chars:Math.floor(rand(5,18)),alpha:rand(.09,.38),kind:i%4===0?'green':'purple'}));
 }
 function writeScore(){scoreEl.textContent=String(score).padStart(2,'0');bestEl.textContent=String(best).padStart(2,'0')}
@@ -202,7 +338,7 @@ function end(){if(mode!=='playing')return;mode='over';if(score>best){best=score;
 function spawnPipe(){const gap=clamp(H*.29,175,222)-Math.min(score*1.2,22);const roof=136;const floor=H-ground-28;
  const center=rand(roof+gap/2+16,Math.max(roof+gap/2+17,floor-gap/2-16));
  pipes.push({x:W+38,w:clamp(W*.18,62,80),center,gap,passed:false,code:Math.floor(rand(100,999))})}
-function step(delta){frame+=delta;viewTime+=delta;shipPulse=Math.max(0,shipPulse-delta*.042);
+function step(delta){frame+=delta;viewTime+=delta;shipPulse=Math.max(0,shipPulse-delta*.042);scorePulse=Math.max(0,scorePulse-delta*.052);gateHalo=Math.max(0,gateHalo-delta*.055);
  for(const c of rain){c.y+=c.speed*delta*(reduceMotion?.35:1);if(c.y>H+180)c.y=-rand(60,330)}
  sparks=sparks.filter(s=>s.life>0);for(const s of sparks){s.x+=s.vx*delta;s.y+=s.vy*delta;s.life-=delta}
  if(mode==='ready'){bird.y=H*.46+Math.sin(frame*.045)*8;bird.tilt=Math.sin(frame*.034)*.14;return}
@@ -211,7 +347,7 @@ function step(delta){frame+=delta;viewTime+=delta;shipPulse=Math.max(0,shipPulse
  pipeClock+=delta;if(pipeClock>=108){spawnPipe();pipeClock-=108}
  const speed=Math.min(3.9,2.55+score*.045);
  for(const p of pipes){p.x-=speed*delta;
-  if(!p.passed&&p.x+p.w<bird.x-bird.r){p.passed=true;score++;passes++;playTone(900,.10,'triangle',.07);vibrate(12);updateHud();if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();for(let i=0;i<(settings.effects?13:0);i++)sparks.push({x:bird.x+6,y:bird.y,vx:rand(-3,2),vy:rand(-3,3),life:rand(10,27),max:27})}
+  if(!p.passed&&p.x+p.w<bird.x-bird.r){p.passed=true;score++;passes++;scorePulse=1;gateHalo=1;scoreEl.classList.remove('scored');void scoreEl.offsetWidth;scoreEl.classList.add('scored');playTone(900,.10,'triangle',.07);vibrate(12);updateHud();if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();for(let i=0;i<(settings.effects?13:0);i++)sparks.push({x:bird.x+6,y:bird.y,vx:rand(-3,2),vy:rand(-3,3),life:rand(10,27),max:27})}
   const left=p.x-6,right=p.x+p.w+6,top=p.center-p.gap/2,bottom=p.center+p.gap/2;
   const overlap=bird.x+bird.r>left&&bird.x-bird.r<right;
   if(overlap&&(bird.y-bird.r<top||bird.y+bird.r>bottom)){end();break}
@@ -240,6 +376,7 @@ function drawBackground(){
   }
  }
  ctx.restore();
+ drawCelestial();
  // Perspective floor grid / horizon glow emphasize depth without distracting from gates.
  ctx.save();ctx.strokeStyle='#329e8c';ctx.globalAlpha=.25;ctx.lineWidth=1;
  const horizon=H*.74;
@@ -312,7 +449,7 @@ function render(){ctx.clearRect(0,0,W,H);drawBackground();
  if(mode==='ready'){
   ctx.save();ctx.globalAlpha=.19;pipeBlock(W*.79,0,62,H*.29,true);pipeBlock(W*.79,H*.61,62,H*.39-ground,false);ctx.restore();
  }
- drawPipes();drawSparks();drawBird();drawGround()}
+ drawPipes();drawSparks();drawTrail();drawBird();drawEnergyFeedback();drawGround()}
 function loop(t){
  const elapsed=t-(last||t),delta=clamp(elapsed/16.6667||1,.05,2);last=t;
  fpsAccumulator+=elapsed;fpsSamples++;
@@ -346,7 +483,7 @@ resize();clear();syncSettings();updateHud();requestAnimationFrame(loop);
 window.matrixFlapStatus=()=>({state:mode,score,best,pipes:pipes.length,
  birdY:Math.round(bird.y),birdR:bird.r,runSeconds:Math.round(runSeconds*10)/10,
  fps:averageFps,settings:{...settings},overlay,passes,width:W,height:H,pixelRatio:dpr,
- birdVy:+bird.vy.toFixed(2),nearestGate:pipes.length?{x:Math.round(pipes[0].x),center:Math.round(pipes[0].center),gap:Math.round(pipes[0].gap)}:null,version:'1.1'});
+ birdVy:+bird.vy.toFixed(2),nearestGate:pipes.length?{x:Math.round(pipes[0].x),center:Math.round(pipes[0].center),gap:Math.round(pipes[0].gap)}:null,version:'1.2'});
 })();
 </script>
 </body>
