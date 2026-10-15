@@ -20,7 +20,7 @@ def allowed_paths(role):
         raise ValueError("Unknown or unauthorized worker role")
     return {str(JAVA / name) for name in ROLES[role]}
 
-def load_proposal(root, role, expected_sha):
+def load_proposal(root, role, expected_sha, expected_slot=None):
     root = Path(root)
     if not re.fullmatch(r"[0-9a-f]{40}", expected_sha):
         raise ValueError("Expected SHA must be a full git commit SHA")
@@ -32,6 +32,11 @@ def load_proposal(root, role, expected_sha):
         raise ValueError("Invalid worker report")
     if report.get("role") != role:
         raise ValueError("Worker role does not match selected artifact")
+    if expected_slot is not None:
+        if not re.fullmatch(r"w\d{3}", expected_slot):
+            raise ValueError("Invalid worker slot")
+        if report.get("slot_id") != expected_slot:
+            raise ValueError("Proposal slot does not match selected artifact")
     if report.get("source_commit") != expected_sha:
         raise ValueError("Artifact generated from a different commit")
     if report.get("status") != "proposed_change_passed_java_tests":
@@ -81,13 +86,13 @@ def verify_reviewed_patch(root, artifact, pending):
         raise ValueError("Reviewed patch does not match promoted Java source replacements")
 
 
-def stage_proposal(root, artifact, role, expected_sha, dry_run=False):
+def stage_proposal(root, artifact, role, expected_sha, dry_run=False, expected_slot=None):
     root = Path(root)
     actual = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
                             capture_output=True, text=True, check=True).stdout.strip()
     if actual != expected_sha:
         raise ValueError("Checkout is not the worker's original source commit")
-    pending = load_proposal(artifact, role, expected_sha)
+    pending = load_proposal(artifact, role, expected_sha, expected_slot)
     # Complete every validation before changing any file.
     for name, content in pending.items():
         target = root / name
@@ -106,11 +111,13 @@ def main():
     p.add_argument("--artifact", type=Path, required=True)
     p.add_argument("--role", choices=sorted(ROLES), required=True)
     p.add_argument("--expected-sha", required=True)
+    p.add_argument("--slot-id")
     p.add_argument("--repo-root", type=Path, default=Path("."))
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
     touched = stage_proposal(args.repo_root, args.artifact,
-                             args.role, args.expected_sha, args.dry_run)
+                             args.role, args.expected_sha, args.dry_run,
+                             expected_slot=args.slot_id)
     print(json.dumps({"result": "verified" if args.dry_run else "staged",
                       "role": args.role, "source_commit": args.expected_sha,
                       "files": touched, "requires_draft_PR_review": True}, indent=2))
