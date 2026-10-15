@@ -3,11 +3,11 @@ on:
   workflow_dispatch:
     inputs:
       emulator_instances:
-        description: 'Independent Android virtual devices (1, 2, or 4)'
+        description: 'Independent Android virtual devices (1, 2, 4, or 8)'
         type: choice
         required: true
         default: '2'
-        options: ['1', '2', '4']
+        options: ['1', '2', '4', '8']
   push:
     branches: ['feature/veilbound-parallel-ai-qa']
     paths:
@@ -16,7 +16,8 @@ permissions:
   contents: read
 # One immutable APK. Each emulator runs on a separate GitHub Ubuntu runner,
 # not competing for KVM, ADB ports, logcat or filesystem resources on one VM.
-# Manual capacity is bounded to 4 to limit runner charges and queue pressure.
+# Optional capacity is eight separate emulator VMs; automatic runs use two.
+# Runners may queue on GitHub account limits; no extra API or secret is required.
 concurrency:
   group: veilbound-emulator-farm-${{ github.ref }}
   cancel-in-progress: false
@@ -35,7 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Allocate at most four independent emulators
+      - name: Allocate up to eight independent emulators
         id: plan
         run: |
           python3 veilbound/scripts/emulator_farm.py \
@@ -84,7 +85,7 @@ jobs:
     timeout-minutes: 55
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 8
       matrix: ${{ fromJSON(needs.emulator-director.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
