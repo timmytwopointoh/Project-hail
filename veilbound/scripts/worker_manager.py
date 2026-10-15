@@ -47,17 +47,24 @@ def normalize_task(obj, source):
     return {"role": role, "task_id": ident, "priority": priority,
             "goal": goal, "source": source}
 
-def plan(roadmap=None, findings=None, *, max_workers=4):
+def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None):
     if isinstance(max_workers, bool) or not isinstance(max_workers, int):
         raise ValueError("Worker cap must be an integer")
     if not 1 <= max_workers <= MAX_WORKERS:
         raise ValueError("Worker cap must be between 1 and 6")
+    findings = findings if isinstance(findings, dict) else {}
+    roadmap = roadmap if isinstance(roadmap, dict) else {}
+    # A failed native build with no machine-readable report is a high-priority
+    # human/CI investigation. Do not let the manager dispatch speculative
+    # changes to unrelated game code in that case.
+    missing_failure_evidence = (workflow_conclusion == "failure"
+                                and not isinstance(findings.get("tasks"), list))
     candidate = []
-    for row in (findings or {}).get("tasks", []):
+    for row in findings.get("tasks", []) if isinstance(findings.get("tasks", []), list) else []:
         task = normalize_task(row, "measured-qa")
         if task is not None:
             candidate.append(task)
-    for row in (roadmap or {}).get("tasks", []):
+    for row in roadmap.get("tasks", []) if isinstance(roadmap.get("tasks", []), list) else []:
         task = normalize_task(row, "roadmap")
         if task is not None:
             candidate.append(task)
@@ -68,6 +75,8 @@ def plan(roadmap=None, findings=None, *, max_workers=4):
     selected = []
     claimed = set()
     for item in candidate:
+        if missing_failure_evidence:
+            break
         if item["role"] in claimed:
             continue
         claimed.add(item["role"])
@@ -76,13 +85,20 @@ def plan(roadmap=None, findings=None, *, max_workers=4):
             break
     selected.sort(key=lambda x: ROLE_ORDER.index(x["role"]))
     ignored = []
-    for row in (findings or {}).get("tasks", []):
+    for row in findings.get("tasks", []) if isinstance(findings.get("tasks", []), list) else []:
         if isinstance(row, dict) and row.get("worker") in OBSERVATION_ONLY:
             ignored.append({"task_id": str(row.get("id", "unidentified")),
                             "owner": row["worker"],
                             "action": "manual-review-required"})
+    if missing_failure_evidence:
+        ignored.insert(0, {"task_id": "VB-CI-FAILURE-NO-ARTIFACT", "owner": "qa",
+                           "priority": "P0", "action": "inspect-native-build-logs",
+                           "reason": "Native workflow failed without a usable task_plan.json; "
+                                     "automatic code proposals are paused for this cycle"})
     return {"schema_version": 1,
             "max_workers": max_workers,
+            "workflow_conclusion": workflow_conclusion or "unspecified",
+            "paused_for_missing_failure_evidence": missing_failure_evidence,
             "allocated": len(selected),
             "spawned_roles": [x["role"] for x in selected],
             "matrix": {"include": selected},
@@ -97,12 +113,14 @@ def main():
     parser.add_argument("--findings", type=Path,
                         default=Path("inspection_output/veilbound/task_plan.json"))
     parser.add_argument("--max-workers", type=int, default=4)
+    parser.add_argument("--workflow-conclusion", default="")
     parser.add_argument("--out", type=Path,
                         default=Path("inspection_output/manager"))
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
     result = plan(load_object(args.backlog), load_object(args.findings),
-                  max_workers=args.max_workers)
+                  max_workers=args.max_workers,
+                  workflow_conclusion=args.workflow_conclusion)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "assignment_plan.json").write_text(json.dumps(result, indent=2) + "\n")
     lines = ["# VEILBOUND master worker allocation", "",
@@ -112,6 +130,9 @@ def main():
     for entry in result["matrix"]["include"]:
         lines.append("| " + entry["role"] + " | " + entry["priority"] + " | "
                      + entry["goal"].replace("|", "/") + " |")
+    if result["paused_for_missing_failure_evidence"]:
+        lines += ["", "**Automatic work paused:** failed native build with no usable "
+                  "repair report. Inspect the Android build logs first.", ""]
     lines += ["", "High-risk renderer and performance failures are human-review "
               "tasks until those systems have dedicated isolated test gates.", ""]
     (args.out / "assignment_plan.md").write_text("\n".join(lines))
