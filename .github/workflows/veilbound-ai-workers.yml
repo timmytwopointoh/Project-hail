@@ -48,6 +48,8 @@ jobs:
       worker_count: ${{ steps.plan.outputs.worker_count }}
       team_count: ${{ steps.plan.outputs.team_count }}
       team_matrix: ${{ steps.plan.outputs.team_matrix }}
+      division_count: ${{ steps.plan.outputs.division_count }}
+      division_matrix: ${{ steps.plan.outputs.division_matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,15 +83,55 @@ jobs:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager/
           retention-days: 14
-  team-managers:
+  division-managers:
     needs: manager
-    if: needs.manager.outputs.team_count != '0'
-    name: Team manager / ${{ matrix.team }}
+    if: needs.manager.outputs.division_count != '0'
+    name: Division manager / ${{ matrix.division }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     strategy:
       fail-fast: false
       max-parallel: 3
+      matrix: ${{ fromJSON(needs.manager.outputs.division_matrix) }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download director's immutable allocation plan
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Approve division specialists and capacity
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --director-plan inspection_output/manager/assignment_plan.json \
+            --division "${{ matrix.division }}" \
+            --output inspection_output/division/division_approval.json
+      - name: Publish division manager authorization
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-division-${{ matrix.division }}-${{ github.run_attempt }}
+          path: inspection_output/division/division_approval.json
+          if-no-files-found: error
+          retention-days: 14
+
+  team-managers:
+    needs: [manager, division-managers]
+    if: needs.manager.outputs.team_count != '0'
+    name: Specialist manager / ${{ matrix.division }} / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      max-parallel: 6
       matrix: ${{ fromJSON(needs.manager.outputs.team_matrix) }}
     permissions:
       contents: read
@@ -107,10 +149,16 @@ jobs:
         with:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager
-      - name: Approve up to eighteen isolated child assignments
+      - name: Read signed-off division-manager plan
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-division-${{ matrix.division }}-${{ github.run_attempt }}
+          path: inspection_output/division
+      - name: Approve up to ten isolated child assignments
         run: |
           python3 veilbound/scripts/team_manager.py \
             --director-plan inspection_output/manager/assignment_plan.json \
+            --division-approval inspection_output/division/division_approval.json \
             --team "${{ matrix.team }}" \
             --output "inspection_output/team-approval/team_approval.json"
       - name: Publish immutable team-to-worker handoff
