@@ -543,6 +543,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return .12f*(float)(Math.sin(x*.26)*Math.cos(z*.20))
               +.06f*(float)Math.sin(z*.12+x*.16);
     }
+    /** Raise model feet and impact stains onto the solid stone causeway. */
+    private static float actorGround(float x,float z){
+        float pathX=.25f*(float)Math.sin(z*.23f);
+        boolean road=z>1.4f&&z<68f&&Math.abs(x-pathX)<3.95f;
+        return terrain(x,z)-.40f+(road?.175f:0f);
+    }
     private void drawAnimatedObjects(){
         float tm=state.time;
         // Ember shrine at the edge of the path: fire and pulsing runestone.
@@ -582,7 +588,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawBloodOnStone(tm);
         // Fused custom character models with distinct armor, skeletal and boss silhouettes;
         // weapon pivot is animated independently to keep attack timing readable.
-        drawKnight(state.x,terrain(state.x,state.z)-.40f,state.z,state.heading,
+        drawKnight(state.x,actorGround(state.x,state.z),state.z,state.heading,
                 false,false,tm,state.walkPhase,state.swing,state.dodge,
                 state.motionBlend,state.exertion,state.hurtFlash,0f);
         for(WorldState.Foe foe:state.foes){
@@ -591,7 +597,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float tellSwing=foe.windup>0
                 ? CombatMotion.DURATION*(.97f-.17f*(1f-foe.windup/(foe.boss?.92f:.72f)))
                 :foe.attackPose;
-            drawKnight(foe.x,terrain(foe.x,foe.z)-.40f,foe.z,ang,true,foe.boss,
+            drawKnight(foe.x,actorGround(foe.x,foe.z),foe.z,ang,true,foe.boss,
                     tm,foe.phase,tellSwing,0,foe.moving,foe.boss?.35f:.16f,
                     foe.stagger,foe.windup);
             if(state.lockTarget>=0 && state.foes[state.lockTarget]==foe){
@@ -730,7 +736,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             if(stain==null)continue;
             float age=tm-stain.born;
             Matrix.setIdentityM(model,0);
-            Matrix.translateM(model,0,stain.x,terrain(stain.x,stain.z)-.39f,stain.z);
+            Matrix.translateM(model,0,stain.x,actorGround(stain.x,stain.z)+.017f,stain.z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(stain.angle),0,1,0);
             float size=stain.radius*(.31f+.69f*CombatMotion.smooth(age/.46f));
             Matrix.scaleM(model,0,size,1f,size);
@@ -740,7 +746,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                     float angle=stain.angle+j*2.7f,travel=age/.53f;
                     float px=stain.x+(float)Math.cos(angle)*(.3f+travel*.56f);
                     float pz=stain.z+(float)Math.sin(angle)*(.3f+travel*.56f);
-                    float py=terrain(px,pz)-.30f+1.4f*4f*travel*(1f-travel);
+                    float py=actorGround(px,pz)+.09f+1.4f*4f*travel*(1f-travel);
                     drawOcta(px,py,pz,.05f,.08f,.05f,
                         .21f,.94f,.16f,.32f,tm*33f);
                 }
@@ -996,15 +1002,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         ArtKit.Model roots=EnvironmentKit.rootFan();
         int stoneCount=0,graveCount=0,ironCount=0,rootCount=0;
         for(int lane=-2;lane<=2;lane++){
-            for(int step=0;step<30;step++){
-                float z=2.0f+step*2.18f+(rng.nextFloat()-.5f)*.27f;
-                float x=lane*1.45f+.25f*(float)Math.sin(z*.23f)+(rng.nextFloat()-.5f)*.26f;
-                if(rng.nextFloat()<.13f)continue;
-                float sc=.63f+rng.nextFloat()*.23f;
-                float y=terrain(x,z)-.32f+(rng.nextFloat()-.5f)*.023f;
-                b.place(tile,x,y,z,sc,.75f,sc*1.18f,
+            for(int step=0;step<46;step++){
+                float z=1.7f+step*1.45f+(rng.nextFloat()-.5f)*.15f;
+                float x=lane*1.44f+.25f*(float)Math.sin(z*.23f)+(rng.nextFloat()-.5f)*.18f;
+                if(rng.nextFloat()<.04f)continue;
+                float sc=.73f+rng.nextFloat()*.22f;
+                float y=terrain(x,z)-.36f+(rng.nextFloat()-.5f)*.015f;
+                b.place(tile,x,y,z,sc,.75f,sc*1.66f,
                         (rng.nextFloat()-.5f)*.16f,
-                        .87f+rng.nextFloat()*.21f);
+                        .72f+rng.nextFloat()*.15f);
                 stoneCount++;
             }
         }
