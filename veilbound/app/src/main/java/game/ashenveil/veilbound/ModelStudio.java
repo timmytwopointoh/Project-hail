@@ -8,7 +8,8 @@ package game.ashenveil.veilbound;
 public final class ModelStudio {
     public static final String[] ITEMS={
         "BELLWARDEN","HUSHED REVENANT","ASH KNIGHT",
-        "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK","IMPORTED OBJ"};
+        "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK",
+        "FRACTURED FLAGSTONE","FUNERARY CENOTAPH","IRON RELIQUARY","ANCIENT ROOT CLUSTER","IMPORTED OBJ"};
     public static final String[] LIGHTS={"STUDIO","MOONLIT","EMBER","RIM LIGHT"};
     public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
@@ -30,7 +31,8 @@ public final class ModelStudio {
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
         panX=panY=0;
-        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;
+        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
+            item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:4.50f;
     }
     public synchronized void selectImported(){item=ITEMS.length-1;reset();zoom=5.3f;}
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
@@ -47,7 +49,8 @@ public final class ModelStudio {
     }
     public synchronized void reset(){
         yaw=.50f;pitch=.12f;panX=0;panY=0;
-        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;
+        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
+            item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:4.50f;
         autoTurn=false;
     }
     public synchronized void orbit(float dx,float dy){
