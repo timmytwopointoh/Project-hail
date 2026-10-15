@@ -101,7 +101,7 @@ jobs:
       - name: Generate isolated source patch and validate trusted Java tests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
           VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
           VEILBOUND_TASK_ID: ${{ matrix.task_id }}
         run: |
