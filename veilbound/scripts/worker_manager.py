@@ -125,6 +125,8 @@ def plan(roadmap=None, findings=None, *, max_workers=4, workflow_conclusion=None
             "spawned_roles": [x["role"] for x in selected],
             "matrix": hierarchy["worker_matrix"],
             "team_matrix": hierarchy["team_matrix"],
+            "division_matrix": hierarchy["division_matrix"],
+            "division_count": hierarchy["division_count"],
             "worker_matrix": hierarchy["worker_matrix"],
             "team_count": hierarchy["team_count"],
             "max_manager_depth": hierarchy["max_depth"],
@@ -150,7 +152,8 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "assignment_plan.json").write_text(json.dumps(result, indent=2) + "\n")
     lines = ["# VEILBOUND hierarchical development manager", "",
-             "Team managers spawned: **" + str(result["team_count"]) + "** / 3  ",
+             "Division managers spawned: **" + str(result["division_count"]) + "** / 3  ",
+             "Specialist team managers spawned: **" + str(result["team_count"]) + "** / 6  ",
              "Concurrent workers: **" + str(result["allocated"]) + "** / "
              + str(result["max_workers"]) + " requested", "",
              "| Team | Worker | Priority | Work assignment |", "|---|---|---|---|"]
@@ -169,6 +172,8 @@ def main():
             file.write("matrix=" + matrix + "\n")
             file.write("worker_count=" + str(result["allocated"]) + "\n")
             file.write("team_count=" + str(result["team_count"]) + "\n")
+            file.write("division_count=" + str(result["division_count"]) + "\n")
+            file.write("division_matrix=" + json.dumps(result["division_matrix"], separators=(",", ":")) + "\n")
             file.write("team_matrix=" + json.dumps(result["team_matrix"], separators=(",", ":")) + "\n")
     print(json.dumps({"allocated": result["allocated"],
                       "roles": result["spawned_roles"],
