@@ -6,6 +6,8 @@ import struct
 import subprocess
 import time
 from pathlib import Path
+from io import BytesIO
+from PIL import Image
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=Path('inspection_output/riftward')
@@ -18,13 +20,19 @@ def adb(*args, timeout=35):
     p=subprocess.run(['adb',*map(str,args)],capture_output=True,check=True,timeout=timeout)
     return p.stdout
 
-def screenshot(name):
+def screenshot(name, require_visible=False):
     error=''
-    for _ in range(2):
+    for _ in range(8 if require_visible else 2):
         try:
             data=adb('exec-out','screencap','-p',timeout=35)
             if not data.startswith(PNG):raise ValueError('Non-PNG screenshot')
             w,h=struct.unpack('>II',data[16:24]);assert w>250 and h>400
+            if require_visible:
+                # A dark Android transition frame is not a verified rendered menu.
+                img=Image.open(BytesIO(data)).convert('RGB')
+                img=img.crop((0,0,w,int(h*.89))).resize((64,110))
+                lit=sum(1 for r,g,b in img.getdata() if r+g+b>360)
+                if lit<22:raise ValueError(f'UI not drawn yet ({lit} lit samples)')
             (OUT/name).write_bytes(data)
             return {'file':name,'width':w,'height':h,'bytes':len(data)}
         except (subprocess.CalledProcessError,subprocess.TimeoutExpired,AssertionError,ValueError) as e:
@@ -53,7 +61,7 @@ def main():
             if report['menu_state']=='menu':break
             time.sleep(1)
         if report['menu_state']!='menu':raise AssertionError('Missing menu-ready state: '+str(report['menu_state']))
-        first=screenshot('01_menu.png');report['screenshots'].append(first)
+        first=screenshot('01_menu.png',require_visible=True);report['screenshots'].append(first)
         for fraction in (.70,.72,.68,.75):
             x=first['width']//2;y=int(first['height']*fraction)
             adb('shell','input','tap',x,y,timeout=25)
