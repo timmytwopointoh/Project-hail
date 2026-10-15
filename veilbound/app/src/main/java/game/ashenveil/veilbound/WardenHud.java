@@ -171,7 +171,6 @@ public final class WardenHud extends View {
         control(c,905,484,51,"✦","ATTACK",GOLD);
         control(c,806,520,41,"↝","DODGE",MIST);
         control(c,908,365,33,"✧","INTERACT",EMBER);
-        if(s.hurtFlash>0){} // actual flash comes from state, drawn below.
         text(c,"DRAG RIGHT SIDE TO ORBIT CAMERA",500,582,11,MIST,false,true);
     }
     private float normX(float raw){return raw*1000f/Math.max(1,getWidth());}
