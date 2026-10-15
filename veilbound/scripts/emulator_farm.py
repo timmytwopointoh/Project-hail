@@ -33,6 +33,7 @@ def summarize(root, expected):
     if not 1 <= expected <= MAX_EMULATORS:
         raise ValueError("Invalid number of expected emulator reports")
     checked = []
+    findings = {}
     for cfg in CONFIGS[:expected]:
         folder = root / ("veilbound-emulator-" + cfg["id"] + "-inspection")
         report_file = folder / "emulator_report.json"
@@ -53,10 +54,41 @@ def summarize(root, expected):
         row["passed"] = (row["result"] == "passed" and row["quality_present"]
                          and row.get("screenshot_count", 0) >= 10)
         checked.append(row)
-    return {"schema_version": 1, "expected": expected,
+        tasks_file = folder / "task_plan.json"
+        if tasks_file.is_file():
+            try:
+                tasks = json.loads(tasks_file.read_text(encoding="utf-8")).get("tasks", [])
+            except (ValueError, OSError, AttributeError):
+                tasks = []
+            for item in tasks:
+                if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                    continue
+                ident = item["id"]
+                if ident not in findings:
+                    findings[ident] = {
+                        "id": ident, "priority": item.get("priority", "P3"),
+                        "worker": item.get("worker", "qa"),
+                        "title": item.get("title", "Unknown QA finding"),
+                        "affected_emulators": []}
+                if cfg["id"] not in findings[ident]["affected_emulators"]:
+                    findings[ident]["affected_emulators"].append(cfg["id"])
+        if not row["passed"] and not tasks_file.is_file():
+            ident = "VB-EMULATOR-EVIDENCE-MISSING"
+            item = findings.setdefault(ident, {
+                "id": ident, "priority": "P0", "worker": "qa",
+                "title": "Emulator failure without machine-readable repair plan",
+                "affected_emulators": []})
+            item["affected_emulators"].append(cfg["id"])
+    ordered_findings = sorted(findings.values(),
+                              key=lambda t: ({"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+                                             .get(t["priority"], 4), t["id"]))
+    for item in ordered_findings:
+        item["scope"] = ("cross-emulator" if len(item["affected_emulators"]) > 1
+                         else "emulator-specific")
+    return {"schema_version": 2, "expected": expected,
             "passed": sum(1 for row in checked if row["passed"]),
             "success": all(row["passed"] for row in checked),
-            "instances": checked}
+            "instances": checked, "findings": ordered_findings}
 
 def main():
     parser = argparse.ArgumentParser()
@@ -89,6 +121,13 @@ def main():
         text += ["| " + row["id"] + " | " + str(row["api"]) + " | " + row["result"] +
                  " | " + str(row.get("screenshot_count", 0)) + " |"
                  for row in result["instances"]]
+        text += ["", "## Grouped repair findings", "",
+                 "| Priority | Responsible worker | Finding | Scope |",
+                 "|---|---|---|---|"]
+        for issue in result["findings"]:
+            text.append("| " + issue["priority"] + " | " + issue["worker"] +
+                        " | " + str(issue["title"]).replace("|", "/") +
+                        " | " + issue["scope"] + " |")
     (args.out / "emulator_farm_report.md").write_text("\n".join(text) + "\n")
     print(json.dumps(result, indent=2))
     return 0 if args.summarize is None or result["success"] else 1
