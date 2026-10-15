@@ -62,8 +62,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "vec3 col=vColor*uTint*wear*(vec3(.27,.32,.37)+warmth+cold+rim); "+
         "col+=uGlow*vColor*uTint*.65; "+
         "vec3 ember=vWorld-vec3(-4.4,1.4,11.);"+
-        "float warmth=1./(1.+dot(ember,ember)*.23);"+
-        "col+=vec3(.85,.28,.08)*warmth*.90; "+
+        "float emberGlow=1./(1.+dot(ember,ember)*.23);"+
+        "col+=vec3(.85,.28,.08)*emberGlow*.90; "+
         "float d=distance(uEye,vWorld); "+
         "float fog=clamp((d-13.)/67.,0.,.87); "+
         "fog+=clamp((2.-vWorld.y)*.045,0.,.13)*clamp(d/27.,0.,1.);"+
