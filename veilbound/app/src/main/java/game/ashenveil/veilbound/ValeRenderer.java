@@ -22,7 +22,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
-    private Rigged playerRig,revenantRig,knightRig;
+    private Rigged playerRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private Mesh verdigrisPool;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
     private boolean lastMeshUltra=true;
@@ -199,6 +199,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         playerRig=new Rigged(CharacterRig.split(DetailArtKit.bellwarden(),false,false));
         revenantRig=new Rigged(CharacterRig.split(DetailArtKit.hushed(),false,true));
         knightRig=new Rigged(CharacterRig.split(DetailArtKit.ashKnight(),true,false));
+        revenantFarRig=new Rigged(CharacterRig.split(ArtKit.hushed(),false,true));
+        knightFarRig=new Rigged(CharacterRig.split(ArtKit.ashKnight(),true,false));
         verdigrisPool=buildVerdigrisPool();
         staticWorld=buildWorld();
         studioWorld=buildStudioStage();
@@ -597,6 +599,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                             boolean boss,float tm,float walk,float swing,float dodge,
                             float moving,float fatigue,float stagger,float windup){
         Rigged rig=boss?knightRig:(foe?revenantRig:playerRig);
+        if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
+            rig=boss?knightFarRig:revenantFarRig;
+        }
         float scale=boss?1.13f:1f;
         float step=(float)Math.sin(walk*1.4f)*moving;
         float inhale=(float)Math.sin(tm*(1.9f+fatigue*2.8f)+(foe?1.2f:0f))
