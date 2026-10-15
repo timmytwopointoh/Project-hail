@@ -21,6 +21,7 @@ public final class WardenHud extends View {
     private float stickX=0,stickY=0,prevCamX=0;
     private float labLastX=0,labLastY=0,labPinchDistance=0;
     private int labDragPointer=-1;
+    private Runnable importAction;
     private long lastStudioDiagnosticUptime=0;
     private long lastDiagnostic=0;
     private float paintAlpha=1;
@@ -30,6 +31,7 @@ public final class WardenHud extends View {
     private static final int EMBER=Color.rgb(246,138,70);
     private final float[] lastCamera={0};
 
+    public void setImportAction(Runnable action){importAction=action;}
     public WardenHud(Context context,WorldState state){
         super(context);game=state;setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         setFocusable(true);setContentDescription("Veilbound native touch controls");
@@ -207,6 +209,7 @@ public final class WardenHud extends View {
         text(c,"◀  BACK",35,47,17,GOLD,true,false);
         text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
+        text(c,"IMPORT OBJ",170,158,14,GOLD,true,true);
         text(c,"HAND DETAIL",660,158,14,GOLD,true,true);
         text(c,"−",827,159,35,GOLD,true,true);
         text(c,"+",931,159,35,GOLD,true,true);
@@ -291,6 +294,10 @@ public final class WardenHud extends View {
             float x=normX(event.getX(idx)),y=normY(event.getY(idx));
             if(action==MotionEvent.ACTION_DOWN){
                 if(y<100&&x<145){game.exitStudio();invalidate();return true;}
+                if(y>120&&y<213&&x<310){
+                    if(importAction!=null)importAction.run();
+                    return true;
+                }
                 if(y>120&&y<213&&x>570){
                     if(x<766)lab.focusDetail();
                     else if(x<874)lab.dolly(.235f);

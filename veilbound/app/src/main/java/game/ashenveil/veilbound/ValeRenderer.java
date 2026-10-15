@@ -23,6 +23,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
     private boolean studioLinePrimitive=false;
+    private Mesh studioImported;
+    private final java.util.concurrent.atomic.AtomicReference<ArtKit.Model> importQueue=
+        new java.util.concurrent.atomic.AtomicReference<>();
+    public void stageImportedMesh(ArtKit.Model imported){importQueue.set(imported);}
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -250,6 +254,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private void renderStudio(){
         initStudioHighDetail();
+        ArtKit.Model pending=importQueue.getAndSet(null);
+        if(pending!=null){
+            studioImported=new Mesh(pending.vertices);
+            studioWireMeshes[ModelStudio.ITEMS.length-1]=null;
+            Log.i("VEILBOUND_STUDIO","IMPORTED_OBJ_READY triangles="+pending.triangleCount);
+        }
         ModelStudio.Snapshot m=state.studio.snapshot();
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
@@ -295,7 +305,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 3:chosen=studioSword;break;
             case 4:chosen=studioGreatsword;break;
             case 5:chosen=studioLantern;break;
-            default:chosen=studioChapel;
+            case 6:chosen=studioChapel;break;
+            default:chosen=studioImported!=null?studioImported:studioWarden;
         }
         Matrix.setIdentityM(model,0);
         // All lab assets stand ON the exhibition plinth, not through it.

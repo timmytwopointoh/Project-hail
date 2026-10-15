@@ -8,7 +8,7 @@ package game.ashenveil.veilbound;
 public final class ModelStudio {
     public static final String[] ITEMS={
         "BELLWARDEN","HUSHED REVENANT","ASH KNIGHT",
-        "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK"};
+        "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK","IMPORTED OBJ"};
     public static final String[] LIGHTS={"STUDIO","MOONLIT","EMBER","RIM LIGHT"};
     public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
@@ -32,6 +32,7 @@ public final class ModelStudio {
         panX=panY=0;
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;
     }
+    public synchronized void selectImported(){item=ITEMS.length-1;reset();zoom=5.3f;}
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
     public synchronized void nextMaterial(){material=(material+1)%MATERIALS.length;}
     public synchronized void toggleTurntable(){autoTurn=!autoTurn;}
