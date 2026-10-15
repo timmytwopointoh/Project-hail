@@ -61,6 +61,16 @@ class CoordinatorTests(unittest.TestCase):
                          [x["id"] for x in plan["tasks"]])
         self.assertEqual("blocked", plan["release_gate"])
 
+    def test_failed_studio_orbit_is_assigned_to_studio(self):
+        plan = qa.create_plan({"status": "failed",
+                               "error": "AssertionError('Model studio orbit gesture did not change image')"},
+                              {"screenshots": [{"file": str(i)} for i in range(17)],
+                               "performance_samples": [{"fps": 24, "gl_error": 0}],
+                               "warnings": []})
+        self.assertEqual("blocked", plan["release_gate"])
+        self.assertEqual("studio", plan["tasks"][0]["worker"])
+        self.assertEqual("VB-STUDIO-ORBIT", plan["tasks"][0]["id"])
+
     def test_invalid_json_returns_none_and_report_is_renderable(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "bad.json"
