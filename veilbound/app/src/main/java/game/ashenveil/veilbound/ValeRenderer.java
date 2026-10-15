@@ -192,6 +192,102 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                   " gl_error="+lastGlError);
         }
     }
+    /**
+     * Isolated model inspection stage with independent camera and materials.
+     * Switching here does not simulate combat or alter the RPG world.
+     */
+    private void renderStudio(){
+        ModelStudio.Snapshot m=state.studio.snapshot();
+        float pitch=m.pitch,yaw=m.yaw;
+        float horizontal=m.zoom*(float)Math.cos(pitch);
+        float targetY=(m.item==2?2.0f:(m.item==3||m.item==4?1.3f:1.50f))+m.panY;
+        float targetX=m.panX;
+        cx=targetX+(float)Math.sin(yaw)*horizontal;
+        cy=targetY+(float)Math.sin(pitch)*m.zoom;
+        cz=(float)Math.cos(yaw)*horizontal;
+        Matrix.setLookAtM(view,0,cx,cy,cz,targetX,targetY,0,0,1,0);
+        Matrix.multiplyMM(vp,0,projection,0,view,0);
+        GLES20.glUseProgram(program);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
+        GLES20.glUniform1i(uDetail,0);
+        GLES20.glUniform3f(uEye,cx,cy,cz);
+        GLES20.glUniform1f(uStudioMode,1f);
+        GLES20.glUniform1f(uStudioMaterial,m.material);
+        if(m.light==0)GLES20.glUniform3f(uStudioLight,-.45f,.82f,.27f);
+        if(m.light==1)GLES20.glUniform3f(uStudioLight,.31f,.74f,-.46f);
+        if(m.light==2)GLES20.glUniform3f(uStudioLight,-.68f,.20f,.60f);
+        if(m.light==3)GLES20.glUniform3f(uStudioLight,.77f,.39f,-.64f);
+        GLES20.glUniform3f(uFog,.08f,.11f,.13f);
+        GLES20.glUniform1f(uSurface,1f);
+        Matrix.setIdentityM(model,0);
+        draw(studioWorld,model,1,1,1,0f);
+        GLES20.glUniform1f(uSurface,0f);
+        Mesh chosen;
+        switch(m.item){
+            case 0:chosen=wardenModel;break;
+            case 1:chosen=hushedModel;break;
+            case 2:chosen=bossModel;break;
+            case 3:chosen=swordModel;break;
+            case 4:chosen=greatswordModel;break;
+            case 5:chosen=lanternModel;break;
+            default:chosen=studioChapel;
+        }
+        Matrix.setIdentityM(model,0);
+        if(m.item==3||m.item==4)Matrix.translateM(model,0,0,.35f,0);
+        else if(m.item==5)Matrix.scaleM(model,0,2.4f,2.4f,2.4f);
+        else if(m.item==2)Matrix.scaleM(model,0,1.12f,1.12f,1.12f);
+        draw(chosen,model,1,1,1,.06f);
+        if(m.item<3){
+            // Paired weapon on a measured side pedestal; compare material scale.
+            drawCube(3.30f,.30f,0,1.1f,.6f,1.1f,.42f,.43f,.45f,0,0);
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,3.3f,.9f,0);
+            draw(m.item==2?greatswordModel:swordModel,model,1,1,1,.08f);
+        }
+    }
+    private Mesh buildStudioStage(){
+        Builder b=new Builder();
+        // Inlaid checker floor, radial calibration ticks and buttressed hall.
+        b.box(0,-.24f,0,20f,.28f,20f,.24f,.27f,.30f);
+        for(int i=-10;i<10;i++)for(int j=-10;j<10;j++){
+            if((i+j)%2==0)
+                b.box(i+.5f,-.08f,j+.5f,.985f,.045f,.985f,
+                      .30f,.31f,.34f);
+        }
+        b.column(0,-.06f,0,2.10f,.68f,.40f,.42f,.45f);
+        b.box(0,.70f,0,4.40f,.11f,4.40f,.68f,.57f,.43f);
+        for(int k=0;k<32;k++){
+            float a=k*(float)(2*Math.PI/32);
+            float x=2.05f*(float)Math.sin(a),z=2.05f*(float)Math.cos(a);
+            b.box(x,.77f,z,.16f,.075f,.36f,.79f,.63f,.38f);
+        }
+        for(int i=-1;i<=1;i+=2){
+            for(int j=-1;j<=1;j+=2){
+                float x=i*7.7f,z=j*7.2f;
+                b.column(x,-.08f,z,.72f,6.70f,.38f,.40f,.42f);
+                b.rock(x,6.62f,z,.65f,2.2f,.51f,.52f,.51f);
+            }
+        }
+        return b.mesh();
+    }
+    private Mesh buildStudioChapel(){
+        Builder b=new Builder();
+        b.box(0,2.2f,0,4.7f,4.5f,7.4f,.47f,.50f,.51f);
+        b.pitchedRoof(0,4.5f,0,6.0f,8.1f,2.2f,.27f,.30f,.35f);
+        for(int side=-1;side<=1;side+=2){
+            for(int i=0;i<4;i++){
+                float z=-3.1f+i*2.1f;
+                b.column(side*2.55f,-.2f,z,.31f,4.4f,.42f,.44f,.46f);
+            }
+        }
+        for(int i=0;i<3;i++)b.chapelWindow(2.39f,2.65f,-2.2f+i*2.0f);
+        b.box(0,2.1f,3.73f,2.0f,3.4f,.22f,.35f,.38f,.41f);
+        b.column(-1.2f,0,3.87f,.20f,3.9f,.53f,.54f,.55f);
+        b.column(1.2f,0,3.87f,.20f,3.9f,.53f,.54f,.55f);
+        return b.mesh();
+    }
+
     private void renderSky(){
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthMask(false);
