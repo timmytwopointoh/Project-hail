@@ -20,7 +20,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
-    private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
+    private Mesh[] sculptedWorld;
+    private Mesh environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Rigged playerRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
@@ -216,7 +217,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         environmentReliquary=new Mesh(EnvironmentKit.reliquary().vertices);
         environmentRoots=new Mesh(EnvironmentKit.rootFan().vertices);
         sculptedWorld=buildWorldProps();
-        Log.i(TAG,"WORLD_ASSET_KIT_READY distinct=4 merged_triangles="+(sculptedWorld.count/3));
+        int worldTriangles=0;for(Mesh chunk:sculptedWorld)worldTriangles+=chunk.count/3;
+        Log.i(TAG,"WORLD_ASSET_KIT_READY distinct=4 chunks="+sculptedWorld.length+
+              " merged_triangles="+worldTriangles);
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count+
               " actor_verts="+(wardenModel.count+hushedModel.count+bossModel.count)+
@@ -535,7 +538,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uSurface,1f);
         draw(staticWorld,model,1,1,1,0);
         // All sculpted prop instances are pre-merged into ONE static buffer.
-        draw(sculptedWorld,model,1,1,1,0);
+        for(int i=0;i<sculptedWorld.length;i++){
+            float zoneCenter=i*10f+5f;
+            if(Math.abs(zoneCenter-state.z)<33f){
+                draw(sculptedWorld[i],model,1,1,1,0);
+            }
+        }
         GLES20.glUniform1f(uSurface,0f);
     }
 
@@ -638,7 +646,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
         // Dynamic material LOD: sharp BRDF only close to the camera.
         // Distant meshes retain fast ES2 per-vertex material lighting.
-        boolean materialQuality=dist2<80f && fps>6.0f;
+        boolean materialQuality=dist2<80f && fps>18.0f;
         GLES20.glUniform1f(uSurfaceQuality,materialQuality?1f:0f);
         Rigged rig=boss?knightRig:(foe?revenantRig:playerRig);
         if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
@@ -993,8 +1001,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * the same Model Atelier. Instances are merged into one immutable mesh.
      * Deliberate broken paving / graves / roots break up repeated cuboids.
      */
-    private Mesh buildWorldProps(){
-        Builder b=new Builder();
+    private Mesh[] buildWorldProps(){
+        Builder[] b=new Builder[8];
+        for(int i=0;i<b.length;i++)b[i]=new Builder();
         Random rng=new Random(190671);
         ArtKit.Model tile=EnvironmentKit.flagstone();
         ArtKit.Model tomb=EnvironmentKit.cenotaph();
@@ -1008,7 +1017,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 if(rng.nextFloat()<.04f)continue;
                 float sc=.73f+rng.nextFloat()*.22f;
                 float y=terrain(x,z)-.36f+(rng.nextFloat()-.5f)*.015f;
-                b.place(tile,x,y,z,sc,.75f,sc*1.66f,
+                b[Math.max(0,Math.min(b.length-1,(int)(z/10f)))].place(tile,x,y,z,sc,.75f,sc*1.66f,
                         (rng.nextFloat()-.5f)*.16f,
                         .72f+rng.nextFloat()*.15f);
                 stoneCount++;
@@ -1019,14 +1028,14 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float side=rng.nextBoolean()?1f:-1f;
             float x=side*(6.4f+rng.nextFloat()*12f);
             float size=.66f+rng.nextFloat()*.46f;
-            b.place(tomb,x,terrain(x,z)-.37f,z,size,size,size,
+            b[Math.max(0,Math.min(b.length-1,(int)(z/10f)))].place(tomb,x,terrain(x,z)-.37f,z,size,size,size,
                     rng.nextFloat()*6.28318f,.75f+rng.nextFloat()*.2f);
             graveCount++;
         }
         for(int k=0;k<12;k++){
             float z=8f+k*5.2f;
             float side=(k%2==0?-1f:1f),x=side*(5.8f+(k%3)*1.1f);
-            b.place(shrine,x,terrain(x,z)-.40f,z,.55f,.72f,.55f,
+            b[Math.max(0,Math.min(b.length-1,(int)(z/10f)))].place(shrine,x,terrain(x,z)-.40f,z,.55f,.72f,.55f,
                     side*.15f,.69f+.035f*(k%4));
             ironCount++;
         }
@@ -1035,7 +1044,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float side=rng.nextBoolean()?-1f:1f;
             float x=side*(5.1f+rng.nextFloat()*17f);
             float scale=.65f+rng.nextFloat()*.65f;
-            b.place(roots,x,terrain(x,z)-.36f,z,
+            b[Math.max(0,Math.min(b.length-1,(int)(z/10f)))].place(roots,x,terrain(x,z)-.36f,z,
                     scale,scale*(.80f+rng.nextFloat()*.5f),scale,
                     rng.nextFloat()*6.28318f,.71f+rng.nextFloat()*.26f);
             rootCount++;
@@ -1043,7 +1052,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Log.i(TAG,"WORLD_ASSET_INSTANCES paving="+stoneCount+
             " cenotaph="+graveCount+" iron_reliquary="+ironCount+
             " root_fans="+rootCount);
-        return b.mesh();
+        Mesh[] result=new Mesh[b.length];
+        for(int i=0;i<b.length;i++)result[i]=b[i].mesh();
+        return result;
     }
 
     private Mesh buildWorld(){
