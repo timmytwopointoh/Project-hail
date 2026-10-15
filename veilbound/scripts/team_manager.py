@@ -4,7 +4,7 @@
 Manager levels are real independent CI jobs, not self-replicating agents.
 Role ownership and budgets are fixed by trusted source. A team manager may
 approve/decline child assignments but cannot create unbounded jobs, choose
-untrusted source paths, or spend outside the top-level six-worker budget.
+untrusted source paths, or spend outside the top-level fifty-worker budget.
 """
 import argparse
 import json
@@ -18,34 +18,44 @@ TEAM_ROLES = {
 ROLE_TEAM = {role: team for team, roles in TEAM_ROLES.items() for role in roles}
 assert len(ROLE_TEAM) == sum(map(len, TEAM_ROLES.values()))
 MAX_TEAM_MANAGERS = len(TEAM_ROLES)
-MAX_CHILDREN_PER_MANAGER = 2
+MAX_CHILDREN_PER_MANAGER = 18
+MAX_TOTAL_WORKERS = 50
 
 def make_hierarchy(workers):
-    if not isinstance(workers, list) or len(workers) > MAX_TEAM_MANAGERS * MAX_CHILDREN_PER_MANAGER:
+    if not isinstance(workers, list) or len(workers) > MAX_TOTAL_WORKERS:
         raise ValueError("Invalid number of child workers")
-    owned = set()
-    jobs = []
-    for task in workers:
+    task_keys, slots, jobs = set(), set(), []
+    per_team = {team: 0 for team in TEAM_ROLES}
+    for index, task in enumerate(workers, start=1):
         if not isinstance(task, dict):
             raise ValueError("Invalid task")
         role = task.get("role")
-        if role not in ROLE_TEAM or role in owned:
-            raise ValueError("Duplicate or unowned role: " + str(role))
-        owned.add(role)
-        if not isinstance(task.get("task_id"), str) or not isinstance(task.get("goal"), str):
+        if role not in ROLE_TEAM:
+            raise ValueError("Unowned role: " + str(role))
+        task_id, goal = task.get("task_id"), task.get("goal")
+        if not isinstance(task_id, str) or not task_id or not isinstance(goal, str) or not goal:
             raise ValueError("Incomplete task assignment")
-        jobs.append(dict(task, team=ROLE_TEAM[role]))
-    managers = []
-    for team, roles in TEAM_ROLES.items():
-        child = [x for x in jobs if x["team"] == team]
-        if child:
-            if len(child) > MAX_CHILDREN_PER_MANAGER:
-                raise ValueError("Team child budget exceeded")
-            managers.append({"team": team, "child_count": len(child)})
+        key = (role, task_id)
+        if key in task_keys:
+            raise ValueError("Duplicated task assignment: " + str(key))
+        task_keys.add(key)
+        slot = task.get("slot_id", "w%03d" % index)
+        if not isinstance(slot, str) or not __import__("re").fullmatch(r"w\d{3}", slot) or slot in slots:
+            raise ValueError("Invalid or duplicate worker slot")
+        slots.add(slot)
+        team = ROLE_TEAM[role]
+        per_team[team] += 1
+        if per_team[team] > MAX_CHILDREN_PER_MANAGER:
+            raise ValueError("Team child budget exceeded")
+        jobs.append(dict(task, slot_id=slot, team=team))
+    managers = [{"team": name, "child_count": per_team[name]}
+                for name in TEAM_ROLES if per_team[name]]
     return {"team_matrix": {"include": managers},
             "worker_matrix": {"include": jobs},
             "team_count": len(managers), "worker_count": len(jobs),
-            "max_depth": 2, "max_workers_total": 6}
+            "max_depth": 2, "max_workers_total": MAX_TOTAL_WORKERS}
+
+
 
 def review_team(master, name):
     if name not in TEAM_ROLES:
@@ -69,13 +79,14 @@ def review_team(master, name):
             "children": children, "max_children": MAX_CHILDREN_PER_MANAGER,
             "requires_review_before_merge": True}
 
-def verify_child(team_plan, name, role, task_id, goal):
+def verify_child(team_plan, name, role, task_id, goal, slot_id=None):
     if team_plan.get("team") != name or team_plan.get("approved") is not True:
         raise ValueError("No approval from this team manager")
     if ROLE_TEAM.get(role) != name:
         raise ValueError("Worker does not belong to supervising team")
     valid = [x for x in team_plan.get("children", [])
-             if x.get("role") == role and x.get("task_id") == task_id and x.get("goal") == goal]
+             if x.get("role") == role and x.get("task_id") == task_id and x.get("goal") == goal
+             and (slot_id is None or x.get("slot_id") == slot_id)]
     if len(valid) != 1:
         raise ValueError("Worker assignment differs from the team manager's approved scope")
     return True
@@ -89,14 +100,16 @@ def cli():
     parser.add_argument("--role")
     parser.add_argument("--task-id")
     parser.add_argument("--goal")
+    parser.add_argument("--slot-id")
     args = parser.parse_args()
     if not args.team or not args.output:
         parser.error("--team and --output are required")
     if args.verify_child:
         plan = json.loads(args.output.read_text(encoding="utf-8"))
-        verify_child(plan, args.team, args.role, args.task_id, args.goal)
+        verify_child(plan, args.team, args.role, args.task_id, args.goal, args.slot_id)
         print(json.dumps({"approved": True, "team": args.team, "role": args.role,
-                          "task_id": args.task_id, "source": "team-manager-review"}))
+                          "task_id": args.task_id, "slot_id": args.slot_id,
+                          "source": "team-manager-review"}))
         return 0
     if args.director_plan is None:
         parser.error("--director-plan is required for manager planning")
