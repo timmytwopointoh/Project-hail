@@ -1,0 +1,49 @@
+name: VEILBOUND - Scoped AI Code Workers
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Goal of this proposal cycle (workers remain file-scoped)'
+        required: false
+        default: 'Find and propose small validated game improvements'
+  push:
+    branches: ['feature/veilbound-parallel-ai-qa']
+    paths:
+      - '.github/workflows/veilbound-ai-workers.yml'
+permissions:
+  contents: read
+# Three different worker instances; no writes to the game's live branch.
+jobs:
+  propose-and-validate:
+    name: Proposal worker / ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        role: [combat, models, world]
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: AI proposes narrowly scoped edits and validates Java tests
+        run: python3 veilbound/scripts/ai_worker.py --role "${{ matrix.role }}" --out "inspection_output/agent-${{ matrix.role }}"
+      - name: Store patch proposals for human review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-proposal-${{ matrix.role }}-${{ github.run_attempt }}
+          path: inspection_output/agent-${{ matrix.role }}/
+          if-no-files-found: warn
+          retention-days: 14
