@@ -39,6 +39,8 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       worker_count: ${{ steps.plan.outputs.worker_count }}
+      team_count: ${{ steps.plan.outputs.team_count }}
+      team_matrix: ${{ steps.plan.outputs.team_matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,8 +74,47 @@ jobs:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager/
           retention-days: 14
-  parallel-code-workers:
+  team-managers:
     needs: manager
+    if: needs.manager.outputs.team_count != '0'
+    name: Team manager / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.manager.outputs.team_matrix) }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Load exact top-level director assignments
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Approve two or fewer nonoverlapping child tasks
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --director-plan inspection_output/manager/assignment_plan.json \
+            --team "${{ matrix.team }}" \
+            --output "inspection_output/team-approval/team_approval.json"
+      - name: Publish immutable team-to-worker handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-team-${{ matrix.team }}-${{ github.run_attempt }}
+          path: inspection_output/team-approval/team_approval.json
+          if-no-files-found: error
+          retention-days: 14
+  parallel-code-workers:
+    needs: [manager, team-managers]
     if: >-
       needs.manager.outputs.worker_count != '0' &&
       (github.event_name == 'workflow_dispatch' || vars.ENABLE_AUTO_AI_WORKERS == 'true')
@@ -98,6 +139,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Download exact manager-to-worker assignment
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-team-${{ matrix.team }}-${{ github.run_attempt }}
+          path: inspection_output/approved-team
+      - name: Verify the team manager approved this precise worker task
+        env:
+          VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
+          VEILBOUND_TASK_ID: ${{ matrix.task_id }}
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --verify-child \
+            --team "${{ matrix.team }}" \
+            --role "${{ matrix.role }}" \
+            --task-id "${VEILBOUND_TASK_ID}" \
+            --goal "${VEILBOUND_TASK_GOAL}" \
+            --output inspection_output/approved-team/team_approval.json
       - name: Generate isolated source patch and validate trusted Java tests
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
