@@ -20,6 +20,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
+    private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Rigged playerRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
@@ -205,6 +206,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         staticWorld=buildWorld();
         studioWorld=buildStudioStage();
         studioChapel=buildStudioChapel();
+        environmentFlagstone=new Mesh(EnvironmentKit.flagstone().vertices);
+        environmentCenotaph=new Mesh(EnvironmentKit.cenotaph().vertices);
+        environmentReliquary=new Mesh(EnvironmentKit.reliquary().vertices);
+        environmentRoots=new Mesh(EnvironmentKit.rootFan().vertices);
+        sculptedWorld=buildWorldProps();
+        Log.i(TAG,"WORLD_ASSET_KIT_READY distinct=4 merged_triangles="+(sculptedWorld.count/3));
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count+
               " actor_verts="+(wardenModel.count+hushedModel.count+bossModel.count)+
@@ -348,7 +355,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
-        float targetY=(m.item==2?2.72f:(m.item==6?3.50f:2.12f))+m.panY;
+        float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
+            m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
+            m.item==10?1.07f:2.12f))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -401,6 +410,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 4:chosen=m.ultraMesh?studioGreatsword:greatswordModel;break;
             case 5:chosen=m.ultraMesh?studioLantern:lanternModel;break;
             case 6:chosen=studioChapel;break;
+            case 7:chosen=m.ultraMesh?environmentFlagstone:cube;break;
+            case 8:chosen=environmentCenotaph;break;
+            case 9:chosen=environmentReliquary;break;
+            case 10:chosen=environmentRoots;break;
             default:chosen=studioImported!=null?studioImported:studioWarden;
         }
         Matrix.setIdentityM(model,0);
@@ -505,6 +518,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(model,0);
         GLES20.glUniform1f(uSurface,1f);
         draw(staticWorld,model,1,1,1,0);
+        // All sculpted prop instances are pre-merged into ONE static buffer.
+        draw(sculptedWorld,model,1,1,1,0);
         GLES20.glUniform1f(uSurface,0f);
     }
 
@@ -822,6 +837,25 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         void quad(float[] p,float[] q,float[] r,float[] s,float cr,float cg,float cb){
             tri(p,q,r,cr,cg,cb);tri(p,r,s,cr,cg,cb);
         }
+        /** Bake any Atelier 3D mesh into a single static OpenGL batch. */
+        void place(ArtKit.Model asset,float x,float y,float z,float sx,float sy,
+                   float sz,float angle,float shade){
+            float ca=(float)Math.cos(angle),sa=(float)Math.sin(angle);
+            float[] data=asset.vertices;
+            for(int i=0;i<data.length;i+=27){
+                float[][] p=new float[3][];
+                float cr=0,cg=0,cb=0;
+                for(int k=0;k<3;k++){
+                    int at=i+k*9;
+                    float dx=data[at]*sx,dz=data[at+2]*sz;
+                    p[k]=v(x+dx*ca+dz*sa,y+data[at+1]*sy,
+                           z-dx*sa+dz*ca);
+                    cr+=data[at+6];cg+=data[at+7];cb+=data[at+8];
+                }
+                tri(p[0],p[1],p[2],
+                    cr/3f*shade,cg/3f*shade,cb/3f*shade);
+            }
+        }
         /** Organic tapered twig cylinder between arbitrary 3D endpoints. */
         void branch(float ax,float ay,float az,float bx,float by,float bz,
                     float radius,float r,float g,float blue){
@@ -926,6 +960,64 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         for(int i=0;i<4;i++){int j=(i+1)%4;b.tri(top,eq[i],eq[j],1,1,1);b.tri(bot,eq[j],eq[i],.7f,.85f,.95f);}
         return b.mesh();
     }
+    /**
+     * Original production assets, authored once in pure Java and showcased in
+     * the same Model Atelier. Instances are merged into one immutable mesh.
+     * Deliberate broken paving / graves / roots break up repeated cuboids.
+     */
+    private Mesh buildWorldProps(){
+        Builder b=new Builder();
+        Random rng=new Random(190671);
+        ArtKit.Model tile=EnvironmentKit.flagstone();
+        ArtKit.Model tomb=EnvironmentKit.cenotaph();
+        ArtKit.Model shrine=EnvironmentKit.reliquary();
+        ArtKit.Model roots=EnvironmentKit.rootFan();
+        int stoneCount=0,graveCount=0,ironCount=0,rootCount=0;
+        for(int lane=-2;lane<=2;lane++){
+            for(int step=0;step<30;step++){
+                float z=2.0f+step*2.18f+(rng.nextFloat()-.5f)*.27f;
+                float x=lane*1.45f+.25f*(float)Math.sin(z*.23f)+(rng.nextFloat()-.5f)*.26f;
+                if(rng.nextFloat()<.13f)continue;
+                float sc=.63f+rng.nextFloat()*.23f;
+                float y=terrain(x,z)-.32f+(rng.nextFloat()-.5f)*.023f;
+                b.place(tile,x,y,z,sc,.75f,sc*1.18f,
+                        (rng.nextFloat()-.5f)*.16f,
+                        .87f+rng.nextFloat()*.21f);
+                stoneCount++;
+            }
+        }
+        for(int k=0;k<28;k++){
+            float z=4f+rng.nextFloat()*67f;
+            float side=rng.nextBoolean()?1f:-1f;
+            float x=side*(6.4f+rng.nextFloat()*12f);
+            float size=.66f+rng.nextFloat()*.46f;
+            b.place(tomb,x,terrain(x,z)-.37f,z,size,size,size,
+                    rng.nextFloat()*6.28318f,.75f+rng.nextFloat()*.2f);
+            graveCount++;
+        }
+        for(int k=0;k<12;k++){
+            float z=8f+k*5.2f;
+            float side=(k%2==0?-1f:1f),x=side*(5.8f+(k%3)*1.1f);
+            b.place(shrine,x,terrain(x,z)-.40f,z,.55f,.72f,.55f,
+                    side*.15f,.69f+.035f*(k%4));
+            ironCount++;
+        }
+        for(int k=0;k<49;k++){
+            float z=2f+rng.nextFloat()*70f;
+            float side=rng.nextBoolean()?-1f:1f;
+            float x=side*(5.1f+rng.nextFloat()*17f);
+            float scale=.65f+rng.nextFloat()*.65f;
+            b.place(roots,x,terrain(x,z)-.36f,z,
+                    scale,scale*(.80f+rng.nextFloat()*.5f),scale,
+                    rng.nextFloat()*6.28318f,.71f+rng.nextFloat()*.26f);
+            rootCount++;
+        }
+        Log.i(TAG,"WORLD_ASSET_INSTANCES paving="+stoneCount+
+            " cenotaph="+graveCount+" iron_reliquary="+ironCount+
+            " root_fans="+rootCount);
+        return b.mesh();
+    }
+
     private Mesh buildWorld(){
         Builder b=new Builder();Random rng=new Random(7249);
         for(int ix=-22;ix<22;ix++){
@@ -957,15 +1049,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                    .16f+rng.nextFloat()*.72f,height*2.6f,
                    red,green,blue);
         }
-        // Worn paving broken across the pilgrimage road, including deliberate gaps.
-        for(int z=4;z<69;z+=3){
-            for(int row=-2;row<=2;row++){
-                float x=row*1.42f+.35f*(float)Math.sin(z*.23);
-                if(rng.nextFloat()<.19f)continue;
-                b.box(x,terrain(x,z)-.18f,z+.3f,1.22f,.22f,2.35f,
-                    .47f+rng.nextFloat()*.07f,.45f,.45f);
-            }
-        }
+        // Worn road now uses unique beveled tessellated limestone props
+        // placed into the same static world-batching pass (buildWorldProps).
         // Chapter landmark: the broken bell tower across the northern horizon.
         ruinTower(b,0,72,8.5f,17.5f,rng);
         ruinTower(b,-15,64,5.8f,11.3f,rng);
