@@ -19,7 +19,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                           model=new float[16],mvp=new float[16];
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface;
     private int skyPos,skyClock;
-    private Mesh staticWorld,cube,octa,needle,cape,armorTorso;
+    private Mesh staticWorld,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private FloatBuffer skyVertices;
     private int screenWidth=1,screenHeight=1;
     private long previous=0;
@@ -98,7 +98,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
-        cube=makeCube();octa=makeOcta();needle=makeNeedle();cape=makeCape();armorTorso=makeArmorTorso();
+        cube=makeCube();octa=makeOcta();
+        wardenModel=new Mesh(ArtKit.bellwarden().vertices);
+        hushedModel=new Mesh(ArtKit.hushed().vertices);
+        bossModel=new Mesh(ArtKit.ashKnight().vertices);
+        swordModel=new Mesh(ArtKit.sword().vertices);
+        greatswordModel=new Mesh(ArtKit.greatsword().vertices);
+        lanternModel=new Mesh(ArtKit.lantern().vertices);
         staticWorld=buildWorld();
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count);
@@ -177,7 +183,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             int side=i%2==0?-1:1;
             float x=side*7.7f;
             float base=terrain(x,z);
-            drawCube(x,base+.66f,z,.50f,1.32f,.48f,.31f,.34f,.34f,0,0);
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,base+.12f,z);
+            Matrix.scaleM(model,0,.82f,1.22f,.82f);
+            draw(lanternModel,model,.62f,.67f,.75f,.09f);
             drawOcta(x,base+1.61f,z,.19f,.43f,.19f,
                      i%3==0?.45f:.96f,i%3==0?.67f:.50f,.30f,
                      1.4f+(float)Math.sin(tm*2.5f+i)*.4f,tm*17);
@@ -190,8 +199,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         // Relic runes and occasional blue motes invite exploration.
         drawOcta(6.1f,terrain(6.1f,19)+1.9f,19,.21f,.46f,.21f,.28f,.8f,1f,1.7f,tm*9);
-        // Combatants are rendered as articulated primitive armor; replace with
-        // rigged character assets at animation milestone M3.
+        // Fused custom character models with distinct armor, skeletal and boss silhouettes;
+        // weapon pivot is animated independently to keep attack timing readable.
         drawKnight(state.x,terrain(state.x,state.z),state.z,state.heading,
                 false,false,tm,state.walkPhase,state.swing,state.dodge);
         for(WorldState.Foe foe:state.foes){
@@ -222,77 +231,40 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             drawOcta(0,terrain(0,59)+4.5f,59,1.2f,2.3f,1.2f,.7f,.9f,1f,3,tm*13);
         }
     }
+    /**
+     * One fused, individually sculpted mesh per actor and one independently
+     * animated blade. Replaces 25+ cuboid draw calls with two mesh draw calls.
+     * The user gains more defined helmets, cloaks, bodies and boss silhouettes
+     * without making the GPU traverse dozens of individual armor cuboids.
+     */
     private void drawKnight(float x,float y,float z,float yaw,boolean foe,
                             boolean boss,float tm,float walk,float swing,float dodge){
-        float scale=boss?1.46f:1f;
-        float c=foe?.38f:.61f;float g=foe?.35f:.53f;float b=foe?.39f:.48f;
-        float bob= (float)Math.sin(walk*1.4)*.045f;
-        float root=y+bob;
-        // Feet and leggings
-        drawPart(x,root+.40f*scale,z,-.31f,.42f,0,.36f,.85f,.44f,
-                yaw,c*.51f,g*.52f,b*.57f,0);
-        drawPart(x,root+.40f*scale,z,.31f,.42f,0,.36f,.85f,.44f,
-                yaw,c*.51f,g*.52f,b*.57f,0);
-        // Tattered cloak, armored torso and layered gorget.
-        drawCape(x,root,z,yaw,scale,foe?.62f:.79f,foe?.55f:.77f,foe?.63f:.82f);
-        drawPart(x,root+1.25f*scale,z,0,0,-.24f,.82f,1.45f,.23f,
-                yaw,foe?.12f:.08f,foe?.16f:.21f,foe?.19f:.30f,0);
-        drawTorso(x,root+1.35f*scale,z,yaw,scale,c,g,b);
-        drawPart(x,root+1.88f*scale,z,0,0,0,.95f,.20f,.72f,
-                yaw,foe?.65f:.77f,foe?.36f:.66f,foe?.30f:.57f,.15f);
-        // Head and winged helmet; visor darkness makes a readable silhouette.
-        drawPart(x,root+2.25f*scale,z,0,0,0,.54f,.62f,.59f,
-                yaw,c*.8f,g*.85f,b*.98f,0);
-        drawPart(x,root+2.34f*scale,z,0,0,.31f,.41f,.18f,.08f,
-                yaw,.035f,.045f,.055f,0);
-        // Visor slits, filigree brow, gorget and belt break up boxy armor.
-        drawPart(x,root+2.36f*scale,z,0,0,.36f,.31f,.055f,.09f,
-                yaw,foe?.71f:.72f,foe?.28f:.60f,foe?.17f:.54f,.16f);
-        drawPart(x,root+1.78f*scale,z,0,0,.43f,.61f,.07f,.07f,
-                yaw,.67f,.63f,.53f,.05f);
-        drawPart(x,root+.93f*scale,z,0,0,.20f,.93f,.19f,.66f,
-                yaw,.28f,.22f,.18f,0);
-        drawPart(x,root+1.21f*scale,z,0,0,.44f,.16f,.28f,.08f,
-                yaw,foe?.73f:.82f,.58f,.68f,.1f);
-        for(int side=-1;side<=1;side+=2){
-            drawPart(x,root+2.63f*scale,z,side*.30f,0,0,.23f,.38f,.26f,
-                    yaw,c*.65f,g*.75f,b*.90f,0);
-        }
-        // Segmented pauldrons, horn-tips and reinforced greaves.
-        for(int side=-1;side<=1;side+=2){
-            drawPart(x,root+1.80f*scale,z,side*.70f,0,.015f,
-                    .60f,.35f,.65f,yaw,c*.89f,g*.96f,b,0);
-            drawOcta(x+(float)Math.cos(yaw)*side*.78f,
-                     root+2.19f*scale,z-(float)Math.sin(yaw)*side*.78f,
-                     .18f,.57f,.19f,.59f,.63f,.69f,.14f,0);
-            drawPart(x,root+.40f*scale,z,side*.30f,0,.21f,
-                    .41f,.18f,.56f,yaw,.36f,.37f,.35f,0);
-        }
-        float armSwing=(float)Math.sin(walk*1.4f)*.10f;
-        drawPart(x,root+1.38f*scale,z,-.65f,armSwing,0,.38f,.90f,.39f,
-                yaw,c*.78f,g*.78f,b*.83f,0);
-        drawPart(x,root+1.38f*scale,z,.65f,-armSwing,0,.38f,.90f,.39f,
-                yaw,c*.72f,g*.69f,b*.72f,0);
-        // Sword is attached to right hand; rotation signals active swing.
-        float slash=swing>0?(float)Math.sin((.57f-swing)/.57f*Math.PI)*.9f:0;
-        drawPart(x,root+1.05f*scale+slash*.36f,z,.79f,0,.4f,.10f,.14f,.72f,
-                yaw+.30f+slash, .23f,.19f,.13f,0);
-        drawPart(x,root+1.66f*scale+slash*.42f,z,.79f,0,.40f,.15f,1.08f,.10f,
-                yaw+.30f+slash,.65f,.76f,.80f,foe?.1f:.20f);
-        drawPart(x,root+1.20f*scale+slash*.36f,z,.79f,0,.40f,.50f,.075f,.14f,
-                yaw+.30f+slash,.78f,.63f,.42f,.07f);
-        drawPart(x,root+1.12f*scale,z,.81f,0,.30f,.23f,.28f,.24f,
-                yaw,.32f,.36f,.38f,0);
-        if(dodge>0)drawOcta(x,root+.35f,z,.58f,.18f,.58f,.28f,.50f,.59f,.25f,tm*60);
-    }
-    private void drawPart(float x,float y,float z,float ox,float oy,float oz,
-                          float sx,float sy,float sz,float yaw,
-                          float r,float g,float b,float glow){
-        Matrix.setIdentityM(model,0);Matrix.translateM(model,0,x,y,z);
+        float bob=(float)Math.sin(walk*1.4f)*.038f;
+        float scale=boss?1.13f:1f;
+        Mesh actor=boss?bossModel:(foe?hushedModel:wardenModel);
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y+bob,z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
-        Matrix.translateM(model,0,ox,oy,oz);
-        Matrix.scaleM(model,0,sx,sy,sz);
-        draw(cube,model,r,g,b,glow);
+        if(dodge>0)Matrix.rotateM(model,0,Math.min(13f,dodge*28f),1,0,0);
+        if(boss)Matrix.scaleM(model,0,scale,scale,scale);
+        draw(actor,model,1,1,1,foe?.03f:0);
+        // Animated sword pivot; purple-blue steel player versus iron boss.
+        float phase=swing>0
+            ?(float)Math.sin((.57f-swing)/.57f*Math.PI):0f;
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y+bob,z);
+        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+        if(boss){
+            Matrix.translateM(model,0,1.43f,1.15f,.21f);
+            Matrix.rotateM(model,0,-14+phase*115,0,0,1);
+            Matrix.scaleM(model,0,1.0f,1.0f,1.0f);
+            draw(greatswordModel,model,.86f,.84f,.84f,.11f);
+        }else{
+            Matrix.translateM(model,0,.84f,1.05f,.28f);
+            Matrix.rotateM(model,0,-9+phase*128,0,0,1);
+            Matrix.scaleM(model,0,.82f,.92f,.82f);
+            draw(swordModel,model,foe?.72f:1f,foe?.65f:1f,foe?.64f:1f,foe?0:.08f);
+        }
     }
     private void drawCube(float x,float y,float z,float sx,float sy,float sz,
                           float r,float g,float b,float glow,float angle){
@@ -440,59 +412,6 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float[][] eq={v(.5f,0,0),v(0,0,.5f),v(-.5f,0,0),v(0,0,-.5f)};
         for(int i=0;i<4;i++){int j=(i+1)%4;b.tri(top,eq[i],eq[j],1,1,1);b.tri(bot,eq[j],eq[i],.7f,.85f,.95f);}
         return b.mesh();
-    }
-    private static Mesh makeNeedle(){return makeOcta();}
-    // Layered, asymmetric cloak mesh with weathered embroidery and fraying.
-    private static Mesh makeCape(){
-        Builder b=new Builder();
-        b.quad(v(-.49f,1.85f,-.42f),v(.49f,1.85f,-.42f),
-               v(.76f,.23f,-.79f),v(-.85f,.22f,-.82f),.26f,.34f,.39f);
-        b.tri(v(-.48f,1.84f,-.44f),v(-.08f,1.65f,-.53f),
-              v(-.77f,.29f,-.85f),.40f,.27f,.24f);
-        b.tri(v(.48f,1.84f,-.43f),v(.77f,.29f,-.85f),
-              v(.10f,1.64f,-.53f),.33f,.30f,.32f);
-        b.quad(v(-.82f,.22f,-.86f),v(.76f,.23f,-.82f),
-               v(.79f,.12f,-.89f),v(-.87f,.12f,-.92f),.54f,.35f,.22f);
-        b.tri(v(-.30f,1.38f,-.68f),v(.30f,1.38f,-.68f),
-              v(0,.74f,-.83f),.71f,.71f,.63f);
-        b.tri(v(-.12f,1.25f,-.72f),v(.12f,1.25f,-.72f),
-              v(0,.92f,-.82f),.15f,.24f,.29f);
-        return b.mesh();
-    }
-    private static Mesh makeArmorTorso(){
-        Builder b=new Builder();
-        // Sloping shoulders taper to the waist; hand-forged breastplate relief.
-        float[] fl=v(-.30f,-.49f,.32f),fr=v(.30f,-.49f,.32f);
-        float[] tl=v(-.49f,.48f,.35f),tr=v(.49f,.48f,.35f);
-        float[] bl=v(-.30f,-.49f,-.30f),br=v(.30f,-.49f,-.30f);
-        float[] ul=v(-.49f,.48f,-.36f),ur=v(.49f,.48f,-.36f);
-        b.quad(fl,fr,tr,tl,.89f,.91f,.93f);
-        b.quad(br,bl,ul,ur,.60f,.63f,.66f);
-        b.quad(bl,fl,tl,ul,.72f,.74f,.80f);
-        b.quad(fr,br,ur,tr,.77f,.79f,.84f);
-        b.quad(tl,tr,ur,ul,.90f,.87f,.76f);
-        b.quad(bl,br,fr,fl,.55f,.57f,.59f);
-        b.tri(v(-.24f,.36f,.378f),v(.24f,.36f,.378f),
-              v(0,-.33f,.349f),.51f,.66f,.73f);
-        b.tri(v(-.11f,.24f,.384f),v(.11f,.24f,.384f),
-              v(0,-.17f,.36f),.80f,.69f,.40f);
-        return b.mesh();
-    }
-    private void drawTorso(float x,float y,float z,float yaw,float scale,
-                           float red,float green,float blue){
-        Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y,z);
-        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
-        Matrix.scaleM(model,0,.93f*scale,1.05f*scale,.80f*scale);
-        draw(armorTorso,model,red,green,blue,0);
-    }
-    private void drawCape(float x,float y,float z,float yaw,
-                          float scale,float r,float g,float b){
-        Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y,z);
-        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
-        Matrix.scaleM(model,0,scale,scale,scale);
-        draw(cape,model,r,g,b,0);
     }
     private Mesh buildWorld(){
         Builder b=new Builder();Random rng=new Random(7249);
