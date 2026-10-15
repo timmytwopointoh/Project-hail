@@ -592,39 +592,117 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             drawOcta(0,terrain(0,59)+4.5f,59,1.2f,2.3f,1.2f,.7f,.9f,1f,3,tm*13);
         }
     }
-    /**
-     * One fused, individually sculpted mesh per actor and one independently
-     * animated blade. Replaces 25+ cuboid draw calls with two mesh draw calls.
-     * The user gains more defined helmets, cloaks, bodies and boss silhouettes
-     * without making the GPU traverse dozens of individual armor cuboids.
-     */
+    /** Details retain their sculpted normals/colors as independently posed limbs. */
     private void drawKnight(float x,float y,float z,float yaw,boolean foe,
-                            boolean boss,float tm,float walk,float swing,float dodge){
-        float bob=(float)Math.sin(walk*1.4f)*.038f;
+                            boolean boss,float tm,float walk,float swing,float dodge,
+                            float moving,float fatigue,float stagger,float windup){
+        Rigged rig=boss?knightRig:(foe?revenantRig:playerRig);
         float scale=boss?1.13f:1f;
-        Mesh actor=boss?bossModel:(foe?hushedModel:wardenModel);
+        float step=(float)Math.sin(walk*1.4f)*moving;
+        float inhale=(float)Math.sin(tm*(1.9f+fatigue*2.8f)+(foe?1.2f:0f))
+                      *(.016f+.042f*fatigue);
+        float bob=moving*(float)Math.abs(Math.sin(walk*1.4f))*.043f+inhale*.4f;
+        float roll=dodge>0?(float)Math.sin(Math.PI*(1f-dodge/.48f)):0f;
+        float flinch=stagger>0?Math.min(1f,stagger*2.65f):0f;
+        float phase=swing>0?CombatMotion.progress(swing):0f;
+        float attackTwist=swing>0?(float)Math.sin(phase*Math.PI)*-14f:0f;
+        // Idle guard, active locomotion, heavy breathing, dodge and damage.
         Matrix.setIdentityM(model,0);
         Matrix.translateM(model,0,x,y+bob,z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
-        if(dodge>0)Matrix.rotateM(model,0,Math.min(13f,dodge*28f),1,0,0);
-        if(boss)Matrix.scaleM(model,0,scale,scale,scale);
-        draw(actor,model,1,1,1,foe?.03f:0);
-        // Animated sword pivot; purple-blue steel player versus iron boss.
-        float phase=swing>0
-            ?(float)Math.sin((.57f-swing)/.57f*Math.PI):0f;
+        Matrix.scaleM(model,0,scale,scale,scale);
+        Matrix.rotateM(model,0,moving*3.2f+fatigue*inhale*47f+
+                flinch*9f+roll*24f,1,0,0);
+        Matrix.rotateM(model,0,attackTwist,0,1,0);
+        draw(rig.torso,model,1,1,1,foe?.04f:0);
+        float brace=windup>0?22f*(1f-windup/(boss?.92f:.72f)):0f;
+        float armDrive=swing>0?25f+26f*CombatMotion.smooth(phase/.32f):0f;
+        drawRigLimb(rig.leftArm,rig.parts.shoulderX,rig.parts.shoulderY,
+                    x,y+bob,z,yaw,scale,-step*18f-12f-flinch*13f+roll*20f,
+                    -8f-fatigue*inhale*44f,false);
+        drawRigLimb(rig.rightArm,rig.parts.shoulderX,rig.parts.shoulderY,
+                    x,y+bob,z,yaw,scale,step*16f+13f-armDrive-brace,
+                    -22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f),true);
+        drawRigLimb(rig.leftLeg,rig.parts.hipX,rig.parts.hipY,
+                    x,y+bob,z,yaw,scale,step*22f-roll*35f,2f,false);
+        drawRigLimb(rig.rightLeg,rig.parts.hipX,rig.parts.hipY,
+                    x,y+bob,z,yaw,scale,-step*22f+roll*24f,-2f,true);
+
         Matrix.setIdentityM(model,0);
         Matrix.translateM(model,0,x,y+bob,z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
-        if(boss){
-            Matrix.translateM(model,0,1.43f,1.15f,.21f);
-            Matrix.rotateM(model,0,-14+phase*115,0,0,1);
-            Matrix.scaleM(model,0,1.0f,1.0f,1.0f);
-            draw(greatswordModel,model,.86f,.84f,.84f,.11f);
+        Matrix.scaleM(model,0,scale,scale,scale);
+        Matrix.translateM(model,0,boss?1.36f:.78f,boss?1.45f:1.12f,.39f);
+        if(swing>0){
+            Matrix.rotateM(model,0,(float)Math.toDegrees(
+                    CombatMotion.bladeBearing(phase)),0,1,0);
+            Matrix.rotateM(model,0,CombatMotion.bladePitch(phase),1,0,0);
+            Matrix.rotateM(model,0,-8f,0,0,1);
         }else{
-            Matrix.translateM(model,0,.84f,1.05f,.28f);
-            Matrix.rotateM(model,0,-9+phase*128,0,0,1);
-            Matrix.scaleM(model,0,.82f,.92f,.82f);
-            draw(swordModel,model,foe?.72f:1f,foe?.65f:1f,foe?.64f:1f,foe?0:.08f);
+            Matrix.rotateM(model,0,foe?29f:23f,0,1,0);
+            Matrix.rotateM(model,0,14f+inhale*33f,1,0,0);
+            Matrix.rotateM(model,0,-23f,0,0,1);
+        }
+        Matrix.scaleM(model,0,boss?1f:.82f,boss?1f:.92f,boss?1f:.82f);
+        draw(boss?greatswordModel:swordModel,model,
+             foe?.72f:1f,foe?.68f:1f,foe?.72f:1f,foe?.04f:.10f);
+        // Glint on the moving blade during the same contact window as physics.
+        if(swing>0&&phase>=CombatMotion.ACTIVE_START&&
+                phase<=CombatMotion.ACTIVE_END){
+            float angle=yaw+CombatMotion.bladeBearing(phase);
+            for(int i=0;i<3;i++){
+                float d=1.48f+i*.34f;
+                drawOcta(x+(float)Math.sin(angle)*d,y+1.3f+i*.1f,
+                    z+(float)Math.cos(angle)*d,.055f,.085f,.055f,
+                    foe?.8f:.64f,foe?.68f:.91f,foe?.58f:1f,.52f,tm*46f);
+            }
+        }
+    }
+    private void drawRigLimb(Mesh limb,float jointX,float jointY,
+                             float x,float y,float z,float yaw,float size,
+                             float pitch,float spread,boolean right){
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y,z);
+        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+        Matrix.scaleM(model,0,size,size,size);
+        Matrix.translateM(model,0,right?jointX:-jointX,jointY,0);
+        Matrix.rotateM(model,0,pitch,1,0,0);
+        Matrix.rotateM(model,0,right?-spread:spread,0,0,1);
+        draw(limb,model,1,1,1,0);
+    }
+    private static Mesh buildVerdigrisPool(){
+        Builder b=new Builder();
+        for(int i=0;i<30;i++){
+            float a=(float)(Math.PI*2*i/30),n=(float)(Math.PI*2*(i+1)/30);
+            float r=.86f+.16f*(float)Math.sin(i*5.17)+.09f*(float)Math.cos(i*2.7);
+            float rn=.86f+.16f*(float)Math.sin((i+1)*5.17)+.09f*(float)Math.cos((i+1)*2.7);
+            b.tri(v(0,0,0),v(rn*(float)Math.cos(n),0,rn*(float)Math.sin(n)),
+                v(r*(float)Math.cos(a),0,r*(float)Math.sin(a)),
+                .15f+.025f*(i%3),.56f+.04f*(i%4),.11f);
+        }
+        return b.mesh();
+    }
+    private void drawBloodOnStone(float tm){
+        for(int k=0;k<state.stainCount;k++){
+            WorldState.Stain stain=state.stains[k];
+            if(stain==null)continue;
+            float age=tm-stain.born;
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,stain.x,terrain(stain.x,stain.z)+.04f,stain.z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(stain.angle),0,1,0);
+            float size=stain.radius*(.31f+.69f*CombatMotion.smooth(age/.46f));
+            Matrix.scaleM(model,0,size,1f,size);
+            draw(verdigrisPool,model,.68f,.88f,.67f,.015f);
+            if(age>=0&&age<.53f){
+                for(int j=0;j<2;j++){
+                    float angle=stain.angle+j*2.7f,travel=age/.53f;
+                    float px=stain.x+(float)Math.cos(angle)*(.3f+travel*.56f);
+                    float pz=stain.z+(float)Math.sin(angle)*(.3f+travel*.56f);
+                    float py=terrain(px,pz)+.11f+1.4f*4f*travel*(1f-travel);
+                    drawOcta(px,py,pz,.05f,.08f,.05f,
+                        .21f,.94f,.16f,.32f,tm*33f);
+                }
+            }
         }
     }
     private void drawCube(float x,float y,float z,float sx,float sy,float sz,
@@ -703,6 +781,15 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static FloatBuffer allocate(float[] v){
         FloatBuffer b=ByteBuffer.allocateDirect(v.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
         b.put(v);b.position(0);return b;
+    }
+    private static final class Rigged {
+        final CharacterRig.Parts parts;
+        final Mesh torso,leftArm,rightArm,leftLeg,rightLeg;
+        Rigged(CharacterRig.Parts p){
+            parts=p;torso=new Mesh(p.torso.vertices);
+            leftArm=new Mesh(p.leftArm.vertices);rightArm=new Mesh(p.rightArm.vertices);
+            leftLeg=new Mesh(p.leftLeg.vertices);rightLeg=new Mesh(p.rightLeg.vertices);
+        }
     }
     private static final class Mesh {
         final FloatBuffer data;final int count;
