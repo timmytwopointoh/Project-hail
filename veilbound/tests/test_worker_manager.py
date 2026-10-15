@@ -96,14 +96,15 @@ class ManagerTests(unittest.TestCase):
             for i in range(60)]}
         p = manager.plan(backlog, max_workers=50)
         self.assertEqual(50, p["allocated"])
-        self.assertEqual(3, p["team_count"])
+        self.assertEqual(6, p["team_count"])
         self.assertEqual(50, len(set(x["slot_id"] for x in p["matrix"]["include"])))
         self.assertEqual(50, len(set(x["task_id"] for x in p["matrix"]["include"])))
         self.assertEqual("w050", p["matrix"]["include"][-1]["slot_id"])
         counts = {x["team"]: x["child_count"] for x in p["team_matrix"]["include"]}
         self.assertEqual(50, sum(counts.values()))
-        self.assertTrue(all(0 < value <= 18 for value in counts.values()))
-        self.assertTrue(all(value >= 15 for value in counts.values()))
+        self.assertTrue(all(0 < value <= 10 for value in counts.values()))
+        self.assertTrue(all(value >= 7 for value in counts.values()))
+        self.assertEqual(3, p["division_count"])
 
     def test_live_fifty_task_backlog_covers_every_slot(self):
         path = MANAGER_PATH.parents[1] / "worker_backlog.json"
@@ -111,7 +112,7 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(50, len(backlog["tasks"]))
         actual = manager.plan(backlog, max_workers=50)
         self.assertEqual(50, actual["allocated"])
-        self.assertEqual(3, actual["team_count"])
+        self.assertEqual(6, actual["team_count"])
         self.assertEqual("w050", actual["matrix"]["include"][-1]["slot_id"])
 
     def test_duplicate_exact_task_id_is_not_double_billed(self):
