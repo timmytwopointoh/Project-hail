@@ -5,10 +5,10 @@ android {
     namespace 'com.trioncompasitor.matrixflap'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.trioncompasitor.matrixflap'
+        applicationId 'com.trioncompasitor.matrixflap.cinematic'
         minSdk 29
         targetSdk 29
-        versionCode 2
-        versionName '1.1'
+        versionCode 12
+        versionName '1.2'
     }
 }

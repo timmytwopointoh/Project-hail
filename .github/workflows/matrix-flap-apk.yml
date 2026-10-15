@@ -53,7 +53,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          target: default
           arch: x86_64
           cores: 4
           ram-size: 4096M
@@ -78,13 +78,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: matrix-flap-v12-candidate-UNVERIFIED
+          name: matrix-flap-cinematic-v12-side-by-side-candidate-UNVERIFIED
           path: matrix-flap/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
       - name: Upload tested Matrix Flap APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: matrix-flap-android15-tested-apk
+          name: matrix-flap-cinematic-v12-tested-apk
           path: matrix-flap/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

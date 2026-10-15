@@ -1,7 +1,9 @@
 # Matrix Flap v1.2 — Cinematic quality plan
 
 Baseline: original stable Matrix Flap APK, verified Android 15 GitHub Actions #4.
-Candidate branch: feature/matrix-flap-cinematic-v12. Never overwrite known-good version before regression tests.
+Candidate branch: feature/matrix-flap-cinematic-v12.
+
+This v1.2 Android APK uses application ID `com.trioncompasitor.matrixflap.cinematic` so it installs **alongside** the stable app instead of replacing it or erasing its score. The Forge JSON retains the original source project identifier; only the Android test wrapper uses the preview package. Never overwrite known-good version before regression tests.
 
 ## Graphics objectives and acceptance gates
 

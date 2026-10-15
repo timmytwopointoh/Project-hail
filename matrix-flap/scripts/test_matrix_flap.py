@@ -8,8 +8,8 @@ import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-PACKAGE = "com.trioncompasitor.matrixflap"
-ACTIVITY = PACKAGE + "/.MainActivity"
+PACKAGE = "com.trioncompasitor.matrixflap.cinematic"
+ACTIVITY = PACKAGE + "/com.trioncompasitor.matrixflap.MainActivity"
 INSPECT = PACKAGE + ".INSPECT"
 OUT = Path("inspection_output/matrix_flap")
 APK = Path("matrix-flap/app/build/outputs/apk/debug/app-debug.apk")

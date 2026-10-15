@@ -17,7 +17,7 @@ def assess(out):
     visuals=load("visual_comparison.json")
     shots=game.get("screenshots",[])
     checks={
-        "android_package": "com.trioncompasitor.matrixflap" in read("apk_badging.txt"),
+        "android_package": "com.trioncompasitor.matrixflap.cinematic" in read("apk_badging.txt"),
         "zip_alignment": "Verification successful" in read("apk_alignment.txt"),
         "v2_signature": "Verified using v2 scheme (APK Signature Scheme v2): true" in read("apk_signature.txt"),
         "apk_installed": game.get("installed") is True,
