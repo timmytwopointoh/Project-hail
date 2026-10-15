@@ -40,6 +40,7 @@ jobs:
           python3 -m unittest discover -s veilbound/tests -p 'test_qa_coordinator.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_worker_manager.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_ai_worker_roles.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_promote_proposal.py' -v
       - name: Keep independent QA evidence
         if: always()
         uses: actions/upload-artifact@v4
