@@ -26,12 +26,22 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
+          disk-size: 4096M
           profile: pixel_6
           disable-animations: true
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: |
             set -euo pipefail
             adb wait-for-device
+            for attempt in $(seq 1 60); do
+              [ "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1" ] && break
+              sleep 5
+            done
+            test "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1"
             adb shell getprop sys.boot_completed | tee inspection_output/boot_completed.txt
             adb shell getprop ro.build.version.release | tee inspection_output/android_version.txt
             adb devices -l | tee inspection_output/adb_devices.txt
