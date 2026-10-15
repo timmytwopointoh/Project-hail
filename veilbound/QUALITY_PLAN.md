@@ -97,3 +97,29 @@ Reference: https://developer.android.com/develop/ui/views/graphics/opengl/about-
   reductions; emulator FPS is not a real-phone measurement.
 - Frame pacing: consider Android Game Development Kit Swappy after native
   integration and profiling; no unsupported claim of Swappy integration.
+
+## M0.8 — Studio cinematics, close-up topology and material realism
+
+- Preserve emulator-verified M0.7 source on a distinct branch.
+- `CinematicArtKit`: non-destructive sculpt layer over the tested `DetailArtKit`
+  with mathematically smooth normals, curved breastplates, laminated pauldrons,
+  fluted helmets, double-sided pleated mantles, rib reliefs and fuller bevels.
+  The gameplay model remains an independent lightweight Level of Detail.
+- `SurfaceAtlas`: deterministic 512×512 RGBA diffuse and normal-roughness
+  atlases for weathered limestone, hammered steel, cloth, and leather.
+  Bound lazily to GLES2 texture units 1/2 while older gameplay pipeline uses
+  its original detail map on texture unit 0.
+- Studio-only shader approximates microfacet BRDF highlights, roughness,
+  normal perturbation, image-based fill/rim and richer colored keys.
+  It is PBR-inspired shading, not physically calibrated photogrammetry.
+- Toggle **SCULPT: ULTRA / LITE** in the studio for side-by-side visual and
+  frame-cost comparisons. Existing import and wireframe modes are maintained.
+- Preflight validates each detailed surface, finite normals, albedo variability,
+  metal/cloth roughness difference, imported OBJ and existing combat rules.
+- Emulator checks model Atelier launch, 512px maps initialized, true
+  original-scene navigation, close-up, boss, wireframe, architecture, and mesh LOD.
+- APK size is not an arbitrary target: prioritize visual quality while measuring
+  runtime memory and actual Motorola Moto G 2025 performance.
+- Remaining professional-asset work: authentic UV-authoring, physical normal/
+  ORM textures and color-managed lighting, artist-authored sculpted geometry,
+  facial topology, imported rigged GLB with skeleton and motion clips.

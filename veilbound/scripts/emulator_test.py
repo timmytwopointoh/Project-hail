@@ -128,6 +128,20 @@ def main():
             diff=ImageChops.difference(before.convert("RGB").resize((160,90)),
                                        after.convert("RGB").resize((160,90)))
             atelier["orbit"]=diff.getbbox() is not None
+        # Verify the studio actually uses the new 512px material maps rather
+        # than silently falling back to the earlier flat surface shader.
+        studio_gl_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",timeout=20).decode("utf-8","replace")
+        atelier["surface_atlas"]="SURFACE_MAPS_READY" in studio_gl_log
+        atelier["cinematic_sculpt"]="DETAIL_MESH_READY" in studio_gl_log
+        if not atelier["surface_atlas"] or not atelier["cinematic_sculpt"]:
+            raise AssertionError("M0.8 atlas / sculpt initialization missing in Android log")
+        touch(w*.43,h*.265)
+        time.sleep(.9)
+        lod=shot("01_atelier_lite_mesh.png")
+        report["screenshots"].append(lod)
+        atelier["mesh_lod_toggle"]=True
+        touch(w*.43,h*.265)
+        time.sleep(.9)
         if not atelier["orbit"]:
             raise AssertionError("Model studio orbit gesture did not change image")
         # Extreme close-up camera confirms mesh detail survives full zoom.
