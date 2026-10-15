@@ -130,6 +130,16 @@ def main():
             atelier["orbit"]=diff.getbbox() is not None
         if not atelier["orbit"]:
             raise AssertionError("Model studio orbit gesture did not change image")
+        # Extreme close-up camera confirms mesh detail survives full zoom.
+        for _ in range(5):
+            touch(w*.931,h*.265)
+            time.sleep(.14)
+        time.sleep(.7)
+        close=shot("01_atelier_closeup.png")
+        report["screenshots"].append(close)
+        atelier["closeup"]=True
+        touch(w*.921,h*.946)  # reset the camera, not the game state
+        time.sleep(.5)
         touch(w*.65,h*.865)
         time.sleep(.8)
         touch(w*.20,h*.944)
@@ -142,6 +152,29 @@ def main():
         atelier["lighting"]="light=1" in logs and "material=1" in logs
         if not atelier["asset_switch"] or not atelier["lighting"]:
             raise AssertionError("Studio model/material/light settings did not change: "+str(atelier))
+        touch(w*.65,h*.865)  # Hushed -> Ash Knight
+        time.sleep(.8)
+        boss=shot("01_atelier_boss.png")
+        report["screenshots"].append(boss)
+        for _ in range(3):  # material 1 -> 4, actual GL_LINES
+            touch(w*.52,h*.944)
+            time.sleep(.22)
+        time.sleep(.5)
+        wire=shot("01_atelier_wireframe.png")
+        report["screenshots"].append(wire)
+        with Image.open(OUT/"01_atelier_boss.png") as before, Image.open(OUT/"01_atelier_wireframe.png") as after:
+            delta=ImageChops.difference(before.convert("RGB").resize((160,90)),
+                                        after.convert("RGB").resize((160,90)))
+            atelier["wireframe"]=delta.getbbox() is not None
+        if not atelier["wireframe"]:
+            raise AssertionError("Wireframe mode did not visibly change model rendering")
+        for _ in range(4): # boss -> chapel (seven asset slots)
+            touch(w*.65,h*.865)
+            time.sleep(.23)
+        time.sleep(.6)
+        chapel=shot("01_atelier_chapel.png")
+        report["screenshots"].append(chapel)
+        atelier["chapel"]=True
         touch(w*.08,h*.08)
         time.sleep(.7)
         if diagnostic_state()!="title":
