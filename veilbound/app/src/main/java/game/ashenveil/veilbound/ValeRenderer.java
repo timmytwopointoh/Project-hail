@@ -171,6 +171,23 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             drawOcta(-4.4f+(float)Math.sin(a)*r,fy,11+(float)Math.cos(a)*r,
                 .025f,.065f,.025f,1f,.45f,.16f,2.8f,0);
         }
+        // Pilgrim's road: distant lamps and weathered bell fragments.
+        for(int i=0;i<8;i++){
+            float z=7+i*7.25f;
+            int side=i%2==0?-1:1;
+            float x=side*7.7f;
+            float base=terrain(x,z);
+            drawCube(x,base+.66f,z,.50f,1.32f,.48f,.31f,.34f,.34f,0,0);
+            drawOcta(x,base+1.61f,z,.19f,.43f,.19f,
+                     i%3==0?.45f:.96f,i%3==0?.67f:.50f,.30f,
+                     1.4f+(float)Math.sin(tm*2.5f+i)*.4f,tm*17);
+        }
+        // Ancient toll gate rune-glass suspended at the far causeway.
+        for(int i=0;i<5;i++){
+            float r=1.2f+i*.14f,a=i*1.2566f+tm*.08f;
+            drawOcta((float)Math.sin(a)*r,7.7f+(float)Math.cos(a)*r*.8f,48f,
+                     .12f,.34f,.12f,.63f,.74f,.73f,1.1f,tm*13);
+        }
         // Relic runes and occasional blue motes invite exploration.
         drawOcta(6.1f,terrain(6.1f,19)+1.9f,19,.21f,.46f,.21f,.28f,.8f,1f,1.7f,tm*9);
         // Combatants are rendered as articulated primitive armor; replace with
@@ -420,6 +437,20 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                        v(x,terrain(x,z+dz)-.42f,z+dz),r,g,bb);
             }
         }
+        // Moss and ash-touched scree: batch environmental pieces into one
+        // static vertex buffer to protect Android performance.
+        for(int i=0;i<260;i++){
+            float rz=-4+rng.nextFloat()*86f;
+            float rx=(rng.nextBoolean()?1f:-1f)*(3.7f+rng.nextFloat()*19f);
+            float height=.05f+rng.nextFloat()*.25f;
+            float moss=rng.nextFloat();
+            float red=moss>.48f?.25f:.42f;
+            float green=moss>.48f?.33f:.39f;
+            float blue=moss>.48f?.26f:.36f;
+            b.box(rx,terrain(rx,rz)-.32f+height*.5f,rz,
+                  .15f+rng.nextFloat()*.72f,height,.17f+rng.nextFloat()*.63f,
+                  red,green,blue);
+        }
         // Worn paving broken across the pilgrimage road, including deliberate gaps.
         for(int z=4;z<69;z+=3){
             for(int row=-2;row<=2;row++){
@@ -448,9 +479,43 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 }
             }
         }
+        // Staggered freestanding perimeter masonry instead of monolithic slabs.
+        for(int side=-1;side<=1;side+=2){
+            for(int segment=0;segment<4;segment++){
+                float zz=17+segment*11f;
+                float wx=side*(16.5f+segment*.8f);
+                for(int course=0;course<5;course++){
+                    float yy=.35f+course*.75f;
+                    for(int brick=0;brick<3;brick++){
+                        if(rng.nextFloat()<.16f)continue;
+                        float bz=zz+(brick-1)*1.65f+(course%2)*.43f;
+                        b.box(wx,yy,bz,1.1f,.69f,1.55f,
+                            .34f+rng.nextFloat()*.09f,
+                            .36f+rng.nextFloat()*.11f,
+                            .38f+rng.nextFloat()*.12f);
+                    }
+                }
+                b.box(wx+side*.63f,1.55f,zz,.51f,3.15f,1.0f,.31f,.33f,.36f);
+            }
+        }
         // A broken chapel to the left, chimney spires and exterior buttresses.
         b.box(-8,2.2f,9,4.1f,5.5f,8.8f,.47f,.47f,.47f);
         b.box(-8,5.2f,9,5f,.55f,9.3f,.38f,.39f,.42f);
+        // Masonry buttresses and inset honey-colored windows on the chapel.
+        for(int i=0;i<4;i++){
+            float zz=5.6f+i*2.2f;
+            for(int side=-1;side<=1;side+=2){
+                float xx=-8+side*2.53f;
+                b.box(xx,2.26f,zz,.59f,4.2f,.75f,.34f,.38f,.40f);
+                b.box(xx,4.43f,zz,.74f,.41f,.91f,.50f,.50f,.51f);
+            }
+        }
+        for(int j=0;j<3;j++){
+            float zz=6.4f+j*2.55f;
+            b.box(-5.90f,3.20f,zz,.13f,1.28f,.56f,.36f,.44f,.48f);
+            b.box(-5.79f,3.19f,zz,.13f,.92f,.20f,.65f,.51f,.29f);
+            b.box(-5.73f,3.59f,zz,.20f,.08f,.68f,.60f,.62f,.64f);
+        }
         for(int s=-1;s<=1;s+=2){
             b.box(-8+s*2.3f,6.5f,6.8f,.76f,2.4f,.86f,.51f,.51f,.55f);
         }
@@ -472,6 +537,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             b.box(x,y,z,.25f,ht,.26f,.29f,.235f,.20f);
             b.box(x+.65f,y+ht*.28f,z,.10f,.14f,1.6f,.28f,.24f,.22f);
             b.box(x-.50f,y+ht*.16f,z,.95f,.14f,.11f,.26f,.22f,.19f);
+        }
+        // Monumental rubble, funerary pillars and collapsed bell fragments.
+        for(int i=0;i<32;i++){
+            float zz=5+i*2.18f;
+            float xx=(i%2==0?-1:1)*(9.5f+rng.nextFloat()*9f);
+            float size=.34f+rng.nextFloat()*1.1f;
+            b.box(xx,terrain(xx,zz)+size*.2f-.35f,zz,
+                size,.42f+size*.35f,size*.84f,.40f,.42f,.43f);
+            if(i%5==0)b.box(xx,terrain(xx,zz)+size*.78f,zz,.15f,size*.5f,.15f,
+                        .59f,.55f,.49f);
         }
         // Foreground fragments of ruined defensive walls.
         for(int z=12;z<64;z+=10){
@@ -519,6 +594,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             }
         }
         b.box(x,height+1.5f,z,width+1.9f,2.2f,1.9f,.42f,.43f,.46f);
+        // Keystone and weathered voussoirs give the arch its masonry profile.
+        for(int i=0;i<9;i++){
+            float xx=x+(i-4)*width/8f;
+            b.box(xx,height+.80f+(float)Math.abs(i-4)*.15f,z-.15f,
+                width/9.5f,.25f,.8f,.52f,.53f,.55f);
+        }
+        b.box(x,height+2.9f,z-1.07f,1.03f,.95f,.35f,.69f,.59f,.44f);
         for(int i=-5;i<=5;i++){
             if((i+13)%4==0)continue;
             float px=x+i*(width/11f);
