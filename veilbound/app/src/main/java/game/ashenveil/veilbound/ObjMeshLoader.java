@@ -121,7 +121,7 @@ public final class ObjMeshLoader {
                     }
                 }
             }
-        }catch(NumberFormatException|IllegalArgumentException e){
+        }catch(IllegalArgumentException e){
             throw new IOException("Invalid OBJ data at line "+lines+": "+e.getMessage(),e);
         }
         if(faces==0)throw new IOException("OBJ file contains no valid polygon faces");
