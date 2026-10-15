@@ -9,6 +9,8 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
+import android.webkit.ConsoleMessage;
 
 public final class MainActivity extends Activity {
     public static final String INSPECT = "com.trioncompasitor.matrixflap.INSPECT";
@@ -26,6 +28,15 @@ public final class MainActivity extends Activity {
         settings.setAllowFileAccess(true);
         settings.setDefaultTextEncodingName("UTF-8");
         game.setWebViewClient(new WebViewClient());
+        // Read-only game-state telemetry; actual gameplay still requires real touch.
+        game.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message.message().startsWith("MATRIX_FLAP_STATUS:")) {
+                    Log.i("MATRIX_FLAP_STATUS", message.message());
+                }
+                return false;
+            }
+        });
         setContentView(game);
         game.loadUrl("file:///android_asset/index.html");
     }

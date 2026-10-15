@@ -291,7 +291,7 @@ function updateHud(){
 }
 function pause(){if(mode!=='playing')return;mode='paused';overlay='pause';pauseSheet.classList.remove('hidden');updateHud();playTone(320,.09)}
 function resume(){if(mode!=='paused')return;mode='playing';overlay='none';pauseSheet.classList.add('hidden');last=0;updateHud();playTone(540,.08)}
-function home(){mode='ready';overlay='none';settingsSheet.classList.add('hidden');pauseSheet.classList.add('hidden');
+function home(){mode='ready';console.log('MATRIX_FLAP_STATUS: ready');overlay='none';settingsSheet.classList.add('hidden');pauseSheet.classList.add('hidden');
  sheet.classList.remove('hidden');kicker.textContent='SYSTEM ONLINE';message.textContent='NEON FLIGHT';
  helper.textContent='Tap to flap. Navigate between the purple gates. How far can you get?';
  action.textContent='▶ INITIALIZE RUN';subtext.textContent='TAP SCREEN OR PRESS SPACE TO FLY';scoreline.style.display='none';clear();updateHud();}
@@ -324,12 +324,12 @@ function resize(){
 }
 function writeScore(){scoreEl.textContent=String(score).padStart(2,'0');bestEl.textContent=String(best).padStart(2,'0')}
 function clear(){score=0;passes=0;runSeconds=0;pipeClock=48;pipes=[];sparks=[];bird={x:W*.285,y:H*.46,r:clamp(W*.051,16,23),vy:0,tilt:0};writeScore()}
-function start(){clear();mode='playing';overlay='none';settingsSheet.classList.add('hidden');pauseSheet.classList.add('hidden');sheet.classList.add('hidden');last=0;updateHud();playTone(720,.09);flap()}
+function start(){clear();mode='playing';console.log('MATRIX_FLAP_STATUS: playing');overlay='none';settingsSheet.classList.add('hidden');pauseSheet.classList.add('hidden');sheet.classList.add('hidden');last=0;updateHud();playTone(720,.09);flap()}
 function flap(){if(mode!=='playing')return;bird.vy=-5.35;bird.tilt=-.48;shipPulse=1;
  playTone(280,.055,'triangle',.035);
  if(settings.effects)for(let i=0;i<9;i++)sparks.push({x:bird.x-bird.r,y:bird.y+rand(-8,8),vx:rand(-3.2,-.5),vy:rand(-2,2),life:rand(15,29),max:29})}
 function onInteract(){if(overlay!=='none'||mode==='paused')return;if(mode==='ready'||mode==='over')start();else flap()}
-function end(){if(mode!=='playing')return;mode='over';if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();
+function end(){if(mode!=='playing')return;mode='over';console.log('MATRIX_FLAP_STATUS: over');if(score>best){best=score;try{localStorage.setItem('matrixFlapBest',String(best))}catch(_){}}writeScore();
  flash.style.opacity='.14';setTimeout(()=>flash.style.opacity='0',85);playTone(150,.28,'sawtooth',.07);updateHud();
  kicker.textContent='CONNECTION TERMINATED';message.textContent='SIGNAL LOST';helper.textContent='One collision. One more chance. Dodge the gates and beat your record.';
  action.textContent='↻ RESTART MISSION';subtext.textContent='TAP TO REBOOT';scoreline.style.display='block';finalscore.textContent=String(score);
@@ -478,7 +478,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('resize',resize);
 window.addEventListener('blur',()=>{last=0});
 document.addEventListener('visibilitychange',()=>{last=0;if(document.hidden&&mode==='playing')pause()});
-resize();clear();syncSettings();updateHud();requestAnimationFrame(loop);
+resize();clear();syncSettings();updateHud();console.log('MATRIX_FLAP_STATUS: ready');requestAnimationFrame(loop);
 // Intentionally expose small, read-only inspection surface for runtime diagnostics.
 window.matrixFlapStatus=()=>({state:mode,score,best,pipes:pipes.length,
  birdY:Math.round(bird.y),birdR:bird.r,runSeconds:Math.round(runSeconds*10)/10,

@@ -31,15 +31,13 @@ def screen(name, timeout=40):
     return {"name": name, "width": w, "height": h, "bytes": len(data)}
 
 def state():
-    adb("shell", "am", "start", "-n", ACTIVITY, "-a", INSPECT,
-        "--activity-single-top", timeout=30)
-    time.sleep(0.5)
-    lines = adb("logcat", "-d", "-s", "MATRIX_FLAP_STATUS:I", "*:S").decode(
-        "utf-8", "replace").splitlines()
-    lines = [line for line in lines if "MATRIX_FLAP_STATUS" in line]
+    """Read Java-forwarded WebView state without launching extra Activities."""
+    lines = adb("logcat", "-d", "-s", "MATRIX_FLAP_STATUS:I", "*:S",
+                timeout=14).decode("utf-8", "replace").splitlines()
+    lines = [line for line in lines if "MATRIX_FLAP_STATUS:" in line]
     if not lines:
         return None
-    result = re.search(r"\b(ready|playing|over|unavailable)\b", lines[-1])
+    result = re.search(r"MATRIX_FLAP_STATUS: (ready|playing|over)", lines[-1])
     return result.group(1) if result else None
 
 def hierarchy():
@@ -106,12 +104,9 @@ def main():
         report["launched"] = True
         time.sleep(5)
         report["launcher_recoveries"] = 0
-        for _ in range(3):
-            if not dismiss_launcher_anr():
-                break
-            report["launcher_recoveries"] += 1
-        adb("logcat", "-c")
-        for _ in range(10):
+        # Avoid synchronous UIAutomator and clearing logcat: both can freeze
+        # software-rendered Android 15 emulators while the launcher is busy.
+        for _ in range(6):
             report["initial_state"] = state()
             if report["initial_state"] == "ready":
                 break
@@ -121,16 +116,16 @@ def main():
                                  str(report["initial_state"]))
         first = screen("01_ready.png")
         report["screenshots"].append(first)
-        button = find_start_button()
-        positions = ([button] if button else []) + [
-            (first["width"] // 2, int(first["height"] * y))
-            for y in (0.60, 0.62, 0.58, 0.65, 0.55)
-        ]
+        # The centered Start control occupies roughly 57-65% screen height.
+        # Try a real ADB touch before expensive UIAutomator introspection.
+        positions = [(first["width"] // 2, int(first["height"] * y))
+                     for y in (0.60, 0.62, 0.58, 0.65, 0.55)]
         for attempt, (x, y) in enumerate(positions):
-            if attempt > 0 and dismiss_launcher_anr():
+            if attempt > 1 and dismiss_launcher_anr():
                 report["launcher_recoveries"] += 1
             adb("shell", "input", "tap", x, y, timeout=30)
             report["tap_coordinates"] = [x, y]
+            time.sleep(0.5)
             report["post_tap_state"] = state()
             if report["post_tap_state"] in ("playing", "over"):
                 report["touch_start_verified"] = True

@@ -34,6 +34,13 @@ jobs:
         run: |
           bash -n matrix-flap/scripts/emulator_test.sh
           python3 -m py_compile matrix-flap/scripts/test_matrix_flap.py
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("matrix-flap/app/src/main/assets/index.html").read_text()
+          js=html.split("<script>",1)[1].split("</script>",1)[0]
+          Path("/tmp/matrix-flap-script.js").write_text(js)
+          PY
+          node --check /tmp/matrix-flap-script.js
       - name: Install image comparison dependency
         run: python3 -m pip install --quiet --user Pillow
       - name: Enable KVM for Android emulator
@@ -48,8 +55,8 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
-          cores: 2
-          ram-size: 2048M
+          cores: 4
+          ram-size: 4096M
           heap-size: 512M
           disk-size: 4096M
           profile: pixel_6
@@ -66,6 +73,13 @@ jobs:
         with:
           name: matrix-flap-gameplay-report
           path: inspection_output/matrix_flap/
+          if-no-files-found: warn
+      - name: Upload compiled candidate APK (not emulator verified)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-flap-v12-candidate-UNVERIFIED
+          path: matrix-flap/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
       - name: Upload tested Matrix Flap APK
         if: success()
