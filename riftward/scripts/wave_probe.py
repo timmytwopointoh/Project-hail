@@ -22,9 +22,21 @@ def main():
         try:
             page.set_content(HTML)
             page.locator('#playBtn').click()
+            # Real movement input driven by the browser's own clock, not a
+            # hidden game-state setter. Circles the arena continuously.
+            page.evaluate("""() => {
+                const dirs=['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'];
+                let n=0;let current=dirs[0];
+                window.dispatchEvent(new KeyboardEvent('keydown',{key:current,bubbles:true}));
+                window.__qaPilot=setInterval(()=>{
+                    window.dispatchEvent(new KeyboardEvent('keyup',{key:current,bubbles:true}));
+                    n=(n+1)%4;current=dirs[n];
+                    window.dispatchEvent(new KeyboardEvent('keydown',{key:current,bubbles:true}));
+                },3300);
+            }""")
             for stage in range(4):
-                for sec in range(30):
-                    page.clock.run_for(1000)
+                for chunk in range(6):
+                    page.clock.run_for(5000)
                     s=page.evaluate('window.Riftward.status()')
                     if s['boss']=='alive' and not report['boss_seen']:
                         report['boss_seen']=True
@@ -38,7 +50,12 @@ def main():
                         report['wave_survival']=True
                         name='wave_upgrade.png';page.screenshot(path=str(OUT/name),animations='disabled');report['snapshots'].append(name)
                     assert page.locator('#upgradeCards .upgradeCard').count()==3, 'Expected three upgrades'
-                    page.locator('#upgradeCards .upgradeCard').first.click()
+                    # Prefer protection for a reproducible, skill-based boss probe.
+                    cards=page.locator('#upgradeCards .upgradeCard')
+                    labels=[cards.nth(i).inner_text().upper() for i in range(3)]
+                    priority=('AETHER ARMOR','PHOENIX SEAL','STARSHIELD','RAPID CONVERGENCE','SOLAR LANCE')
+                    choice=next((i for label in priority for i,text in enumerate(labels) if label in text),0)
+                    cards.nth(choice).click()
                     report['upgrades_selected']+=1
                     assert page.evaluate('window.Riftward.status().state')=='playing'
             report['last_state']=page.evaluate('window.Riftward.status()')
