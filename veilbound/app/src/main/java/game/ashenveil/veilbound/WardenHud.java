@@ -103,7 +103,7 @@ public final class WardenHud extends View {
             lastDiagnostic=now;
             Log.i("VEILBOUND_STATE","mode="+s.mode+" hp="+s.health+
                   " stamina="+s.stamina+" sigils="+s.fragments+
-                  " enemies="+s.foes+" x="+(int)s.x+" z="+(int)s.z);
+                  " enemies="+s.foes+" lock="+s.targetIndex+" x="+(int)s.x+" z="+(int)s.z);
         }
         postInvalidateDelayed(32);
     }
