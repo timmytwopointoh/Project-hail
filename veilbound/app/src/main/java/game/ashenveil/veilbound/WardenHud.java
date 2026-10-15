@@ -160,6 +160,9 @@ public final class WardenHud extends View {
         pane(c,582,18,982,91,6);
         text(c,"MOURNING VALE  /  CHAPTER I",602,42,14,GOLD,true,false);
         text(c,s.objective.length()>36?s.objective.substring(0,36):s.objective,602,75,14,PALE,false,false);
+        if(s.targetIndex>=0){
+            text(c,"LOCKED  ·  "+s.targetName,500,107,14,GOLD,true,true);
+        }
         if(s.bossAlive&&s.z>46){
             text(c,"ASH KNIGHT",500,42,18,PALE,true,true);
             bar(c,403,56,194,s.bossHealth/260f,EMBER);
@@ -196,6 +199,8 @@ public final class WardenHud extends View {
         control(c,905,484,51,"✦","ATTACK",GOLD);
         control(c,806,520,41,"↝","DODGE",MIST);
         control(c,908,365,33,"✧","INTERACT",EMBER);
+        control(c,791,387,34,"◎",s.targetIndex>=0?"RELEASE":"LOCK",
+                s.targetIndex>=0?GOLD:MIST);
         text(c,"DRAG RIGHT SIDE TO ORBIT CAMERA",500,582,11,MIST,false,true);
     }
     /**
@@ -261,6 +266,7 @@ public final class WardenHud extends View {
             if(near(x,y,905,484,76)){game.attack();return true;}
             if(near(x,y,806,520,65)){game.roll();return true;}
             if(near(x,y,908,365,60)){game.interact();return true;}
+            if(near(x,y,791,387,46)){game.toggleLock();return true;}
             if(x<340&&joystickPointer<0){
                 joystickPointer=event.getPointerId(index);updateStick(x,y);return true;
             }
