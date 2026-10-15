@@ -28,6 +28,36 @@ def diagnostic_state():
 def touch(x,y):
     adb("shell","input","tap",int(x),int(y),timeout=25)
 
+def dismiss_android_overlay():
+    """Dismiss only known Android first-launch tutorial / launcher ANR dialogs.
+
+    Never bypass in-game menus or modify game state programmatically.
+    """
+    import xml.etree.ElementTree as ET
+    for attempt in range(5):
+        try:
+            adb("shell","uiautomator","dump","/sdcard/veilbound-system.xml",timeout=28)
+            xml=adb("exec-out","cat","/sdcard/veilbound-system.xml",timeout=18)
+            (OUT/"system_ui.xml").write_bytes(xml)
+            root=ET.fromstring(xml)
+            nodes=list(root.iter("node"))
+            text=" ".join(n.get("text","") for n in nodes)
+            button=None
+            if "Viewing full screen" in text:
+                button=next((n for n in nodes if n.get("text","")=="Got it"),None)
+            elif ("isn't responding" in text or "not responding" in text):
+                button=next((n for n in nodes if n.get("text","")=="Wait"),None)
+            if button is None:
+                return
+            m=re.fullmatch(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]",button.get("bounds",""))
+            if m is None:return
+            x1,y1,x2,y2=map(int,m.groups())
+            touch((x1+x2)//2,(y1+y2)//2)
+            time.sleep(1.1)
+        except (subprocess.SubprocessError,ValueError,ET.ParseError) as exc:
+            (OUT/"system_overlay_warning.txt").write_text(str(exc))
+            return
+
 def shot(name):
     content=adb("exec-out","screencap","-p",timeout=55)
     if not content.startswith(bytes.fromhex("89504e470d0a1a0a")):
@@ -56,14 +86,17 @@ def main():
                                      timeout=85).decode("utf-8","replace").strip()
         report["launched"]=True
         time.sleep(6)
+        dismiss_android_overlay()
+        time.sleep(1.5)
         first=shot("01_menu.png")
         report["screenshots"].append(first);w,h=first["width"],first["height"]
         report["initial_mode"]=diagnostic_state()
         # System's one-time immersive tutorial may cover the first screen.
-        for attempt in range(5):
+        for attempt in range(6):
             if diagnostic_state()=="playing":break
+            dismiss_android_overlay()
             touch(w*.50,h*.75)
-            time.sleep(2.1)
+            time.sleep(1.7)
         report["mode_after_start"]=diagnostic_state()
         if report["mode_after_start"]!="playing":
             # The emulator sometimes adds a fullscreen tutorial. Recover only
