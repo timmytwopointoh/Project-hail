@@ -1,0 +1,81 @@
+name: Riftward Eclipse - Android APK
+on:
+  push:
+    branches:
+      - main
+      - 'feature/riftward-*'
+    paths:
+      - 'riftward/**'
+      - '.github/workflows/riftward-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: riftward-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile genuine Android APK
+        run: gradle -p riftward :app:assembleDebug --no-daemon
+      - name: Validate source and scripts
+        run: |
+          bash -n riftward/scripts/emulator_test.sh
+          python3 -m py_compile riftward/scripts/emulator_test.py riftward/scripts/browser_qa.py
+          node --check riftward/app/src/main/assets/game.js
+      - name: Set up Python visual checks
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Allow KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Android 15 installation and gameplay check
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash riftward/scripts/emulator_test.sh
+      - name: Save gameplay screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riftward-eclipse-emulator-report
+          path: inspection_output/riftward/
+          if-no-files-found: warn
+      - name: Retain candidate APK even if emulator fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riftward-eclipse-candidate-unverified
+          path: riftward/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+      - name: Upload emulator-tested installable APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riftward-eclipse-android15-tested-apk
+          path: riftward/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

@@ -1,0 +1,34 @@
+name: Riftward Eclipse - Visual QA
+on:
+  push:
+    branches:
+      - main
+      - 'feature/riftward-*'
+    paths:
+      - 'riftward/**'
+      - '.github/workflows/riftward-visual.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: riftward-visual-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up headless Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Run three-screen graphical and interaction QA
+        run: python3 riftward/scripts/browser_qa.py
+      - name: Upload visual screenshots and QA JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: riftward-eclipse-visual-qa
+          path: riftward/qa/
+          if-no-files-found: warn
