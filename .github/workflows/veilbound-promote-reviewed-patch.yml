@@ -6,6 +6,10 @@ on:
         description: 'Manager workflow run ID containing a reviewed worker proposal'
         required: true
         type: string
+      slot_id:
+        description: 'Exact selected worker slot, such as w001 or w050'
+        required: true
+        type: string
       role:
         description: 'Reviewed worker to promote'
         required: true
@@ -32,9 +36,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ inputs.source_run_id }}
+          SLOT_ID: ${{ inputs.slot_id }}
         run: |
           set -euo pipefail
           [[ "${RUN_ID}" =~ ^[0-9]+$ ]] || { echo "Run ID is not numeric"; exit 1; }
+          [[ "${SLOT_ID}" =~ ^w[0-9]{3}$ ]] || { echo "Invalid worker slot"; exit 1; }
           gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > /tmp/veilbound-run.json
           python3 - <<'PY'
           import json,os,re
@@ -67,7 +73,7 @@ jobs:
       - name: Get selected code proposal artifact
         uses: actions/download-artifact@v4
         with:
-          name: veilbound-coder-${{ inputs.role }}-${{ inputs.run_attempt }}
+          name: veilbound-coder-${{ inputs.slot_id }}-${{ inputs.run_attempt }}
           run-id: ${{ inputs.source_run_id }}
           path: inspection_output/approved-worker
           github-token: ${{ github.token }}
@@ -75,14 +81,15 @@ jobs:
         env:
           ROLE: ${{ inputs.role }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SLOT_ID: ${{ inputs.slot_id }}
         run: |
           set -euo pipefail
           python3 veilbound/scripts/promote_proposal.py \
             --artifact inspection_output/approved-worker --role "${ROLE}" \
-            --expected-sha "${SOURCE_SHA}" --dry-run
+            --expected-sha "${SOURCE_SHA}" --slot-id "${SLOT_ID}" --dry-run
           python3 veilbound/scripts/promote_proposal.py \
             --artifact inspection_output/approved-worker --role "${ROLE}" \
-            --expected-sha "${SOURCE_SHA}"
+            --expected-sha "${SOURCE_SHA}" --slot-id "${SLOT_ID}"
           git diff --check
           git diff --stat
       - name: Push isolated code branch and create DRAFT pull request
@@ -92,9 +99,10 @@ jobs:
           BASE: ${{ steps.source.outputs.base }}
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN: ${{ inputs.source_run_id }}
+          SLOT_ID: ${{ inputs.slot_id }}
         run: |
           set -euo pipefail
-          BRANCH="feature/veilbound-worker-${ROLE}-${GITHUB_RUN_ID}"
+          BRANCH="feature/veilbound-worker-${ROLE}-${SLOT_ID}-${GITHUB_RUN_ID}"
           git checkout -b "${BRANCH}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -103,6 +111,6 @@ jobs:
           git commit -m "Propose scoped VEILBOUND ${ROLE} worker change"
           git push origin "HEAD:refs/heads/${BRANCH}"
           gh pr create --draft --base "${BASE}" --head "${BRANCH}" \
-            --title "VEILBOUND: ${ROLE} worker proposal from run ${SOURCE_RUN}" \
+            --title "VEILBOUND: ${ROLE} / ${SLOT_ID} proposal from run ${SOURCE_RUN}" \
             --body "Independent AI-suggested code changes, reviewed for promotion. Source commit: \`${SOURCE_SHA}\`. Model-authored Java patch must be reviewed as untrusted code. Pure Java tests passed at proposal time; full native emulator and real device testing still required before merge. Source manager run #${SOURCE_RUN}. No automatic merge."
           echo 'NOTE: GitHub GITHUB_TOKEN pushes may not trigger downstream push workflows; manually run native APK QA on the promoted branch if no checks appear.' >> "${GITHUB_STEP_SUMMARY}"
