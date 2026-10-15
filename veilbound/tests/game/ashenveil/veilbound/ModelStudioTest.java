@@ -16,6 +16,8 @@ public final class ModelStudioTest {
         ok(Math.abs(s.snapshot().panY)<=3.2f,"Pan Y safe");
         for(int i=0;i<ModelStudio.MATERIALS.length;i++)s.nextMaterial();
         ok(s.snapshot().material==0,"Materials must cycle all supported inspection modes");
+        s.selectImported();
+        ok(s.snapshot().item==ModelStudio.ITEMS.length-1,"File import must select last studio slot");
         s.nextMaterial();s.nextLight();
         ok(s.snapshot().material==1&&s.snapshot().light==1,"Studio lighting and material");
         float old=s.snapshot().yaw;s.toggleTurntable();s.tick(.3f);

@@ -36,16 +36,19 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ModelStudio.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/DetailArtKit.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ObjMeshLoader.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialTextures.java \
             veilbound/tests/game/ashenveil/veilbound/WorldRulesTest.java \
             veilbound/tests/game/ashenveil/veilbound/ModelStudioTest.java \
             veilbound/tests/game/ashenveil/veilbound/ArtKitTest.java \
             veilbound/tests/game/ashenveil/veilbound/DetailArtKitTest.java \
+            veilbound/tests/game/ashenveil/veilbound/ObjMeshLoaderTest.java \
             veilbound/tests/game/ashenveil/veilbound/MaterialTexturesTest.java
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ModelStudioTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.WorldRulesTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArtKitTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.DetailArtKitTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ObjMeshLoaderTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.MaterialTexturesTest
       - name: Build true native-3D Android APK
         run: gradle -p veilbound :app:assembleDebug --no-daemon
