@@ -42,6 +42,29 @@ def state():
     result = re.search(r"\b(ready|playing|over|unavailable)\b", lines[-1])
     return result.group(1) if result else None
 
+def dismiss_launcher_anr():
+    """Recover from transient Pixel Launcher ANR without masking game crashes."""
+    try:
+        root = hierarchy()
+        texts = [n.get("text", "") for n in root.iter("node")]
+        if not any("launcher" in text.lower() and
+                   ("isn't responding" in text.lower() or "not responding" in text.lower())
+                   for text in texts):
+            return False
+        button = next((n for n in root.iter("node") if n.get("text") == "Close app"), None)
+        if button is None:
+            return False
+        m = re.fullmatch(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]", button.get("bounds", ""))
+        if not m:
+            return False
+        left, top, right, bottom = map(int, m.groups())
+        adb("shell", "input", "tap", (left + right)//2, (top + bottom)//2)
+        time.sleep(2)
+        adb("shell", "am", "start", "-n", ACTIVITY)
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, ET.ParseError):
+        return False
+
 def find_start_button():
     try:
         adb("shell", "uiautomator", "dump", "/sdcard/matrix-flap-ui.xml", timeout=50)
@@ -78,6 +101,11 @@ def main():
                                        ACTIVITY).decode("utf-8", "replace").strip()
         report["launched"] = True
         time.sleep(5)
+        report["launcher_recoveries"] = 0
+        for _ in range(3):
+            if not dismiss_launcher_anr():
+                break
+            report["launcher_recoveries"] += 1
         adb("logcat", "-c")
         for _ in range(10):
             report["initial_state"] = state()
@@ -95,6 +123,8 @@ def main():
             for y in (0.60, 0.62, 0.58, 0.65, 0.55)
         ]
         for x, y in positions:
+            if dismiss_launcher_anr():
+                report["launcher_recoveries"] += 1
             adb("shell", "input", "tap", x, y, timeout=30)
             report["tap_coordinates"] = [x, y]
             report["post_tap_state"] = state()

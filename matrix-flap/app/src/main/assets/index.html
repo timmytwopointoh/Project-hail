@@ -39,6 +39,7 @@ button:active{filter:brightness(.82);transform:translateY(1px)}
 .top{padding:calc(env(safe-area-inset-top,0px) + 19px) 16px 0;align-items:flex-start}
 .brand strong{font-size:clamp(20px,5.6vw,28px)}
 .stats{gap:7px}.stat{min-width:53px;padding:7px 8px}.stat b{font-size:22px}
+.hud-status.hidden{display:none}
 .hud-status{position:absolute;top:calc(env(safe-area-inset-top,0px) + 83px);left:17px;z-index:2;font:800 9px ui-monospace,monospace;color:#70deac;letter-spacing:2px;text-shadow:0 0 10px #22ff8877;pointer-events:none}
 .tools{position:absolute;right:17px;top:calc(env(safe-area-inset-top,0px) + 84px);z-index:5;display:flex;gap:9px}
 .tool{width:46px;min-height:44px;height:44px;border-radius:13px;background:linear-gradient(145deg,#10251eec,#110c27ed);border:1px solid #589d81a8;color:#b8ffce;font-size:23px;letter-spacing:0;box-shadow:0 0 15px #39ff7514;display:flex;align-items:center;justify-content:center;padding:0}
@@ -124,6 +125,7 @@ const settingsButtons={sound:document.getElementById('toggleSound'),effects:docu
 const settings={sound:false,effects:true,fps:false,haptics:true};
 try{Object.assign(settings,JSON.parse(localStorage.getItem('matrixFlapSettings')||'{}'))}catch(_){}
 let overlay='none',averageFps=60,fpsSamples=0,fpsAccumulator=0,runSeconds=0,passes=0;
+let perfQuality=1.5,lowFpsWindows=0;
 let audioContext=null,shipPulse=0,viewTime=0;
 const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function playTone(frequency=440,duration=.065,kind='sine',volume=.06){
@@ -148,6 +150,7 @@ function syncSettings(){
 function updateHud(){
  pauseBtn.classList.toggle('hidden',mode!=='playing');
  settingsBtn.classList.toggle('hidden',mode==='ready'||mode==='over');
+ hudStatus.classList.toggle('hidden',mode==='ready'||mode==='over');
  hudStatus.textContent=mode==='playing'?'● RUNNING // GATE '+String(score+1).padStart(2,'0'):
   mode==='paused'?'◉ SYSTEM PAUSED':mode==='over'?'× SIGNAL LOST':'● SIGNAL STABLE // STANDBY';
 }
@@ -175,7 +178,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function resize(){
  const bounds=canvas.getBoundingClientRect();const oldH=H;
  W=Math.max(250,bounds.width||390);H=Math.max(380,bounds.height||750);
- dpr=Math.min(window.devicePixelRatio||1,1.5);
+ dpr=Math.min(window.devicePixelRatio||1,perfQuality);
  canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
  ctx.setTransform(dpr,0,0,dpr,0,0);
  bird.x=W*.285;bird.r=clamp(W*.051,16,23);
@@ -313,7 +316,11 @@ function render(){ctx.clearRect(0,0,W,H);drawBackground();
 function loop(t){
  const elapsed=t-(last||t),delta=clamp(elapsed/16.6667||1,.05,2);last=t;
  fpsAccumulator+=elapsed;fpsSamples++;
- if(fpsAccumulator>800){averageFps=Math.round(fpsSamples*1000/fpsAccumulator);fpsEl.textContent=averageFps+' FPS';fpsAccumulator=0;fpsSamples=0}
+ if(fpsAccumulator>800){
+  averageFps=Math.round(fpsSamples*1000/fpsAccumulator);fpsEl.textContent=averageFps+' FPS';fpsAccumulator=0;fpsSamples=0;
+  lowFpsWindows=(mode==='playing'&&averageFps<46)?lowFpsWindows+1:0;
+  if(lowFpsWindows>=3&&perfQuality>1.12){perfQuality=Math.max(1.12,perfQuality-.2);lowFpsWindows=0;resize()}
+ }
  step(delta);render();requestAnimationFrame(loop)
 }
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();onInteract()},{passive:false});
@@ -338,7 +345,8 @@ resize();clear();syncSettings();updateHud();requestAnimationFrame(loop);
 // Intentionally expose small, read-only inspection surface for runtime diagnostics.
 window.matrixFlapStatus=()=>({state:mode,score,best,pipes:pipes.length,
  birdY:Math.round(bird.y),birdR:bird.r,runSeconds:Math.round(runSeconds*10)/10,
- fps:averageFps,settings:{...settings},overlay,passes,width:W,height:H,version:'1.1'});
+ fps:averageFps,settings:{...settings},overlay,passes,width:W,height:H,pixelRatio:dpr,
+ birdVy:+bird.vy.toFixed(2),nearestGate:pipes.length?{x:Math.round(pipes[0].x),center:Math.round(pipes[0].center),gap:Math.round(pipes[0].gap)}:null,version:'1.1'});
 })();
 </script>
 </body>
