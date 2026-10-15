@@ -36,6 +36,10 @@ SCREENSHOTS = ["01_atelier_hero.png", "01_world_asset_flagstone.png",
 MAX_CHANGES = 3
 MAX_SOURCE = 55000
 
+# Unit tests import this module by file location; use the script's real folder
+# rather than depending on the caller's current working directory.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gemini_client import generate as gemini_generate
 
 # Non-sensitive provider metadata is included in the worker report for cost
