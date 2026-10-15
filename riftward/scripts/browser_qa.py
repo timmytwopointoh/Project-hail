@@ -53,7 +53,7 @@ def main():
                     # A wave should contain enemies, then shots after 2 seconds.
                     page.wait_for_timeout(2600)
                     current=state()
-                    assert current['enemies']>=1, f'No enemies after 2.6s: {current}'
+                    assert current['enemies']+current['kills']>=1, f'No combat activity after 2.6s: {current}'
                     shot('combat')
                     rect=page.locator('#joyArea').bounding_box()
                     page.mouse.move(rect['x']+rect['width']*.5,rect['y']+rect['height']*.5)

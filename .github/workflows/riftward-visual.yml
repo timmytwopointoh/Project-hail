@@ -25,6 +25,8 @@ jobs:
           python3 -m playwright install --with-deps chromium
       - name: Run three-screen graphical and interaction QA
         run: python3 riftward/scripts/browser_qa.py
+      - name: Run accelerated wave upgrades and boss gameplay simulation
+        run: python3 riftward/scripts/wave_probe.py
       - name: Upload visual screenshots and QA JSON
         if: always()
         uses: actions/upload-artifact@v4

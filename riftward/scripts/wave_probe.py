@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Accelerated *real game loop* test: waves, upgrades and a boss appear without stubs."""
+import json
+import shutil
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+ROOT=Path(__file__).resolve().parents[1]
+ASSETS=ROOT/'app/src/main/assets'
+HTML=(ASSETS/'index.html').read_text().replace('<link rel="stylesheet" href="style.css">','<style>'+(ASSETS/'style.css').read_text()+'</style>').replace('<script src="game.js"></script>','<script>'+(ASSETS/'game.js').read_text()+'</script>')
+OUT=ROOT/'qa'
+
+def main():
+    OUT.mkdir(exist_ok=True)
+    report={'wave_survival':False,'upgrades_selected':0,'boss_seen':False,'snapshots':[],'errors':[]}
+    with sync_playwright() as p:
+        opts={'executable_path':shutil.which('chromium')} if shutil.which('chromium') else {}
+        browser=p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader'],**opts)
+        page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1)
+        page.clock.install()
+        page.on('pageerror',lambda exc:report['errors'].append(str(exc)))
+        try:
+            page.set_content(HTML)
+            page.locator('#playBtn').click()
+            for stage in range(4):
+                for sec in range(30):
+                    page.clock.run_for(1000)
+                    s=page.evaluate('window.Riftward.status()')
+                    if s['boss']=='alive' and not report['boss_seen']:
+                        report['boss_seen']=True
+                        name='boss_encounter.png';page.screenshot(path=str(OUT/name),animations='disabled');report['snapshots'].append(name)
+                    if s['state'] in ('upgrade','gameover'):break
+                if s['state']=='gameover':
+                    report['gameover_stage']=stage
+                    break
+                if s['state']=='upgrade':
+                    if stage==0:
+                        report['wave_survival']=True
+                        name='wave_upgrade.png';page.screenshot(path=str(OUT/name),animations='disabled');report['snapshots'].append(name)
+                    assert page.locator('#upgradeCards .upgradeCard').count()==3, 'Expected three upgrades'
+                    page.locator('#upgradeCards .upgradeCard').first.click()
+                    report['upgrades_selected']+=1
+                    assert page.evaluate('window.Riftward.status().state')=='playing'
+            report['last_state']=page.evaluate('window.Riftward.status()')
+            report['passed']=report['wave_survival'] and report['upgrades_selected']>=3 and report['boss_seen'] and not report['errors']
+        except Exception as e:
+            report['passed']=False;report['error']=str(e)
+        finally:
+            (OUT/'wave_probe.json').write_text(json.dumps(report,indent=2)+'\n')
+            print(json.dumps(report,indent=2))
+            browser.close()
+    return 0 if report['passed'] else 1
+
+if __name__=='__main__':raise SystemExit(main())

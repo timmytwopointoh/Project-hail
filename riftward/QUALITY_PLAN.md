@@ -15,7 +15,7 @@ A complete, original portrait-space action survival game: become a Riftwarden ab
 4. Three or more distinct enemy types, at least one multi-attack boss, upgrades that change mechanics, escalating difficulty.
 5. Pause/resume, wave-end upgrades, defeat, retry, menu, settings, sound and particle controls, FPS toggle, best run saved locally.
 6. High-contrast original procedural graphics: seamless infinite parallax starfield and arena grid, distinct silhouettes, impact effects, screen shake (optional), transition animations.
-7. Deterministic seeded debug scenarios: menu, gameplay, upgrade selection, boss appearance, defeat and restart; no hidden test-only bypass of gameplay logic.
+7. Accelerated **real animation-loop clock** tests: menu, gameplay, upgrade selection, boss appearance, defeat and restart; no mock enemies, fake attacks, or hidden test-only bypass of gameplay logic.
 8. JavaScript error-free local browser automation plus emulator screenshot and interaction report; pixel change verified.
 9. Target >=55 FPS typical Android 4GB+ hardware. Measure during QA; do not claim on unmeasured devices.
 10. Keep known good build intact and add improvement branches; review output screenshot and failure logs after each run.
@@ -28,3 +28,8 @@ A complete, original portrait-space action survival game: become a Riftwarden ab
 
 ## Explicit exclusions
 No network services, multiplayer, monetization, copyrighted music/assets, app permissions other than vibration, guaranteed Play Store production compliance, or background development outside the active session.
+
+### Loop refinements after first test
+- Treat combat activity as enemy presence **or eliminations**: an empty screen after auto-fire can be success, not failure.
+- Browser visual QA and long-wave/boss gameplay tests are independent, both required; Android install, launch and tap remains a separate quality gate.
+- Source and workflow changes are committed on the development branch while the successful APK artifact remains recoverable.

@@ -18,6 +18,6 @@ APK: `riftward/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Tests
 
-`python3 riftward/scripts/browser_qa.py` runs UI/graphics tests across 320×640, 390×844 and 430×932 (Chromium/Playwright required). `bash riftward/scripts/emulator_test.sh` performs Android 15 signing, alignment, install, launch, tap and screenshot checks.
+`python3 riftward/scripts/browser_qa.py` runs UI/graphics tests across 320×640, 390×844 and 430×932; `python3 riftward/scripts/wave_probe.py` accelerates actual animation time to verify upgrades and a wave-four boss (Chromium/Playwright required). `bash riftward/scripts/emulator_test.sh` performs Android 15 signing, alignment, install, launch, tap and screenshot checks.
 
 Refer to [QUALITY_PLAN.md](QUALITY_PLAN.md) for objective targets and remaining physical-phone checks.
