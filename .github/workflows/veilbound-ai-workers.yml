@@ -60,7 +60,7 @@ jobs:
         id: plan
         run: |
           python3 veilbound/scripts/worker_manager.py \
-            --max-workers "${{ inputs.max_workers || '3' }}" \
+            --max-workers "${{ inputs.max_workers || '6' }}" \
             --github-output "${GITHUB_OUTPUT}" \
             --out inspection_output/manager
           cat inspection_output/manager/assignment_plan.md >> "${GITHUB_STEP_SUMMARY}"
