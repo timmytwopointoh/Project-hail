@@ -78,6 +78,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "vec3 cold=vec3(.46,.65,.88)*fill*.18; "+
         "vec3 col=vColor*uTint*wear*(vec3(.27,.32,.37)+warmth+cold+rim); "+
         "col+=uGlow*vColor*uTint*.65; "+
+        "float metalHint=clamp((vColor.b-vColor.r)*2.6+vColor.r*.14,0.,1.);"+
+        "vec3 cameraDir=normalize(uEye-vWorld);"+
+        "vec3 bounceHalf=normalize(cameraDir+normalize(vec3(-.4,.83,-.25)));"+
+        "float specCore=pow(max(dot(n,bounceHalf),0.),24.);"+
+        "col+=vec3(.32,.43,.48)*specCore*metalHint*.47; "+
         "vec3 ember=vWorld-vec3(-4.4,1.4,11.);"+
         "float emberGlow=1./(1.+dot(ember,ember)*.23);"+
         "col+=vec3(.85,.28,.08)*emberGlow*.90; "+
@@ -86,7 +91,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "fog+=clamp((2.-vWorld.y)*.045,0.,.13)*clamp(d/27.,0.,1.);"+
         "fog=clamp(fog,0.,.90); "+
         "fog=fog*fog*(3.-2.*fog); "+
-        "if(uStudioMode>.5){"+
+        "if(uStudioMode>.5||uSurfaceQuality>.5){"+
         "vec3 light=normalize(uStudioLight);"+
         "vec3 eye=normalize(uEye-vWorld);"+
         "float rough=.63;float metallic=.0;float ao=1.;"+
@@ -133,7 +138,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "if(uStudioMaterial>1.5&&uStudioMaterial<2.5)col=vec3(.012,.015,.025);"+
         "if(uStudioMaterial>2.5&&uStudioMaterial<3.5)col=n*.5+.5;"+
         "if(uStudioMaterial>3.5)col=vec3(.21,.92,.78);"+
-        "gl_FragColor=vec4(col,1.);return;}"+
+        "if(uStudioMode>.5){gl_FragColor=vec4(col,1.);return;}}"+
         "gl_FragColor=vec4(mix(col,uFog,fog),1.);}";
     private static final String SKY_VERTEX=
         "attribute vec2 aPos; varying vec2 vUv; "+
@@ -250,6 +255,17 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1i(uDetail,0);
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform1f(uStudioMode,0f);
+        // Main-world ground uses the inexpensive micro-grit pass; the full
+        // 512px atlas BRDF is reserved for on-screen near character models.
+        ensureSurfaceAtlas();
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,albedoTexture);
+        GLES20.glUniform1i(uAlbedoAtlas,1);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,surfaceTexture);
+        GLES20.glUniform1i(uSurfaceAtlas,2);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
         GLES20.glUniform1f(uSurfaceQuality,0f);
         GLES20.glUniform1f(uStudioMaterial,0f);
         GLES20.glUniform3f(uStudioLight,-.40f,.83f,-.3f);
@@ -613,6 +629,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private void drawKnight(float x,float y,float z,float yaw,boolean foe,
                             boolean boss,float tm,float walk,float swing,float dodge,
                             float moving,float fatigue,float stagger,float windup){
+        float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
+        // Dynamic material LOD: sharp BRDF only close to the camera.
+        // Distant meshes retain fast ES2 per-vertex material lighting.
+        boolean materialQuality=dist2<80f && fps>6.0f;
+        GLES20.glUniform1f(uSurfaceQuality,materialQuality?1f:0f);
         Rigged rig=boss?knightRig:(foe?revenantRig:playerRig);
         if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
             rig=boss?knightFarRig:revenantFarRig;
@@ -677,6 +698,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                     foe?.8f:.64f,foe?.68f:.91f,foe?.58f:1f,.52f,tm*46f);
             }
         }
+        GLES20.glUniform1f(uSurfaceQuality,0f);
     }
     private void drawRigLimb(Mesh limb,float jointX,float jointY,
                              float x,float y,float z,float yaw,float size,
