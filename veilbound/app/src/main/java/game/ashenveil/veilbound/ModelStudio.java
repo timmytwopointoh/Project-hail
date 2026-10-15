@@ -23,21 +23,21 @@ public final class ModelStudio {
         }
     }
     private int item=0,light=0,material=0;
-    private float yaw=.50f,pitch=.14f,zoom=6.2f,panX=0,panY=0;
+    private float yaw=.50f,pitch=.12f,zoom=4.50f,panX=0,panY=0;
     private boolean autoTurn=false;
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
     public synchronized Snapshot snapshot(){return new Snapshot(this);}
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
         panX=panY=0;
-        zoom=item==2?8.7f:item==6?12f:item==5?3.5f:5.9f;
+        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;
     }
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
     public synchronized void nextMaterial(){material=(material+1)%MATERIALS.length;}
     public synchronized void toggleTurntable(){autoTurn=!autoTurn;}
     public synchronized void reset(){
-        yaw=.50f;pitch=.14f;panX=0;panY=0;
-        zoom=item==2?8.7f:item==6?12f:item==5?3.5f:5.9f;
+        yaw=.50f;pitch=.12f;panX=0;panY=0;
+        zoom=item==2?6.80f:item==6?12f:item==5?3.2f:4.50f;
         autoTurn=false;
     }
     public synchronized void orbit(float dx,float dy){

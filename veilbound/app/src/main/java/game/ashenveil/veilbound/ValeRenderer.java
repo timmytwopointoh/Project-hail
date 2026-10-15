@@ -241,7 +241,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         ModelStudio.Snapshot m=state.studio.snapshot();
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
-        float targetY=(m.item==2?2.0f:(m.item==3||m.item==4?1.3f:1.50f))+m.panY;
+        float targetY=(m.item==2?2.72f:(m.item==6?3.50f:2.12f))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -277,6 +277,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             default:chosen=studioChapel;
         }
         Matrix.setIdentityM(model,0);
+        // All lab assets stand ON the exhibition plinth, not through it.
+        Matrix.translateM(model,0,0,.82f,0);
         if(m.item==3||m.item==4)Matrix.translateM(model,0,0,.35f,0);
         else if(m.item==5)Matrix.scaleM(model,0,2.4f,2.4f,2.4f);
         else if(m.item==2)Matrix.scaleM(model,0,1.12f,1.12f,1.12f);
@@ -306,11 +308,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 b.box(i+.5f,-.08f,j+.5f,.985f,.045f,.985f,
                       .30f,.31f,.34f);
         }
-        b.column(0,-.06f,0,2.10f,.68f,.40f,.42f,.45f);
-        b.box(0,.70f,0,4.40f,.11f,4.40f,.68f,.57f,.43f);
+        b.column(0,-.06f,0,1.62f,.68f,.40f,.42f,.45f);
+        b.box(0,.70f,0,3.50f,.11f,3.50f,.68f,.57f,.43f);
         for(int k=0;k<32;k++){
             float a=k*(float)(2*Math.PI/32);
-            float x=2.05f*(float)Math.sin(a),z=2.05f*(float)Math.cos(a);
+            float x=1.70f*(float)Math.sin(a),z=1.70f*(float)Math.cos(a);
             b.box(x,.77f,z,.16f,.075f,.36f,.79f,.63f,.38f);
         }
         for(int i=-1;i<=1;i+=2){
