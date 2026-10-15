@@ -549,7 +549,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawBloodOnStone(tm);
         // Fused custom character models with distinct armor, skeletal and boss silhouettes;
         // weapon pivot is animated independently to keep attack timing readable.
-        drawKnight(state.x,terrain(state.x,state.z),state.z,state.heading,
+        drawKnight(state.x,terrain(state.x,state.z)-.40f,state.z,state.heading,
                 false,false,tm,state.walkPhase,state.swing,state.dodge,
                 state.motionBlend,state.exertion,state.hurtFlash,0f);
         for(WorldState.Foe foe:state.foes){
@@ -558,7 +558,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float tellSwing=foe.windup>0
                 ? CombatMotion.DURATION*(.97f-.17f*(1f-foe.windup/(foe.boss?.92f:.72f)))
                 :foe.attackPose;
-            drawKnight(foe.x,terrain(foe.x,foe.z),foe.z,ang,true,foe.boss,
+            drawKnight(foe.x,terrain(foe.x,foe.z)-.40f,foe.z,ang,true,foe.boss,
                     tm,foe.phase,tellSwing,0,foe.moving,foe.boss?.35f:.16f,
                     foe.stagger,foe.windup);
             if(state.lockTarget>=0 && state.foes[state.lockTarget]==foe){
@@ -688,7 +688,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             if(stain==null)continue;
             float age=tm-stain.born;
             Matrix.setIdentityM(model,0);
-            Matrix.translateM(model,0,stain.x,terrain(stain.x,stain.z)+.04f,stain.z);
+            Matrix.translateM(model,0,stain.x,terrain(stain.x,stain.z)-.39f,stain.z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(stain.angle),0,1,0);
             float size=stain.radius*(.31f+.69f*CombatMotion.smooth(age/.46f));
             Matrix.scaleM(model,0,size,1f,size);
@@ -698,7 +698,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                     float angle=stain.angle+j*2.7f,travel=age/.53f;
                     float px=stain.x+(float)Math.cos(angle)*(.3f+travel*.56f);
                     float pz=stain.z+(float)Math.sin(angle)*(.3f+travel*.56f);
-                    float py=terrain(px,pz)+.11f+1.4f*4f*travel*(1f-travel);
+                    float py=terrain(px,pz)-.30f+1.4f*4f*travel*(1f-travel);
                     drawOcta(px,py,pz,.05f,.08f,.05f,
                         .21f,.94f,.16f,.32f,tm*33f);
                 }
