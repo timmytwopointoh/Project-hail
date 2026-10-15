@@ -9,7 +9,7 @@ public final class CombatMotion {
     private CombatMotion() {}
     public static final float DURATION=.64f;
     public static final float ACTIVE_START=.31f, ACTIVE_END=.77f;
-    public static final float RANGE=3.12f;
+    public static final float RANGE=2.55f;
     public static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
     public static float smooth(float x) {
         x=clamp(x,0f,1f);
