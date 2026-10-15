@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: matrix-flap-\u0024{{ github.ref }}
+  group: matrix-flap-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build-and-test:
