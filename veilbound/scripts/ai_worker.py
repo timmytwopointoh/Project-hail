@@ -181,7 +181,11 @@ def draft_code(role, out):
                         break
                 else:
                     status = "proposed_change_passed_java_tests"
-    return {"role": role, "status": status, "summary": proposal.get("summary", ""),
+    source_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT,
+        text=True, capture_output=True, timeout=10, check=True).stdout.strip()
+    return {"role": role, "status": status, "source_commit": source_sha,
+            "summary": proposal.get("summary", ""),
             "edited_paths": list(replacement), "risks": proposal.get("risks", []),
             "proposal_requires_human_review": True}
 
