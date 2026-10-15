@@ -8,7 +8,7 @@ No game code, user controls, Android SDK or Model Atelier is replaced.
 
 The **director manager** creates only the team-manager jobs actually needed
 by the queue (up to **3**). Each team manager validates the director's
-immutable `assignment_plan.json`, checks its two-child budget, and publishes
+immutable `assignment_plan.json`, checks its 18-child budget, and publishes
 `team_approval.json`. Each child code worker is blocked until its matching
 team approval artifact exists and exactly matches the worker role, task ID and
 goal. Team managers and code workers execute as **separate GitHub Actions jobs**,
@@ -29,8 +29,31 @@ Director / QA backlog priority
 
 The hierarchy is *bounded, depth two* (director -> team manager -> worker).
 It can vary the number of **active managers** and workers dynamically, but
-cannot create unrestricted recursive managers, bypass source ownership, or
-run extra model calls outside the chosen six-worker cap.
+cannot create unrestricted recursive managers, bypass allowed Java file ownership, or
+run more than the selected 50-worker ceiling.
+
+## Opt-in capacity: 50 distinct workers
+
+The repository includes **50 concrete improvement tasks** in
+`veilbound/worker_backlog.json`: 9 combat, 8 animation, 8 models,
+8 materials, 9 world, and 8 studio tasks. Selecting a smaller budget runs
+only the highest-ranked subset. Selecting **50** allocates all fifty task
+slots (provided no higher-priority QA evidence replaces assignments).
+
+The director distributes assignments fairly across six specialties and
+three separate team-manager jobs, each with no more than 18 children.
+Workers that share a Java specialty are **alternative independent proposals**:
+they do not concurrently edit one shared branch. Each has an immutable
+checkout, unique `w001` through `w050` slot ID, its own artifact and
+Java test results. A reviewer can promote only a specific slot to a
+separate **draft PR**, never mass-merge all proposals.
+
+GitHub Actions' matrix supports 256 jobs, but actual runner concurrency
+depends on account quotas. The manual control allows `max_workers`
+6/12/24/50 and `max_parallel` 2/4/8/12. **The default remains six
+task slots and four simultaneous code jobs.** Gemini usage can incur charges
+and per-project request/token limits: choose a small trial first. An
+automatically triggered manager run uses the safe default of six workers.
 
 ## Gemini integration
 
@@ -57,8 +80,8 @@ verifies that the reviewed text patch exactly matches replacement files.
 1. **Master AI Worker Manager** is a real GitHub Actions planner. Every
    cycle assigns an independently scoped task matrix from
    `veilbound/worker_backlog.json` and, where supplied, the actual Android
-   emulator `task_plan.json`. It dynamically creates up to **three independent team managers and six
-   concurrent code-proposal jobs**, limited by a selected budget of 2, 4 or 6.
+   emulator `task_plan.json`. It dynamically creates up to **three independent team managers and fifty
+   isolated code-proposal jobs**, limited by a selected budget of 6, 12, 24, or 50.
    No two concurrent roles own the same source file.
 2. **Parallel Worker QA** runs existing deterministic Java combat and
    geometry checks plus manifest/source integrity and management unit tests.
@@ -98,7 +121,7 @@ privileged code-writing jobs.
 ## Run the manager
 
 Open GitHub Actions → **VEILBOUND - Master AI Worker Manager** →
-**Run workflow**, select 2/4/6 max workers, and optionally enter the run ID
+**Run workflow**, select 6/12/24/50 max workers, and optionally enter the run ID
 of a completed native emulator test to prioritize its measured findings.
 
 The planner produces `assignment_plan.json` and a GitHub job summary.
@@ -118,9 +141,9 @@ To activate Gemini workers:
   triggering, which requires reviewing and merging the implementation.
   This branch's draft PR does not itself activate default-branch triggers.
 
-Gemini runs can incur model API costs. There is a cap of six simultaneous
-proposals in one manager run and one worker per role; **no automatic
-recursive job creation, unmanaged loops or automatic merges**.
+Gemini runs can incur model API costs. There is a cap of 50 proposed tasks per manager cycle and 18 child tasks
+per team. Only 2, 4, 8, or 12 model jobs run at once, based on the explicitly
+selected concurrency budget; **no recursive jobs or automatic merges**.
 
 ## Validation / approval
 
