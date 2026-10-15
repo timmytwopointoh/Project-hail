@@ -19,6 +19,8 @@ public final class WardenHud extends View {
     private final RectF rect=new RectF();
     private int joystickPointer=-1,cameraPointer=-1;
     private float stickX=0,stickY=0,prevCamX=0;
+    private float labLastX=0,labLastY=0,labPinchDistance=0;
+    private int labDragPointer=-1;
     private long lastDiagnostic=0;
     private float paintAlpha=1;
     private static final int GOLD=Color.rgb(229,192,139);
@@ -86,7 +88,8 @@ public final class WardenHud extends View {
         if(sx<=0||sy<=0)return;
         canvas.save();canvas.scale(sx,sy);
         WorldState.Snapshot s=game.snapshot();
-        if(s.mode.equals("title"))drawTitle(canvas);
+        if(s.mode.equals("lab"))drawModelAtelier(canvas);
+        else if(s.mode.equals("title"))drawTitle(canvas);
         else if(s.mode.equals("story"))drawStory(canvas);
         else if(s.mode.equals("dead"))drawEnd(canvas,false);
         else if(s.mode.equals("victory"))drawEnd(canvas,true);
@@ -103,7 +106,7 @@ public final class WardenHud extends View {
     }
     private void drawTitle(Canvas c){
         fill(c,Color.rgb(2,7,12),.58f);c.drawRect(0,0,1000,600,p);
-        pane(c,220,76,780,524,10);frame(c,228,83,772,518);
+        pane(c,220,62,780,541,10);frame(c,228,68,772,535);
         text(c,"AN ORIGINAL DARK FANTASY TALE",500,134,15,MIST,false,true);
         thinLine(c,310,159,690,159,GOLD,.5f,1.3f);
         text(c,"VEILBOUND",500,253,75,GOLD,true,true);
@@ -113,8 +116,13 @@ public final class WardenHud extends View {
         fill(c,EMBER,.17f);rect.set(349,419,651,480);c.drawRoundRect(rect,7,7,p);
         fill(c,GOLD,1);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.4f);
         c.drawRoundRect(rect,7,7,p);
-        text(c,"BEGIN THE PILGRIMAGE",500,456,21,PALE,true,true);
-        text(c,"NATIVE 3D PROLOGUE  •  OFFLINE",500,506,11,MIST,false,true);
+        text(c,"BEGIN THE PILGRIMAGE",500,448,21,PALE,true,true);
+        fill(c,Color.rgb(14,26,31),.86f);
+        rect.set(350,472,650,521);c.drawRoundRect(rect,7,7,p);
+        fill(c,MIST,.83f);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.4f);
+        c.drawRoundRect(rect,7,7,p);
+        text(c,"OPEN THE MODEL ATELIER",500,503,16,GOLD,true,true);
+        text(c,"NATIVE 3D PROLOGUE  •  OFFLINE",500,555,11,MIST,false,true);
     }
     private void drawStory(Canvas c){
         fill(c,Color.rgb(2,7,12),.69f);c.drawRect(0,0,1000,600,p);
@@ -187,16 +195,56 @@ public final class WardenHud extends View {
         control(c,908,365,33,"✧","INTERACT",EMBER);
         text(c,"DRAG RIGHT SIDE TO ORBIT CAMERA",500,582,11,MIST,false,true);
     }
+    /**
+     * Character workshop HUD. Fullscreen native 3D remains visible behind
+     * transparent inspection controls. No WebView or browser UI.
+     */
+    private void drawModelAtelier(Canvas c){
+        ModelStudio.Snapshot m=game.studio.snapshot();
+        pane(c,14,10,986,102,8);
+        frame(c,21,15,979,97);
+        text(c,"◀  BACK",35,47,17,GOLD,true,false);
+        text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
+        text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
+        text(c,"CAMERA  "+String.format(java.util.Locale.US,"%.1fm",m.zoom),
+             824,43,14,MIST,true,false);
+        text(c,"Drag to orbit • Pinch to zoom • Two fingers to pan",500,126,14,MIST,false,true);
+        // Crosshair and subtle stone platform reference remain visible in 3D.
+        thinLine(c,493,302,507,302,GOLD,.24f,1);
+        thinLine(c,500,295,500,309,GOLD,.24f,1);
+        pane(c,22,471,978,594,9);
+        text(c,"◀",285,526,34,GOLD,true,true);
+        text(c,"NEXT MODEL  ▶",637,525,18,GOLD,true,true);
+        text(c,"←  PREVIOUS",169,525,16,PALE,true,true);
+        text(c,"LIGHTING",47,565,11,MIST,true,false);
+        text(c,ModelStudio.LIGHTS[m.light],180,565,14,GOLD,true,true);
+        text(c,"MATERIAL",327,565,11,MIST,true,false);
+        text(c,ModelStudio.MATERIALS[m.material],520,565,14,GOLD,true,true);
+        text(c,m.autoTurn?"⏸ AUTO ORBIT":"▶ AUTO ORBIT",764,565,13,PALE,true,true);
+        text(c,"RESET",920,565,14,PALE,true,true);
+        // Orientation marker: a calibrated studio model, not a combat arena.
+        text(c,"0°  —  90°  —  180°  —  270°",500,456,12,MIST,false,true);
+        if(android.os.SystemClock.uptimeMillis()-lastDiagnostic>1150){
+            lastDiagnostic=android.os.SystemClock.uptimeMillis();
+            Log.i("VEILBOUND_STUDIO","item="+m.item+" name="+ModelStudio.ITEMS[m.item]+
+                " light="+m.light+" material="+m.material+
+                " yaw="+m.yaw+" pitch="+m.pitch+" zoom="+m.zoom);
+        }
+    }
     private float normX(float raw){return raw*1000f/Math.max(1,getWidth());}
     private float normY(float raw){return raw*600f/Math.max(1,getHeight());}
     private static boolean near(float x,float y,float bx,float by,float radius){
         return (x-bx)*(x-bx)+(y-by)*(y-by)<radius*radius;
     }
     @Override public boolean onTouchEvent(MotionEvent event){
+        if("lab".equals(game.snapshot().mode))return onLabTouch(event);
         int index=event.getActionIndex(),action=event.getActionMasked();
         if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN){
             float x=normX(event.getX(index)),y=normY(event.getY(index));
             WorldState.Snapshot s=game.snapshot();
+            if(s.mode.equals("title")&&x>345&&x<655&&y>466&&y<532){
+                game.enterStudio();invalidate();return true;
+            }
             if(!s.mode.equals("playing")){
                 game.start();invalidate();return true;
             }
@@ -228,6 +276,62 @@ public final class WardenHud extends View {
             if(action==MotionEvent.ACTION_CANCEL||action==MotionEvent.ACTION_UP){
                 joystickPointer=-1;cameraPointer=-1;stickX=0;stickY=0;game.movement(0,0);
             }
+        }
+        return true;
+    }
+    private boolean onLabTouch(MotionEvent event){
+        int action=event.getActionMasked(),idx=event.getActionIndex();
+        ModelStudio lab=game.studio;
+        if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_POINTER_DOWN){
+            float x=normX(event.getX(idx)),y=normY(event.getY(idx));
+            if(action==MotionEvent.ACTION_DOWN){
+                if(y<100&&x<145){game.exitStudio();invalidate();return true;}
+                if(y>485&&y<548){
+                    if(x<440){lab.nextItem(-1);invalidate();return true;}
+                    if(x>540){lab.nextItem(1);invalidate();return true;}
+                }
+                if(y>=548){
+                    if(x<300)lab.nextLight();
+                    else if(x<665)lab.nextMaterial();
+                    else if(x<847)lab.toggleTurntable();
+                    else lab.reset();
+                    invalidate();return true;
+                }
+                labDragPointer=event.getPointerId(idx);
+                labLastX=x;labLastY=y;
+            }else if(event.getPointerCount()>=2){
+                float dx=normX(event.getX(0)-event.getX(1));
+                float dy=normY(event.getY(0)-event.getY(1));
+                labPinchDistance=(float)Math.hypot(dx,dy);
+            }
+        }else if(action==MotionEvent.ACTION_MOVE){
+            if(event.getPointerCount()>=2){
+                float x0=normX(event.getX(0)),y0=normY(event.getY(0));
+                float x1=normX(event.getX(1)),y1=normY(event.getY(1));
+                float distance=(float)Math.hypot(x0-x1,y0-y1);
+                if(labPinchDistance>5&&distance>5)
+                    lab.dolly((float)Math.log(labPinchDistance/distance));
+                labPinchDistance=distance;
+                float centerX=(x0+x1)*.5f,centerY=(y0+y1)*.5f;
+                lab.pan((centerX-labLastX)*.008f,(labLastY-centerY)*.007f);
+                labLastX=centerX;labLastY=centerY;
+            }else if(event.getPointerCount()==1){
+                int id=event.getPointerId(0);
+                float x=normX(event.getX(0)),y=normY(event.getY(0));
+                if(id==labDragPointer){
+                    lab.orbit((x-labLastX)*.011f,(labLastY-y)*.009f);
+                    labLastX=x;labLastY=y;
+                }else{
+                    labDragPointer=id;labLastX=x;labLastY=y;
+                }
+            }
+            invalidate();
+        }else if(action==MotionEvent.ACTION_POINTER_UP){
+            labPinchDistance=0;
+            labDragPointer=-1;
+        }else if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){
+            labPinchDistance=0;
+            labDragPointer=-1;
         }
         return true;
     }
