@@ -47,6 +47,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/CharacterRig.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HeroPose.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/BellwardenAnatomy.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/BootAssets.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/EnvironmentKit.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ModelStudio.java \
