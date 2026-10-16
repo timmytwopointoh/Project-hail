@@ -85,7 +85,8 @@ public final class ContinuousHuman {
         for(float v:g)if(!Float.isFinite(v)||v<.83f||v>1.17f)
             throw new IllegalArgumentException("Human proportion outside reviewed range");
     }
-    private static Field anatomy(float[] g){
+    private static Field anatomy(float[] g){return anatomy(g,true);}
+    private static Field anatomy(float[] g,boolean includeDigits){
         Field f=new Field();
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
@@ -125,6 +126,7 @@ public final class ContinuousHuman {
             // thumb: exactly five digits per hand. Individual fingertip
             // lengths follow little/ring/middle/index proportions; the webbing
             // stays fused into the palm but tips do NOT join one another.
+            if(includeDigits){
             final float[] tips={.576f,.517f,.493f,.538f}; // little, ring, middle, index
             float handCenter=side*.554f*g[0];
             for(int finger=0;finger<4;finger++){
@@ -170,6 +172,7 @@ public final class ContinuousHuman {
                    .024f,.025f,2);
             f.add(handCenter+side*.183f,.689f,.170f,
                   .024f,.025f,.026f);
+            } // End legacy SDF digits. Sculpted ones use HumanHandSculpt.
             // Joined pelvis/thigh/hips to calf, ankle and broad human foot.
             float hx=side*.207f*g[4];
             f.add(hx,1.045f,-.018f,.175f*g[5],.204f,.159f);
@@ -291,8 +294,15 @@ public final class ContinuousHuman {
     }
     public static ArtKit.Model build(boolean lite){return build(lite,BASE);}
     public static ArtKit.Model build(boolean lite,float[] controls){
+        return build(lite,controls,true);
+    }
+    /** Palm/wrist mesh without the M21 cylinders; M23 loft digits attach here. */
+    static ArtKit.Model buildWithoutDigits(boolean lite){
+        return build(lite,BASE,false);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,boolean includeDigits){
         validate(controls);
-        Field field=anatomy(controls);
+        Field field=anatomy(controls,includeDigits);
         float h=lite?.062f:.039f;
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
