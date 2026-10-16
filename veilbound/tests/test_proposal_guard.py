@@ -39,6 +39,25 @@ class ProposalGuardTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.validate(obj)
 
+    def test_real_pilot_whitespace_only_change_is_rejected(self):
+        original = ("public synchronized void orbit(float dx,float dy){\\n"
+                    "        yaw+=clamp(dx,-1.4f,1.4f);\\n}")
+        obj = proposal(old="yaw+=clamp(dx,-1.4f,1.4f);",
+                       new="yaw += clamp(dx, -1.4f, 1.4f);")
+        with self.assertRaisesRegex(ValueError, "formatting or comments"):
+            self.validate(obj, source=original)
+
+    def test_comment_only_patch_is_not_a_real_ai_improvement(self):
+        obj = proposal(new="public final class CharacterRig { /* now better */ }")
+        with self.assertRaisesRegex(ValueError, "formatting or comments"):
+            self.validate(obj)
+
+    def test_semantic_filter_preserves_literal_comment_markers(self):
+        self.assertEqual(
+            'Stringurl="http://host/";',
+            guard.semantic_fingerprint(
+                'String url = "http://host/"; /* code comment */ '))
+
     def test_path_traversal_and_different_role_are_rejected(self):
         for path in ("../../.github/workflows/build.yml", "WorldState.java",
                      PATH_OK + "/../../MainActivity.java"):
