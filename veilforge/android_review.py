@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 from android_visual_qa import ROLES, VIEWS
+from vq_android_qa_sdk import evidence_png
 
 def review(root,out,source_sha,apk_sha):
     root=Path(root);out=Path(out);out.mkdir(parents=True,exist_ok=True)
@@ -49,14 +50,10 @@ def review(root,out,source_sha,apk_sha):
                     issues.append(f"{role}/{name}: camera orbit not visually detectable")
                 for v in a["views"]:
                     count+=1
-                    img=path.parent/v["image"]
-                    if not img.is_file() or img.stat().st_size<1000 or (
-                        hashlib.sha256(img.read_bytes()).hexdigest()!=v["sha256"]):
-                        issues.append(f"{role}/{name}: screenshot missing/changed")
-                    if v.get("modal_overlay_fraction",1)>=.70:
-                        issues.append(f"{role}/{name}: system-UI dialog obscured actual 3D frame")
-                    if (v.get("foreground_fraction",0)<.0015 or v.get("channel_stddev",0)<3):
-                        issues.append(f"{role}/{name}: blank or near-empty actual render")
+                    try:
+                        evidence_png(path.parent, v["image"], v["sha256"], v)
+                    except (ValueError, KeyError) as error:
+                        issues.append(f"{role}/{name}: untrusted actual screenshot ({error})")
             if count!=len(VIEWS)*len(names) or r.get("screenshot_count")!=count:
                 issues.append(f"{role}: view count mismatch")
             if not (path.parent/"device_logcat.txt").is_file():

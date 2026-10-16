@@ -152,3 +152,18 @@ Source-only CI:
 [38940863117](https://github.com/timmytwopointoh/Project-hail/actions/runs/38940863117)
 passed on commit `eb33b174539f6290ee9b6eeb4b5f9052da2180b4`.
 It did not launch new emulators or alter any playable game.
+
+## M34-10 — Shared Android PNG truth gate (candidate, CI pending)
+
+New `veilforge/vq_android_qa_sdk.py` centralizes conservative framebuffer
+acceptance for the factory and M30 capture tools and independently reopens
+actual PNG bytes in both reviewer paths. It rejects forged foreground metrics,
+launcher backgrounds, blank frames, modal overlays, missing/altered hashes,
+symlinks and out-of-root image paths. The reviewer must install pinned Pillow;
+this is deliberate, since trusting a JSON assertion without recomputing pixels
+could falsely approve a non-render screenshot. Keep the distinct M30 normal-on/
+normal-off noise-control test and factory's 14-view per-asset identity gates.
+
+This branch does **not** consolidate the M30 legacy logcat polling path or
+prove Android performance improvements. Real emulator CI and independent
+reviewer compatibility are mandatory before marking this candidate verified.

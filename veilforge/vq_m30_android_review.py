@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse,hashlib,json
 from pathlib import Path
+from vq_android_qa_sdk import evidence_png
 ROLES={"pixel_4","pixel_5","pixel_6","pixel_7"}
 def review(root,out,*,source_sha=None,apk_sha=None):
     root=Path(root);out=Path(out);out.mkdir(parents=True,exist_ok=True)
@@ -33,10 +34,10 @@ def review(root,out,*,source_sha=None,apk_sha=None):
                 frame=path.parent/name
                 if not name.startswith("angle_") or not frame.is_file():
                     issues.append(role+": missing source screenshot "+name);continue
-                if hashlib.sha256(frame.read_bytes()).hexdigest()!=v.get("sha256"):
-                    issues.append(role+": screenshot hash mismatch")
-                if v.get("metrics",{}).get("modal_overlay_fraction",1)>=.70:
-                    issues.append(role+": system dialog obscured screenshot")
+                try:
+                    evidence_png(path.parent, name, v.get("sha256"), v.get("metrics"))
+                except ValueError as error:
+                    issues.append(role+": untrusted actual screenshot ("+str(error)+")")
             on_reference=path.parent/"normal_on_reference.png"
             if not on_reference.is_file() or hashlib.sha256(on_reference.read_bytes()).hexdigest()!=r.get("normal_on_reference_sha256"):
                 issues.append(role+": missing/altered matched normal-on reference")

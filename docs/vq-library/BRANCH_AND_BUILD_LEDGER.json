@@ -104,5 +104,14 @@
     "No private keys/signing secrets are archived.",
     "Manual artistic and real-device performance gates remain open.",
     "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release."
+  ],
+  "in_progress_workstreams": [
+    {
+      "name": "M34-10 shared Android PNG evidence SDK",
+      "branch": "feature/veilforge-m34-shared-android-qa-20261016",
+      "derived_from_sha": "40f1519078d3340266e99d7d6d434934a6cbb938",
+      "status": "pending_full_factory_android_ci",
+      "note": "One shared framebuffer acceptance contract; both independent reviewers recompute actual PNG pixels and reject forged metrics, unsafe paths and SHA mismatches. M30 logcat streaming remains legacy; no physical-device or aesthetic claim."
+    }
   ]
 }

@@ -95,8 +95,9 @@
       "id": "M34-10",
       "priority": "P1",
       "name": "Shared single emulator QA SDK for M30, factory and unified queue",
-      "status": "planned",
-      "acceptance": "One tested ADB, screenshot, image and log validator API; compatibility tests for existing reviewers."
+      "status": "partial",
+      "acceptance": "One tested ADB, screenshot, image and log validator API; compatibility tests for existing reviewers.",
+      "implementation_note": "Shared fail-closed frame policy and independent real-PNG pixel/hash/path validator integrated into factory and M30 capture/review. Full Android 15 CI on this branch and legacy M30 logcat-to-stream migration remain necessary before verified status."
     },
     {
       "id": "M34-11",

@@ -8,6 +8,7 @@ angles, source/APK hashes, GPU import logs, and Android 15. No fake captures.
 from __future__ import annotations
 import argparse,hashlib,json,re,time
 from pathlib import Path
+from vq_android_qa_sdk import frame_is_trusted
 from android_visual_qa import (adb,screenshot,metrics,BACKGROUND,
                                change_fraction,VIEWS,ANDROID_PACKAGE,ACTIVITY)
 
@@ -61,9 +62,7 @@ def capture_real_model_frame(dest, *, retries=18):
         # Reuse the same strict GLES background gate as all VQ emulators,
         # avoiding duplicated splash-screen sampling and mismatched criteria.
         background_ok=score["renderer_background_confirmed"]
-        if (background_ok and score["foreground_fraction"]>=.0015 and
-                score["channel_stddev"]>=3 and
-                score.get("modal_overlay_fraction",1)<.70):
+        if frame_is_trusted(score):
             return frame,score,attempt
         last={"background_ok":background_ok,
               "score":score}

@@ -15,6 +15,7 @@ import re
 import subprocess
 import time
 from vq_logcat_stream import LogcatStream
+from vq_android_qa_sdk import frame_is_trusted
 
 ANDROID_PACKAGE="game.veilforge.probe"
 ACTIVITY=ANDROID_PACKAGE+"/.ViewerActivity"
@@ -113,9 +114,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
                 str(round(pic.height*.66)),timeout=20)
             if attempt<attempts:time.sleep(interval)
             continue
-        if (last["foreground_fraction"] >= .0015 and
-                last["channel_stddev"] >= 3 and
-                last.get("renderer_background_confirmed") is True):
+        if frame_is_trusted(last):
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
