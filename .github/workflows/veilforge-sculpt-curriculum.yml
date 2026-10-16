@@ -1,0 +1,55 @@
+name: VEILFORGE - Reusable Sculpting Curriculum
+on:
+  push:
+    branches:
+      - 'feature/veilforge-m26-sculpting-curriculum-engine'
+    paths:
+      - 'veilforge/sculpt_learning.py'
+      - 'veilforge/sculpt_curriculum.json'
+      - 'veilforge/feedback/sculpt_lessons.json'
+      - 'veilforge/tests/test_sculpt_learning.py'
+      - '.github/workflows/veilforge-sculpt-curriculum.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sculpt-learning-director:
+    name: Validate reusable sculpt curriculum and evidence-backed proposal engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run all existing VEILFORGE engine tests, plus new sculpt learning tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 veilforge/sculpt_learning.py map --out inspection_output/learning
+          for FOCUS in face surface feet full; do
+            python3 veilforge/sculpt_learning.py propose \
+              --focus "$FOCUS" --out "inspection_output/learning/$FOCUS.json"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/learning")
+          files=[root/(x+".json") for x in ("face","surface","feet","full")]
+          for f in files:
+              r=json.loads(f.read_text())
+              assert len(r["candidates"])==4
+              assert r["accepted_for_game"] is False
+              assert r["silhouette_likeness_measured"] is False
+              assert all(not x["auto_promote"] for x in r["candidates"])
+          info=json.loads((root/"map_summary.json").read_text())
+          assert info["stages"]==9 and info["recorded_manual_defects"]>=8
+          print("VEILFORGE_M26_SCULPT_ENGINE_MAP_PASS four_review_only_managers")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: veilforge-m26-sculpting-curriculum-review
+          path: inspection_output/learning/
+          retention-days: 21
+          if-no-files-found: warn
