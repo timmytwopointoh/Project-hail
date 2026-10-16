@@ -64,7 +64,11 @@ public final class ContinuousHuman {
         float sample(float x,float y,float z){
             float d=99f;
             for(Blob b:shapes){
-                float k=.025f;
+                // Protect the air gaps between fingertips: global
+                // .025 smoothing blended adjacent .04-wide digits into a
+                // mitten. Keep soft transitions at elbow/shoulder/palm.
+                float k=(y<.765f&&y>.46f&&Math.abs(x)>.40f)
+                    ?.0035f:.025f;
                 float v=b.distance(x,y,z);
                 if(d==99f){d=v;continue;}
                 // Smooth minimum applied in signed-distance space. Fuses
@@ -117,15 +121,27 @@ public final class ContinuousHuman {
                    side*.554f*g[0],.998f,.041f,
                    .094f*g[10],.087f*g[10],3);
             f.add(side*.554f*g[0],.878f,.052f,.108f,.141f,.076f);
-            // Four narrow tapered fingers and a side-mounted opposable thumb.
+            // Four visibly separated tapering fingers and ONE opposable
+            // thumb: exactly five digits per hand. Individual fingertip
+            // lengths follow little/ring/middle/index proportions; the webbing
+            // stays fused into the palm but tips do NOT join one another.
+            final float[] tips={.576f,.517f,.493f,.538f};
             for(int finger=0;finger<4;finger++){
-                float dx=(finger-1.5f)*.046f;
-                float low=.535f+.025f*Math.abs(finger-1.5f);
-                f.bone(side*.554f*g[0]+dx,.795f,.085f,
-                       side*.554f*g[0]+dx,low,.09f,.021f,.023f,2);
+                float spread=(finger-1.5f)*.061f;
+                float fx=side*.554f*g[0]+spread;
+                f.bone(fx,.794f,.087f,fx,tips[finger],.095f,
+                       .019f,.021f,2);
+                // Very subtle raised proximal knuckle mass. This supports
+                // believable webbing without visually merging fingertips.
+                f.add(fx,.791f,.079f,.025f,.035f,.024f);
             }
-            f.bone(side*(.554f*g[0]+.105f),.842f,.10f,
-                   side*(.554f*g[0]+.145f),.708f,.14f,.03f,.034f,2);
+            // Thumb emerges from the lateral palm and bends away from the
+            // index fingertip, rather than looking like a fifth straight
+            // finger or an extra knuckle embedded in the mitten.
+            float handCenter=side*.554f*g[0];
+            f.bone(handCenter+side*.074f,.844f,.100f,
+                   handCenter+side*.161f,.698f,.142f,
+                   .027f,.029f,2);
             // Joined pelvis/thigh/hips to calf, ankle and broad human foot.
             float hx=side*.207f*g[4];
             f.add(hx,1.045f,-.018f,.175f*g[5],.204f,.159f);
