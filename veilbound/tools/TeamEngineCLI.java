@@ -85,8 +85,8 @@ public final class TeamEngineCLI {
         int triangles=0;
         switch(role){
             case "models":
-                ArtKit.Model forged=ShapeEngine.bellwardenForgedPlates(false);
-                obj(forged,dir.resolve("bellwarden_forged_armor.obj"));
+                ArtKit.Model forged=BellwardenAnatomy.build(false);
+                obj(forged,dir.resolve("bellwarden_full_anatomy.obj"));
                 triangles=forged.triangleCount;
                 break;
             case "world":
