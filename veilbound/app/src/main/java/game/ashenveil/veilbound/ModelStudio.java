@@ -26,11 +26,23 @@ public final class ModelStudio {
     private int item=0,light=0,material=0;
     private float yaw=.50f,pitch=.12f,zoom=4.50f,panX=0,panY=0;
     private boolean autoTurn=false,ultraMesh=true;
+    private int reviewView=0;
+    private static final float[] REVIEW_YAWS={0f,1.5707963f,3.14159265f,5.497787f};
+    private static final String[] REVIEW_NAMES={"FRONT","SIDE","BACK","3/4"};
+    /** Repeatable camera angles for actual geometry review and emulator QA. */
+    public synchronized void nextReviewView(){
+        if(item!=11)return;
+        reviewView=(reviewView+1)%4;
+        yaw=REVIEW_YAWS[reviewView];pitch=.055f;
+        zoom=4.15f;panX=0;panY=0;autoTurn=false;
+    }
+    public synchronized String reviewViewName(){return REVIEW_NAMES[reviewView];}
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
     public synchronized Snapshot snapshot(){return new Snapshot(this);}
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
         panX=panY=0;
+        if(item==11){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:4.50f;
     }
