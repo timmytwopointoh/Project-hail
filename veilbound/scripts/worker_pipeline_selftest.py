@@ -29,9 +29,9 @@ def run(role, out):
     if original.count(package) != 1:
         raise AssertionError("Expected a unique Java package statement in " + str(rel))
     fixture = {
-        "summary": "Deterministic CI-only harmless comment; not an AI proposal",
+        "summary": "Deterministic CI-only harmless unused import; not an AI improvement",
         "edits": [{"path": str(rel), "find": package,
-                   "replace": package + "\n// QA PIPELINE FIXTURE ONLY"}],
+                   "replace": package + "\nimport java.util.concurrent.TimeUnit; // QA FIXTURE ONLY"}],
         "risks": ["Fixture change is never promoted or committed"],
     }
     # Real draft_code executes javac and every existing pure-Java test suite.
