@@ -7,6 +7,7 @@ on:
       - .github/workflows/veilbound-m24-veilforge-full-body.yml
       - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/M24AnimationLab.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java
       - veilbound/tools/HumanVariantCLI.java
       - veilbound/tests/game/ashenveil/veilbound/M24FullBodyTest.java
@@ -51,13 +52,16 @@ jobs:
             "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
             "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
             "$SRC/HumanAnatomy.java" "$SRC/M24BodyRetarget.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/M24AnimationLab.java" \
             "$SRC/ObjMeshLoader.java" "$SRC/ModelStudio.java" \
             "$TEST/HumanHandsTest.java" "$TEST/HumanHandSculptTest.java" \
-            "$TEST/M24FullBodyTest.java" "$TEST/M24BodyRetargetTest.java"
+            "$TEST/M24FullBodyTest.java" "$TEST/M24BodyRetargetTest.java" \
+            "$TEST/M24AnimationLabTest.java"
           java -cp /tmp/m24-classes game.ashenveil.veilbound.HumanHandsTest
           java -cp /tmp/m24-classes game.ashenveil.veilbound.HumanHandSculptTest
           java -cp /tmp/m24-classes game.ashenveil.veilbound.M24FullBodyTest
           java -cp /tmp/m24-classes game.ashenveil.veilbound.M24BodyRetargetTest
+          java -cp /tmp/m24-classes game.ashenveil.veilbound.M24AnimationLabTest
           test -f docs/veilbound/M24_VEILFORGE_PLAN.md
 
   anatomy-managers:
