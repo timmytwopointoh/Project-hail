@@ -14,7 +14,17 @@ import javax.microedition.khronos.opengles.GL10;
 /** Native OpenGL ES 2.0 third-person renderer; no WebView or HTML. */
 public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final String TAG="VEILBOUND_RENDER";
+    public interface StartupListener {
+        void stage(int percent,String description);
+        void ready();
+    }
     private final WorldState state;
+    private final BootAssets prepared;
+    private final StartupListener startup;
+    private boolean firstFrameShown=false;
+    private void bootStage(int percent,String label){
+        if(startup!=null)startup.stage(percent,label);
+    }
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
     private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading;
@@ -45,7 +55,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private float cx,cy,cz;
     private final float[] fogColor={.125f,.159f,.189f};
 
-    public ValeRenderer(WorldState s){state=s;}
+    public ValeRenderer(WorldState s){this(s,null,null);}
+    public ValeRenderer(WorldState s,BootAssets prepared,StartupListener startup){
+        state=s;this.prepared=prepared;this.startup=startup;
+    }
     public float currentFps(){return fps;}
 
     private static final String VERTEX=
@@ -175,6 +188,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "gl_FragColor=vec4(sky,1.);}";
 
     @Override public void onSurfaceCreated(GL10 ignored,EGLConfig config){
+        firstFrameShown=false;
+        bootStage(87,"Compiling native OpenGL shaders");
         GLES20.glClearColor(.07f,.09f,.13f,1);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -205,8 +220,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         skyClock=GLES20.glGetUniformLocation(skyProgram,"uTime");
         skyStudioMode=GLES20.glGetUniformLocation(skyProgram,"uIsStudio");
         skyVertices=allocate(new float[]{-1,-1,1,-1,-1,1,1,1});
+        bootStage(89,"Uploading procedural textures");
         initDetailTexture();
         cube=makeCube();octa=makeOcta();
+        bootStage(92,"Uploading shaped player geometry");
         wardenModel=new Mesh(ArtKit.bellwarden().vertices);
         hushedModel=new Mesh(ArtKit.hushed().vertices);
         bossModel=new Mesh(ArtKit.ashKnight().vertices);
@@ -216,25 +233,31 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         // Premium sculpt details from the atelier, with GPU-friendly rigid bones.
         // Gameplay now uses the same ultra-sculpt as the workshop, with a
         // retained medium LOD for weak GPU frames. Enemies are untouched.
-        ArtKit.Model heroSculpt=CinematicArtKit.bellwarden();
-        playerRig=new Rigged(CharacterRig.split(heroSculpt,false,false));
-        playerLiteRig=new Rigged(CharacterRig.split(CinematicArtKit.bellwardenLite(),false,false));
-        playerPremiumSword=new Mesh(CinematicArtKit.sword().vertices);
+        ArtKit.Model heroSculpt=prepared==null?CinematicArtKit.bellwarden():prepared.hero;
+        playerRig=new Rigged(prepared==null?
+            CharacterRig.split(heroSculpt,false,false):prepared.heroRig);
+        playerLiteRig=new Rigged(prepared==null?
+            CharacterRig.split(CinematicArtKit.bellwardenLite(),false,false):
+            prepared.heroLiteRig);
+        playerPremiumSword=new Mesh((prepared==null?
+            CinematicArtKit.sword():prepared.premiumSword).vertices);
         Log.i(TAG,"PLAYER_PREMIUM_READY triangles="+heroSculpt.triangleCount+
             " medium_triangles="+DetailArtKit.bellwarden().triangleCount);
         revenantRig=new Rigged(CharacterRig.split(DetailArtKit.hushed(),false,true));
         knightRig=new Rigged(CharacterRig.split(DetailArtKit.ashKnight(),true,false));
         revenantFarRig=new Rigged(CharacterRig.split(ArtKit.hushed(),false,true));
         knightFarRig=new Rigged(CharacterRig.split(ArtKit.ashKnight(),true,false));
+        bootStage(95,"Assembling the Mourning Vale world");
         verdigrisPool=buildVerdigrisPool();
         staticWorld=buildWorld();
         studioWorld=buildStudioStage();
         studioChapel=buildStudioChapel();
-        environmentFlagstone=new Mesh(EnvironmentKit.flagstone().vertices);
-        environmentCenotaph=new Mesh(EnvironmentKit.cenotaph().vertices);
-        environmentReliquary=new Mesh(EnvironmentKit.reliquary().vertices);
-        environmentRoots=new Mesh(EnvironmentKit.rootFan().vertices);
+        environmentFlagstone=new Mesh((prepared==null?EnvironmentKit.flagstone():prepared.flagstone).vertices);
+        environmentCenotaph=new Mesh((prepared==null?EnvironmentKit.cenotaph():prepared.cenotaph).vertices);
+        environmentReliquary=new Mesh((prepared==null?EnvironmentKit.reliquary():prepared.reliquary).vertices);
+        environmentRoots=new Mesh((prepared==null?EnvironmentKit.rootFan():prepared.roots).vertices);
         sculptedWorld=buildWorldProps();
+        bootStage(97,"Preparing the first playable frame");
         Log.i(TAG,"WORLD_ASSET_KIT_READY distinct=4 merged_triangles="+(sculptedWorld.count/3));
         previous=System.nanoTime();
         Log.i(TAG,"OpenGL ES active; static scene vertices="+staticWorld.count+
@@ -296,6 +319,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         sampleFrameQuality();
     }
     private void sampleFrameQuality(){
+        if(!firstFrameShown){
+            firstFrameShown=true;
+            bootStage(100,"Ready to enter the Vale");
+            if(startup!=null)startup.ready();
+        }
         // Throttled diagnostics feed automated visual QA without per-frame
         // logcat overhead or lying about FPS when simulation clamps dt.
         if(qualityClock>1.35f){
@@ -314,7 +342,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private void initStudioHighDetail(){
         if(studioWarden!=null)return;
         long start=System.nanoTime();
-        studioWarden=new Mesh(CinematicArtKit.bellwarden().vertices);
+        studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
         studioBoss=new Mesh(CinematicArtKit.ashKnight().vertices);
         studioSword=new Mesh(CinematicArtKit.sword().vertices);
@@ -353,7 +381,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      */
     private void ensureSurfaceAtlas(){
         if(albedoTexture!=0&&surfaceTexture!=0)return;
-        SurfaceAtlas.Pair baked=SurfaceAtlas.bake();
+        SurfaceAtlas.Pair baked=prepared==null?SurfaceAtlas.bake():prepared.atlas;
+        bootStage(99,"Uploading the steel and cloth material atlas");
         albedoTexture=uploadAtlas(baked.albedo);
         surfaceTexture=uploadAtlas(baked.normalRoughness);
         Log.i("VEILBOUND_STUDIO","SURFACE_MAPS_READY resolution="+SurfaceAtlas.SIZE+
@@ -851,7 +880,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(aColor);
     }
     private void initDetailTexture(){
-        byte[] rgba=MaterialTextures.stoneRgba();
+        byte[] rgba=prepared==null?MaterialTextures.stoneRgba():prepared.stoneRgba;
         ByteBuffer pixels=ByteBuffer.allocateDirect(rgba.length)
             .order(ByteOrder.nativeOrder());
         pixels.put(rgba);pixels.position(0);
