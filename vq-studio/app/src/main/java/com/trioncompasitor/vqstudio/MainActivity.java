@@ -22,6 +22,7 @@ public final class MainActivity extends Activity {
   private final Handler timer=new Handler(Looper.getMainLooper());
   private final ExecutorService io=Executors.newSingleThreadExecutor();
   private volatile boolean active=false,autoLoad=true;
+  private volatile boolean pairedIntegrationTest=false;
   private volatile String loadedSnapshotKey="";
   private volatile long lastAnonymousPollMs=0;
   private final java.util.concurrent.atomic.AtomicBoolean refreshBusy=
@@ -74,6 +75,51 @@ public final class MainActivity extends Activity {
     history=text("No worker update yet.",12,Color.rgb(159,210,210));history.setTextIsSelectable(true);
     scroll.addView(history);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,3));
     setContentView(root);
+    maybeRunPairedTest(getIntent());
+  }
+  /**
+   * Test-only Android IPC: Trion serves an actual procedural model via a
+   * UID-restricted read-only provider; VQ rechecks SHA and retains camera.
+   */
+  private boolean maybeRunPairedTest(Intent intent){
+    if(!BuildConfig.DEBUG||intent==null||
+       !intent.getBooleanExtra("vq_pair_test",false))return false;
+    int revision=intent.getIntExtra("vq_pair_revision",0);
+    if(revision!=1&&revision!=2)return false;
+    pairedIntegrationTest=true;
+    io.execute(()->{
+      try{
+        LiveMeshClient.Snapshot snap=LiveMeshClient.pairedTestFixture(this,revision);
+        runOnUiThread(()->{
+          String before=viewport.cameraFingerprint();
+          viewport.setMeshKeepingCamera(snap.mesh);
+          String after=viewport.cameraFingerprint();
+          if(!before.equals(after)){
+            android.util.Log.e("VQ_PAIR","CAMERA_CHANGED rev="+revision);
+            status.setText("Paired test failed: camera changed");
+            return;
+          }
+          loadedSnapshotKey=snap.identity();
+          meshLabel.setText("TRION VERIFIED MESH rev "+revision+" • "+snap.triangles+
+                 " triangles • SHA "+snap.sha.substring(0,16));
+          small.setText("PAIRED TEST: model rev "+revision+
+            " arrived from Trion over verified Android provider");
+          status.setText("TRION ⇄ VQ VERIFIED • revision "+revision);
+          history.setText("Trion provided "+snap.mesh.label+" / SHA256 "+snap.sha+
+            "\nCamera preserved: "+before.equals(after)+
+            "\nOnly the VQ Studio app UID can read this mesh.");
+          android.util.Log.i("VQ_PAIR",
+             "TRANSFER_VERIFIED rev="+revision+
+             " sha="+snap.sha+" triangles="+snap.triangles+
+             " camera_preserved=true");
+        });
+      }catch(Exception error){
+        String msg=error.getMessage();
+        android.util.Log.e("VQ_PAIR","TRANSFER_FAILED rev="+revision+" "+msg,error);
+        runOnUiThread(()->status.setText("PAIRED TEST FAILED: "+msg));
+      }
+    });
+    return true;
   }
   private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density);}
   private TextView text(String txt,int size,int color){
@@ -97,8 +143,14 @@ public final class MainActivity extends Activity {
           .putString("run_id",runId).apply();
     }
   }
-  @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);handleIntent(i);refresh();}
-  @Override protected void onResume(){super.onResume();active=true;timer.removeCallbacks(updater);timer.post(updater);}
+  @Override protected void onNewIntent(Intent i){
+    super.onNewIntent(i);setIntent(i);handleIntent(i);
+    if(!maybeRunPairedTest(i))refresh();
+  }
+  @Override protected void onResume(){
+    super.onResume();active=true;timer.removeCallbacks(updater);
+    if(!pairedIntegrationTest)timer.post(updater);
+  }
   @Override protected void onPause(){active=false;timer.removeCallbacks(updater);super.onPause();}
   @Override protected void onDestroy(){timer.removeCallbacks(updater);io.shutdownNow();super.onDestroy();}
   private void openRunArtifacts(){
