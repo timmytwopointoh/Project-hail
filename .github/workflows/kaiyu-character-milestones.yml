@@ -2,7 +2,7 @@ name: Kaiyu - M3 Rig, Expressions, VQ, Android
 on:
   push:
     branches: ['feature/vq-kaiyu-*']
-    paths: ['assets/kaiyu/**', '.github/workflows/kaiyu-character-milestones.yml']
+    paths: ['assets/kaiyu/**', '.github/workflows/kaiyu-character-milestones.yml', 'veilforge/android-probe/app/src/main/java/game/veilforge/probe/ViewerActivity.java']
   workflow_dispatch:
 permissions:
   contents: read
