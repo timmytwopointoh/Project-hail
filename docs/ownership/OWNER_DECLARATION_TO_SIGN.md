@@ -5,7 +5,7 @@ assignment, notarial act, ownership certification or authorization by another
 party. Do not publish a completed version containing personal data in this
 public repository. Obtain legal advice before relying on the declaration.
 
-**Claimant's complete legal name:** [fill privately]
+**Named claimant (self-reported):** Timothy Harris
 **Connected GitHub username:** timmytwopointoh
 **Relevant project:** VEILFORGE, VEILBOUND's supporting development engines,
 worker management/CI and emulator inspection system in Project-hail.
@@ -36,7 +36,7 @@ F. I reserve rights I lawfully possess, and I intend to document commercial
 licenses and assignments in separately executed written contracts.
 
 **Claimant signature:** [sign privately]
-**Printed legal name:** [fill privately]
+**Printed legal name:** Timothy Harris (confirm privately before signing)
 **Execution timestamp:** [fill privately]
 **If applicable, witness / notarial acknowledgment:** [obtain if advised]
 
