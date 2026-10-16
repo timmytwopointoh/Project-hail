@@ -1,0 +1,209 @@
+name: VEILFORGE M33 - VQ M30 Actual Human Baking
+on:
+  push:
+    branches: [feature/veilbound-m33-vq-baked-human-surface]
+    paths:
+      - '.github/workflows/veilforge-m33-vq-human-bake.yml'
+      - 'veilforge/vq_mesh_baker.py'
+      - 'veilforge/vq_human_region_bake.py'
+      - 'veilforge/vq_engine_health.py'
+      - 'veilforge/tests/test_vq_mesh_baker.py'
+      - 'docs/veilbound/M33_VQ_HUMAN_MATERIAL_LESSONS.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m33-vq-human
+  cancel-in-progress: true
+
+jobs:
+  source-and-vq-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Audit VQ tools and repeat upstream normal-baking tests
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_engine_health.py --root . --out inspection_output/m33_health.json
+          python3 -m unittest discover -s veilforge/tests -v
+      - name: Check M32 original anatomy against VQ integration
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m33-pure
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m33-pure \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" "$SRC/MaterialMapping.java" \
+            "$SRC/ShapeEngine.java" "$SRC/ContinuousHuman.java" \
+            "$SRC/HumanHandSculpt.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/M30ReferenceRig.java" "$SRC/M31SkinSurfaceNormals.java" \
+            "$SRC/M32ShoulderRig.java" "$SRC/M32AnatomySurface.java" \
+            "$SRC/HumanAnatomy.java" "$SRC/ModelStudio.java" \
+            "$TEST/M32AnatomyPerfectionTest.java" "$TEST/ModelStudioTest.java" \
+            veilbound/tools/HumanVariantCLI.java
+          java -Xmx2200m -cp /tmp/m33-pure game.ashenveil.veilbound.M32AnatomyPerfectionTest
+          java -cp /tmp/m33-pure game.ashenveil.veilbound.ModelStudioTest
+      - name: Export real unchanged M32 human for VQ Studio and material tests
+        run: |
+          set -euo pipefail
+          ROOT=inspection_output/m33_human
+          mkdir -p "$ROOT"
+          java -Xmx2400m -Djava.awt.headless=true -cp /tmp/m33-pure \
+            game.ashenveil.veilbound.HumanVariantCLI \
+            1,1,1,1,1,1,1,1,1,1,1,1 "$ROOT" --m32-neutral --mesh-only
+          python3 veilforge/engine.py inspect \
+            --obj "$ROOT/human_candidate.obj" --out "$ROOT/quality.json"
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          p=Path("inspection_output/m33_human")
+          quality=json.loads((p/"quality.json").read_text())
+          assert quality["triangles"]>55000
+          assert quality["nonmanifold_edges"]==0
+          assert quality["degenerate_triangles"]==0
+          source=p/"human_candidate.obj"
+          summary={"source":"M32 neutral original geometry",
+                   "source_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),
+                   "source_triangle_count":quality["triangles"],
+                   "vq_studio_obj_importable":True,
+                   "game_asset_replaced":False,"artist_approved":False}
+          (p/"human_source_manifest.json").write_text(json.dumps(summary,indent=2)+"\n")
+          print("M33_REAL_HUMAN_SOURCE_PASS",summary["source_triangle_count"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m33-source-actual-human-obj
+          path: inspection_output/m33_human/
+          retention-days: 21
+
+  four-anatomy-specialists:
+    name: VQ actual high-to-low normal bake / ${{ matrix.region }}
+    needs: source-and-vq-health
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        region: [face, shoulders, hands, feet]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m33-source-actual-human-obj
+          path: inspection_output/m33_human
+      - name: Use real M32 anatomy and genuine VQ M30 mesh-to-texture baker
+        env:
+          REGION: ${{ matrix.region }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/m33-$REGION"
+          mkdir -p "$OUT"
+          export OUT
+          python3 veilforge/vq_human_region_bake.py \
+            --obj inspection_output/m33_human/human_candidate.obj \
+            --region "$REGION" --out "$OUT"
+          python3 veilforge/vq_mesh_baker.py \
+            --low "$OUT/source_skin_low.obj" \
+            --high "$OUT/source_skin_high.obj" \
+            --out "$OUT/maps" --size 128
+          python3 veilforge/engine.py inspect \
+            --obj "$OUT/source_skin_high.obj" --out "$OUT/high_geo.json"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,os,hashlib
+          p=Path(os.environ["OUT"])
+          src=json.loads((p/"m33_skin_region_source_manifest.json").read_text())
+          m=json.loads((p/"maps/bake_manifest.json").read_text())
+          base=Path("inspection_output/m33_human/human_candidate.obj")
+          assert hashlib.sha256(base.read_bytes()).hexdigest()==src["source_obj_sha256"]
+          assert src["selected_real_human_faces"]>120
+          assert m["low_source_sha256"]==src["low_sha256"]
+          assert m["high_source_sha256"]==src["high_sha256"]
+          assert m["textured_coverage_fraction"]>=.60
+          assert m["meaningful_normal_variation_texels"]>0
+          assert m["max_high_poly_height_world_units"]>0
+          assert not m["production_approved"] and not src["gameplay_character_modified"]
+          assert not src["whole_body_uv_atlas_created"]
+          for kind in ("normal","height"):
+              image=p/"maps"/m["textures"][kind]["path"]
+              assert image.read_bytes()[:8]==bytes((137,80,78,71,13,10,26,10))
+              assert hashlib.sha256(image.read_bytes()).hexdigest()==m["textures"][kind]["sha256"]
+          print("M33_VQ_GENUINE_ANATOMY_BAKE_PASS",src["region"],
+                "source_skin_triangles",src["selected_real_human_faces"],
+                "coverage",m["textured_coverage_fraction"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m33-baked-${{ matrix.region }}
+          path: inspection_output/m33-${{ matrix.region }}/
+          retention-days: 21
+          if-no-files-found: warn
+
+  review-director:
+    name: Independent QA director / all four VQ anatomy surface bakes
+    needs: four-anatomy-specialists
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m33-baked-*
+          path: inspection_output/m33-review-all
+      - name: Verify complete human surface artifacts and independent texture hashes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          root=Path("inspection_output/m33-review-all")
+          all_metrics={}
+          for region in ("face","shoulders","hands","feet"):
+              p=root/("m33-baked-"+region)
+              src=json.loads((p/"m33_skin_region_source_manifest.json").read_text())
+              bake=json.loads((p/"maps/bake_manifest.json").read_text())
+              assert src["region"]==region and src["selected_real_human_faces"]>=120
+              assert src["low_sha256"]==bake["low_source_sha256"]
+              assert src["high_sha256"]==bake["high_source_sha256"]
+              for info in bake["textures"].values():
+                  f=p/"maps"/info["path"]
+                  assert hashlib.sha256(f.read_bytes()).hexdigest()==info["sha256"]
+              assert not bake["production_approved"]
+              all_metrics[region]={"faces":src["selected_real_human_faces"],
+                                   "normal_variation":bake["meaningful_normal_variation_texels"],
+                                   "coverage":bake["textured_coverage_fraction"]}
+          report={"milestone":"M33","engine":"VEYLQUORIN/VEILFORGE",
+                  "actual_human_geometry_bake_working":True,
+                  "regions":all_metrics,
+                  "whole_human_source_unchanged":True,
+                  "android_baked_human_shader_verified":False,
+                  "production_uv_unwrap_approved":False,
+                  "human_photorealism_approved":False,
+                  "playable_knight_replaced":False,
+                  "human_visual_review_required":True}
+          out=Path("inspection_output/m33-review")
+          out.mkdir(exist_ok=True,parents=True)
+          (out/"M33_VQ_HUMAN_REVIEW.json").write_text(json.dumps(report,indent=2)+"\n")
+          print("M33_VQ_FOUR_SPECIALISTS_COMPLETE",json.dumps(all_metrics))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m33-vq-human-independent-director
+          path: inspection_output/m33-review/
+          retention-days: 21
