@@ -239,11 +239,18 @@ jobs:
           set -euo pipefail
           test -s veilforge/android-probe/app/src/main/assets/scene/ruin_courtyard_demo.gltf
           test -s veilforge/android-probe/app/src/main/assets/scene/buffers/ancient_tree.bin
+          test -s veilforge/android-probe/app/src/main/assets/scene/textures/ancient_tree/leaf/albedo.png
           python3 - <<'PY'
           import json
           from pathlib import Path
           root=Path("veilforge/android-probe/app/src/main/assets/scene")
           doc=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
+          assert len(doc.get("images",[]))>=20
+          assert len(doc.get("textures",[]))==len(doc["images"])
+          assert all((root/i["uri"]).is_file() for i in doc["images"])
+          assert all(len((root/i["uri"]).read_bytes())>100 for i in doc["images"])
+          assert all("baseColorTexture" in m["pbrMetallicRoughness"] for m in doc["materials"] if
+                    m["name"].split("/")[0] not in ("human_repaired","bellwarden_full_anatomy_repaired"))
           assert len(doc["meshes"])==10
           assert len(doc["nodes"])==11
           assert all((root/b["uri"]).stat().st_size==b["byteLength"] for b in doc["buffers"])

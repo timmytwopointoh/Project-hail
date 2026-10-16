@@ -30,6 +30,9 @@ def review(root,out,source_sha,apk_sha):
             if (r.get("role")!=role or r.get("source_commit")!=source_sha or
                 r.get("apk_sha256")!=apk_sha or r.get("device_android_api")!=35 or
                 r.get("technical_visual_smoke_pass") is not True or
+                r.get("material_textures_uploaded") is not True or
+                r.get("texture_counts",{}).get("basecolor",0)<8 or
+                r.get("texture_counts",{}).get("metallic_roughness",0)<8 or
                 r.get("artistic_quality_approved") is not False or
                 r.get("physical_device_qa_pass") is not False):
                 issues.append(f"{role}: invalid device/checksum/approval attestations")
@@ -59,7 +62,8 @@ def review(root,out,source_sha,apk_sha):
                 issues.append(f"{role}: Android process memory report missing")
             findings.append({"worker":role,"assets":len(assets),"images":count,
                 "android_api":r.get("device_android_api"),
-                "apk_sha256":r.get("apk_sha256")})
+                "apk_sha256":r.get("apk_sha256"),
+                "real_material_textures":r.get("texture_counts")})
         except (OSError,ValueError,KeyError,TypeError) as e:
             issues.append(f"{role}: corrupt emulator evidence ({e})")
     if issues:
@@ -74,7 +78,7 @@ def review(root,out,source_sha,apk_sha):
         "source_commit":source_sha,"shared_apk_sha256":apk_sha,
         "automatically_promoted_to_games":False,
         "photorealism_verified":False,"hardware_phone_fps_verified":False,
-        "next_priority":"Add semantic rendered-image segmentation, golden approved appearance refs, 3D LOD and physically based material/texture testing"}
+        "next_priority":"Validate tangent-space normal/AO sampling, reference-graded materials, cinematic lighting and physical device performance"}
     (out/"android_gate_report.json").write_text(json.dumps(report,indent=2)+"\n")
     (out/"android_repair_backlog.json").write_text(json.dumps(repair,indent=2)+"\n")
     lines=["# VEILFORGE Android renderer worker review","",

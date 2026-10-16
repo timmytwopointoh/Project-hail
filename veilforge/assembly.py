@@ -81,6 +81,7 @@ def compile_scene(catalog,scenes,scene_id,assets_root,out):
     document={"asset":{"version":"2.0","generator":"VEILFORGE M3 scene pack"},
               "scene":0,"scenes":[{"name":scene_id,"nodes":[]}],
               "nodes":[],"meshes":[],"materials":[],"buffers":[],
+              "images":[],"textures":[],"samplers":[],
               "bufferViews":[],"accessors":[],
               "extras":{"scene_id":scene_id,"instances":len(layout["instances"]),
                         "asset_dependencies":deps,"production_approved":False,
@@ -100,8 +101,8 @@ def compile_scene(catalog,scenes,scene_id,assets_root,out):
         gltf=json.loads(content)
         if gltf.get("asset",{}).get("version")!="2.0" or len(gltf.get("meshes",[]))!=1:
             raise AssetError("Unsupported glTF source "+ident)
-        if gltf.get("skins") or gltf.get("animations") or gltf.get("images") or gltf.get("textures"):
-            raise AssetError("Unsupported rich asset source (skinning/textures); don't silently strip")
+        if gltf.get("skins") or gltf.get("animations") or gltf.get("extensionsRequired"):
+            raise AssetError("Unsupported skin/animation/extensions; never silently strip")
         buffers=gltf.get("buffers",[])
         if len(buffers)!=1 or buffers[0].get("uri")!=ident+".bin" or (
             binfile.stat().st_size!=buffers[0].get("byteLength")):
@@ -115,6 +116,35 @@ def compile_scene(catalog,scenes,scene_id,assets_root,out):
         view_base=len(document["bufferViews"])
         accessor_base=len(document["accessors"])
         material_base=len(document["materials"])
+        image_base=len(document["images"])
+        texture_base=len(document["textures"])
+        sampler_base=len(document["samplers"])
+        # Copy only safe, hashes-verified authored material maps. All texture
+        # paths remain relative to the scene glTF and are unique per asset.
+        source_maps=manifest.get("texture_maps",{})
+        allowed_hashes={}
+        for name,recipe in source_maps.items():
+            for map_name,meta in recipe["maps"].items():
+                allowed_hashes["textures/"+name+"/"+meta["file"]]=meta["sha256"]
+        for image in gltf.get("images",[]):
+            uri=image.get("uri","")
+            if uri not in allowed_hashes or image.get("mimeType")!="image/png":
+                raise AssetError("Texture not recorded in provenance: "+uri)
+            data=(folder/uri).read_bytes()
+            if hashlib.sha256(data).hexdigest()!=allowed_hashes[uri]:
+                raise AssetError("Texture bytes differ from baked manifest "+uri)
+            new_uri="textures/"+ident+"/"+uri.removeprefix("textures/")
+            output_file=out/new_uri;output_file.parent.mkdir(parents=True,exist_ok=True)
+            output_file.write_bytes(data)
+            row=copy.deepcopy(image);row["uri"]=new_uri
+            document["images"].append(row)
+        for sampler in gltf.get("samplers",[]):
+            document["samplers"].append(copy.deepcopy(sampler))
+        for tex in gltf.get("textures",[]):
+            row=copy.deepcopy(tex)
+            row["source"]+=image_base
+            if "sampler" in row:row["sampler"]+=sampler_base
+            document["textures"].append(row)
         for view in gltf["bufferViews"]:
             clone=copy.deepcopy(view);clone["buffer"]=buffer_index
             document["bufferViews"].append(clone)
@@ -125,6 +155,11 @@ def compile_scene(catalog,scenes,scene_id,assets_root,out):
         for material in gltf["materials"]:
             clone=copy.deepcopy(material)
             clone["name"]=ident+"/"+material["name"]
+            fields=[clone.get("pbrMetallicRoughness",{}).get("baseColorTexture"),
+                    clone.get("pbrMetallicRoughness",{}).get("metallicRoughnessTexture"),
+                    clone.get("normalTexture"),clone.get("occlusionTexture")]
+            for field in fields:
+                if field is not None:field["index"]+=texture_base
             document["materials"].append(clone)
         clone=copy.deepcopy(gltf["meshes"][0])
         clone["name"]=ident
@@ -150,6 +185,7 @@ def compile_scene(catalog,scenes,scene_id,assets_root,out):
     (out/(scene_id+".gltf")).write_text(json.dumps(document,indent=2)+"\n",encoding="utf-8")
     report={"schema_version":1,"scene":scene_id,"instances":len(layout["instances"]),
             "unique_asset_sources":len(deps),"binary_files":len(document["buffers"]),
+            "texture_images":len(document["images"]),
             "source_provenance":provenance,
             "glTF":scene_id+".gltf",
             "production_approved":False,"renderer_verified":False,

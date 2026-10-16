@@ -66,6 +66,21 @@ def review(catalog,collected,out):
                     problems.append(f"{name}: binary buffer length mismatch")
                 if len(gltf.get("meshes",[{}])[0].get("primitives",[]))!=len(row.get("materials",[])):
                     problems.append(f"{name}: submesh/material mismatch")
+            # Authored material textures must be preserved end-to-end, not
+            # merely referenced as missing glTF URLs.
+            gltf_images=gltf.get("images",[]) if gltfpath.is_file() else []
+            expected_images=set()
+            for material,bake in row.get("texture_maps",{}).items():
+                if bake.get("material")!=material or len(bake.get("maps",{}))!=4:
+                    problems.append(f"{name}: incomplete material map set {material}")
+                for key,meta in bake.get("maps",{}).items():
+                    uri="textures/"+material+"/"+meta["file"]
+                    expected_images.add(uri)
+                    img=entry.parent/uri
+                    if not img.is_file() or hashlib.sha256(img.read_bytes()).hexdigest()!=meta["sha256"]:
+                        problems.append(f"{name}: invalid texture provenance {uri}")
+            if len(expected_images)!=len(gltf_images) or expected_images!={i["uri"] for i in gltf_images}:
+                problems.append(f"{name}: generated glTF image references differ from baked manifests")
             preview=entry.parent/"previews"
             for label in VIEWS:
                 path=preview/("view_"+label+".png")

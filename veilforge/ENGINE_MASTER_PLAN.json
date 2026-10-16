@@ -90,7 +90,7 @@
       "id": "VF-007",
       "domain": "materials",
       "name": "Production UV unwrap and texture-space continuity",
-      "status": "planned",
+      "status": "partial",
       "gate": "verified UV seams, orientation, texel density and packing; checkerboard render across 3 assets",
       "depends_on": [
         "VF-004"

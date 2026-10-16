@@ -109,3 +109,27 @@ python3 veilforge/assembly.py --catalog veilforge/catalog.json   --scenes veilfo
 VEILFORGE now preserves vertex identity exactly within each glTF material primitive: equal position, hard/soft normal, UV coordinate, and RGBA vertex tint map to one indexed vertex. UV seams, normals and boundaries are never welded merely because their positions coincide. All input triangle indices remain, and independent CI tests check index bounds and buffer lengths. Each asset manifest reports original corner count, indexed vertices, vertices saved, and binary bytes. This is **lossless geometry/attribute deduplication**, not triangle decimation or completed LOD generation.
 
 A schema-validated 24-group objective [ENGINE_MASTER_PLAN.json](ENGINE_MASTER_PLAN.json) now governs scoped engine iterations. `python3 veilforge/roadmap.py --out inspection_output/library-manager` reports the next eligible job and blocks false completion claims. The recurring orchestration remains external to GitHub: GitHub Actions validate pushes and create review artifacts; they **do not** execute autonomous unreviewed source changes, incur hourly CI charges on their own, or alter games. The final release gate requires real imagery and human signoff.
+
+## M5 — Real UV-to-material-to-Android pipeline
+
+Each catalog asset now exports a four-map texture set per material:
+tileable albedo PNG, tangent-space normal PNG, glTF-compliant packed
+metallic/roughness PNG (green=roughness, blue=metallic), and AO PNG.
+Pixel data is deterministic, hashed and independently rechecked by the
+scene-pack compiler. glTF images, samplers and materials are preserved
+across multi-asset composition instead of being silently dropped.
+
+Quad UVs use a consistent physical tile scale (approx. 0.85 model meters
+per repeat). They are **not** production-atlas-unwrapped or texture-island
+packed yet. Non-quad sculpt faces still use local procedural UVs.
+
+The Android 15 viewer now uploads genuine source PNGs and samples
+baseColor and metallic/roughness channels with UVs on the GPU, using
+a modest direct-light/Blinn reflection approximation. The strict
+emulator review requires positive GLES texture-upload counts, real
+14-angle screenshots and camera motion. Full glTF metallic-roughness
+BRDF, tangent-space normal map lighting, AO sampling, shadow casting,
+multi-light PBR validation and appearance sign-off **remain future tasks**.
+
+No asset is automatically integrated into any game. A passing emulator
+check verifies real texture import/drawing, not material realism.

@@ -64,8 +64,13 @@ class Mesh:
         color=(variation,variation,variation,1.)
         self.parts[material].append((tuple(a),tuple(b),tuple(c),n,uv,color))
     def quad(self,a,b,c,d,material,variation=1):
-        self.tri(a,b,c,material,((0,0),(1,0),(1,1)),variation)
-        self.tri(a,c,d,material,((0,0),(1,1),(0,1)),variation)
+        # Consistent planar UV orientation and predictable physical texel
+        # scale, with continuous mapping across both triangles of a quad.
+        # Dedicated seam unwrap/atlas packing remains a separate milestone.
+        du=max(.01,math.dist(a,b)/.85)
+        dv=max(.01,math.dist(a,d)/.85)
+        self.tri(a,b,c,material,((0,0),(du,0),(du,dv)),variation)
+        self.tri(a,c,d,material,((0,0),(du,dv),(0,dv)),variation)
     def box(self,c,s,mat):
         x,y,z=c
         hx,hy,hz=(t/2 for t in s)
@@ -371,9 +376,18 @@ def export_obj(mesh,dest):
             index+=3
     dest.write_text("\n".join(lines)+"\n",encoding="utf-8")
 
-def export_gltf(mesh,dest,spec):
+def export_gltf(mesh,dest,spec,*,material_maps=None):
     dest=Path(dest);dest.parent.mkdir(parents=True,exist_ok=True)
     output=bytearray();views=[];accessors=[];primitives=[];materials=[]
+    images=[];textures=[]
+    sampler={"magFilter":9729,"minFilter":9729,"wrapS":10497,"wrapT":10497}
+    def texture(uri):
+        if not uri.startswith("textures/") or ".." in uri:
+            raise AssetError("Unsafe material texture path")
+        idx=len(images)
+        images.append({"uri":uri,"mimeType":"image/png"})
+        textures.append({"source":idx,"sampler":0})
+        return len(textures)-1
     def add(values,arity,fmt,ctype,target,bounds=False):
         while len(output)%4:output.append(0)
         offset=len(output)
@@ -416,11 +430,25 @@ def export_gltf(mesh,dest,spec):
             "COLOR_0":add(color,4,"f",5126,34962)}
         idx=add(indices,1,"I",5125,34963)
         defn=MATERIALS[material]
-        materials.append({"name":material,"doubleSided":material in ("leaf","grass"),
-                          "pbrMetallicRoughness":{
-                              "baseColorFactor":defn["base"],
-                              "metallicFactor":defn["metallic"],
-                              "roughnessFactor":defn["roughness"]}})
+        mat={"name":material,"doubleSided":material in ("leaf","grass"),
+             "pbrMetallicRoughness":{
+                 "baseColorFactor":defn["base"],
+                 "metallicFactor":defn["metallic"],
+                 "roughnessFactor":defn["roughness"]}}
+        if material_maps is not None:
+            maps=material_maps[material]
+            # The albedo texture is authored at the intended material color:
+            # don't multiply the palette color twice.
+            mat["pbrMetallicRoughness"]["baseColorFactor"]=[1,1,1,1]
+            mat["pbrMetallicRoughness"]["metallicFactor"]=1
+            mat["pbrMetallicRoughness"]["roughnessFactor"]=1
+            mat["pbrMetallicRoughness"]["baseColorTexture"]={
+                "index":texture(maps["albedo"])}
+            mat["pbrMetallicRoughness"]["metallicRoughnessTexture"]={
+                "index":texture(maps["metallic_roughness"])}
+            mat["normalTexture"]={"index":texture(maps["normal"])}
+            mat["occlusionTexture"]={"index":texture(maps["ao"])}
+        materials.append(mat)
         primitives.append({"attributes":attributes,"indices":idx,
                            "mode":4,"material":len(materials)-1})
     doc={"asset":{"version":"2.0","generator":"VEILFORGE M3 asset factory"},
@@ -437,6 +465,12 @@ def export_gltf(mesh,dest,spec):
                    "vertices_saved":total_source_corners-total_indexed_vertices,
                    "vertex_indexing":"exact-position-normal-uv-color-within-material",
                    "rigged":False,"production_approved":False}}
+    if images:
+        doc["images"]=images
+        doc["textures"]=textures
+        doc["samplers"]=[sampler]
+        doc["extras"]["material_maps_authored"]=True
+        doc["extras"]["tangent_vectors_authored"]=False
     dest.write_text(json.dumps(doc,indent=2)+"\n",encoding="utf-8")
     (dest.parent/(dest.stem+".bin")).write_bytes(output)
     return doc
@@ -448,7 +482,18 @@ def build_asset(catalog,ident,dest):
     dest=Path(dest);dest.mkdir(parents=True,exist_ok=True)
     mesh=generate(spec)
     obj=dest/(ident+".obj");gltf=dest/(ident+".gltf")
-    export_obj(mesh,obj);doc=export_gltf(mesh,gltf,spec)
+    export_obj(mesh,obj)
+    from material_baker import bake
+    maps={}
+    bakes={}
+    texture_size=128 if spec["detail"]!="cinematic" else 256
+    for mat in sorted(mesh.parts):
+        folder=dest/"textures"/mat
+        result=bake(mat,folder,size=texture_size,seed=spec["seed"]+len(mat)*19)
+        bakes[mat]=result
+        maps[mat]={name:"textures/"+mat+"/"+meta["file"]
+                   for name,meta in result["maps"].items()}
+    doc=export_gltf(mesh,gltf,spec,material_maps=maps)
     from engine import inspect_obj
     metrics=inspect_obj(obj)
     if metrics["degenerate_triangles"]!=0 or metrics["triangles"]!=mesh.triangle_count:
@@ -469,7 +514,8 @@ def build_asset(catalog,ident,dest):
                         "boundary_edges":metrics["boundary_edges"],
                         "nonmanifold_edges":metrics["nonmanifold_edges"]},
         "topology_note":"Open architectural/terrain/vegetation surfaces may be intentional; component-aware approval needed.",
-        "render_level":"procedural geometry and scalar PBR materials, not photoreal",
+        "texture_maps":bakes,
+        "render_level":"procedural geometry and textured PBR inputs; not cinematic BRDF or photoreal",
         "production_approved":False,"manual_visual_review_required":True
     }
     (dest/"asset_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")

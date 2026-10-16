@@ -147,18 +147,27 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
     (output/"device_logcat.txt").write_text(log,encoding="utf-8")
     if "GLTF_LOADED actual_scene=true" not in log or "GLES_READY renderer=" not in log:
         raise RuntimeError("No real GLES geometry-import/GPU evidence")
+    texture_markers=re.findall(r"MATERIAL_MAPS_LOADED basecolor=(\d+) metallic_roughness=(\d+) unique_gpu_textures=(\d+)",log)
+    if not texture_markers or max(int(a) for a,b,t in texture_markers)<8 or (
+        max(int(b) for a,b,t in texture_markers)<8) or (
+        max(int(t) for a,b,t in texture_markers)<16):
+        raise RuntimeError("Android GLES did not import genuine albedo and metallic-roughness texture maps")
     mem=adb("shell","dumpsys","meminfo",ANDROID_PACKAGE,timeout=40)
     (output/"android_meminfo.txt").write_text(mem,encoding="utf-8")
     report={"schema_version":1,"role":role,"source_commit":source_sha,
         "apk_sha256":real_sha,"device_android_api":observed_api,
         "source_gltf_imported":True,"real_gles2_draws":True,
+        "material_textures_uploaded":True,
+        "texture_counts":{"basecolor":max(int(a) for a,b,t in texture_markers),
+                          "metallic_roughness":max(int(b) for a,b,t in texture_markers),
+                          "unique_gpu_textures":max(int(t) for a,b,t in texture_markers)},
         "screenshot_count":sum(len(x["views"]) for x in collected),
         "assets":collected,"memory_snapshot_saved":True,
         "technical_visual_smoke_pass":True,"artistic_quality_approved":False,
         "physical_device_qa_pass":False,"photorealism_verified":False,
         "quality_limitations":["Emulator uses software GPU not phone hardware",
             "Screenshot heuristics detect blank and frozen renders, not aesthetics",
-            "Static renderer; no rigged animation, textures, FPS or physical GPU VRAM claims"]}
+            "Static renderer; no rigged animation, normal-map tangent basis, physically accurate PBR BRDF, FPS or physical GPU VRAM claims"]}
     (output/"emulator_visual_qa.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     return report
 
