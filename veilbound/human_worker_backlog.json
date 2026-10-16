@@ -1,30 +1,30 @@
 {
   "schema_version": 1,
-  "description": "M17 reference target: bare skin realistic adult male anatomy from supplied Veilbound character sheet; keep modest neutral undershorts, no helmet armor or weapon. Studio-only model. All worker outputs manual-review-only; no untested gameplay replacement.",
+  "description": "M17 anatomy iteration 2 after real Android screenshot review. The first body is a BLOCKY mannequin, far from the realistic human character sheet; accept only compile-safe geometrical revisions with visible impact. Review and merge manually after Java and emulator test.",
   "tasks": [
     {
       "id": "VB-M17-ANATOMY",
       "role": "models",
       "priority": "P0",
-      "goal": "Build the NEW HumanAnatomy.java studio-only unarmored adult male figure. Target anatomically believable head-to-body 1:7.5 ratio, rib cage, scapula, shoulder deltoids, elbow, hips, quadriceps, knees, calves, individual palms/fingers and toes. Source remains original and locally generated, not copies of proprietary game/movie meshes. Neutral modest shorts, natural skin. Separate model from armor. Preserve all existing game meshes and Android ES2."
+      "goal": "Modify only HumanAnatomy.java. Make ONE small, legal mathematical change to existing loft ring width or depth values that narrows blocky deltoids and smooths human upper arm attachment (no new methods or braces, no replacement of build(), do not edit armor). The preview shows detached block-shaped shoulders. Preserve all method signatures and Java syntax; copy a short exact existing line."
     },
     {
       "id": "VB-M17-SKIN",
       "role": "materials",
       "priority": "P0",
-      "goal": "Develop warm natural-looking skin material, undertones and controlled skin roughness with deterministic original procedural textures. No shiny silver skin, no texture sliding. Keep existing steel, leather, cloth, stone maps and tests intact."
+      "goal": "Make ONE small compile-safe parameter change in SurfaceAtlas.java that improves non-metallic skin readability or matte roughness while preserving steel/cloth/stone/leather legacy atlas and existing Java tests. Do not recreate or replace an entire class, do not invent new methods."
     },
     {
       "id": "VB-M17-POSING",
       "role": "animation",
       "priority": "P0",
-      "goal": "Design realistic neutral unarmored human idle pose, shoulder-to-elbow articulation and planted foot contacts; preserve combat animation interfaces and old armored gameplay hero. Reference human gait with weight shift, heel roll and torso counterrotation."
+      "goal": "Review only: animation AI proposal passed compilation but only added constant -10 degrees elbow and was NOT promoted; realistic human weight-shift needs actual skin rig, not a blind constant offset. Do not change old Bellwarden gameplay."
     },
     {
       "id": "VB-M17-ATELIER",
       "role": "studio",
       "priority": "P1",
-      "goal": "Expose NEW HUMAN BASE model as separate Model Atelier selection with orbit zoom front side back and UV/material inspection. Never replace playable armored Bellwarden or remove existing viewer entries."
+      "goal": "Make ONE small compile-safe ModelStudio.java change improving camera framing when item==11 (HUMAN BASE). Preserve the current model item order and final IMPORTED OBJ. Do not add/remove items or change controls or replace the whole class."
     },
     {
       "id": "VB-M17-WORLD-GATE",
