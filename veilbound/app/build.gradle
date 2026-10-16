@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 17
-        versionName '0.16.0-articulated-armor-joints'
+        versionCode 18
+        versionName '0.17.0-human-anatomy-worker-lab'
     }
     buildTypes {
         debug { minifyEnabled false }
