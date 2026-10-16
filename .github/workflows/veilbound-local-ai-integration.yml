@@ -51,13 +51,13 @@ jobs:
                   raise SystemExit("Trusted Java negative-control test failed for an unrelated cause: " + evidence[:300])
               print("Confirmed: unpatched Studio has the exact finite-gesture defect")
           PY
-      - name: Boot private on-runner 1.5B coding model
+      - name: Boot private on-runner 3B coding model
         env:
-          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:3b
         run: bash veilbound/scripts/install_local_ai.sh
       - name: Director -> division -> specialist -> local coder -> real Java tests
         env:
-          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:3b
         run: |
           python3 veilbound/scripts/local_ai_pilot.py \
             --role studio \
