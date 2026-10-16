@@ -11,6 +11,24 @@
         "ruins",
         "modular",
         "stone"
+      ],
+      "sculpt_layers": [
+        {
+          "id": "stone-chisel",
+          "mode": "micro_relief",
+          "amplitude": 0.009,
+          "frequency": 5,
+          "materials": [
+            "stone",
+            "stone_trim"
+          ],
+          "center": [
+            0,
+            2,
+            0
+          ],
+          "radius": 5.5
+        }
       ]
     },
     {
@@ -33,6 +51,24 @@
         "landscape",
         "ground",
         "open-surface"
+      ],
+      "sculpt_layers": [
+        {
+          "id": "erosion-relief",
+          "mode": "micro_relief",
+          "amplitude": 0.008,
+          "frequency": 3.5,
+          "materials": [
+            "earth",
+            "grass"
+          ],
+          "center": [
+            0,
+            0,
+            0
+          ],
+          "radius": 9
+        }
       ]
     },
     {
@@ -67,6 +103,24 @@
         "container",
         "loot",
         "wood"
+      ],
+      "sculpt_layers": [
+        {
+          "id": "wood-grain-sculpt",
+          "mode": "micro_relief",
+          "amplitude": 0.004,
+          "frequency": 14,
+          "materials": [
+            "wood",
+            "dark_wood"
+          ],
+          "center": [
+            0,
+            0.5,
+            0
+          ],
+          "radius": 2.2
+        }
       ]
     },
     {

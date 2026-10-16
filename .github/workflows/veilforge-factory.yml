@@ -50,6 +50,47 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  surface-sculpt-audit:
+    name: M27 sculpt worker / independent source-geometry review
+    needs: library-manager
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install headless actual-mesh preview dependency
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Compare three scoped sculpt candidates to immutable original geometry
+        run: |
+          set -euo pipefail
+          python3 veilforge/sculpt_review.py \
+            --catalog veilforge/catalog.json \
+            --out inspection_output/m27-surface-review
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("inspection_output/m27-surface-review/surface_quality_review.json").read_text())
+          assert data["geometry_gate_passed"] is True
+          assert data["reviewed_assets"]>=3
+          assert len(data["asset_families"])>=3
+          assert not data["human_artistic_approval"]
+          assert all(r["candidate_triangles"]>r["source_triangles"] for r in data["reports"])
+          print("VEILFORGE_M27_SOURCE_SCULPT_PASS",len(data["asset_families"]),"families")
+          PY
+          cat inspection_output/m27-surface-review/surface_quality_review.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive actual before/after geometry, projections and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-m27-surface-sculpt-qa
+          path: inspection_output/m27-surface-review/
+          if-no-files-found: warn
+          retention-days: 14
+
   asset-producers:
     name: Factory asset / ${{ matrix.id }}
     needs: library-manager
@@ -136,7 +177,7 @@ jobs:
 
   scene-package:
     name: Assemble reusable world from reviewed asset outputs
-    needs: [library-manager, asset-producers, library-review]
+    needs: [library-manager, asset-producers, library-review, surface-sculpt-audit]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -78,7 +78,7 @@
       "id": "VF-006",
       "domain": "sculpt",
       "name": "High resolution detailed geometry and non-destructive sculpt layers",
-      "status": "planned",
+      "status": "partial",
       "gate": "editable layer stack with headless DCC export; geometry validation on at least 3 asset families",
       "depends_on": [
         "VF-005"

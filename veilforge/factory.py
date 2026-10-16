@@ -318,7 +318,7 @@ def load_catalog(path):
     result={}
     for spec in data["assets"]:
         required={"id","category","detail","seed"}
-        allowed=required|{"scale","tags"}
+        allowed=required|{"scale","tags","sculpt_layers"}
         if not isinstance(spec,dict) or not required.issubset(spec) or set(spec)-allowed:
             raise AssetError("Asset recipe must have id, category, detail and seed")
         ident=spec["id"]
@@ -337,6 +337,9 @@ def load_catalog(path):
             not isinstance(tag,str) or not re.fullmatch(r"[a-z0-9_-]{2,32}",tag)
             for tag in tags):
             raise AssetError("Tags must be an array of short identifiers")
+        if "sculpt_layers" in spec:
+            from sculpt_layers import validate_layers
+            validate_layers(spec["sculpt_layers"],MATERIALS)
         result[ident]=spec
     if not result:
         raise AssetError("Empty asset catalog")
@@ -354,6 +357,11 @@ def generate(spec):
                 (tuple(x*scale for x in a),tuple(x*scale for x in b),
                  tuple(x*scale for x in c),n,uv,tint)
                 for a,b,c,n,uv,tint in faces]
+    if "sculpt_layers" in spec:
+        from sculpt_layers import apply_layers
+        m, m.sculpt_report=apply_layers(
+            m,spec["sculpt_layers"],spec["seed"],
+            triangle_budget=TIERS[spec["detail"]])
     if not 0<m.triangle_count<=TIERS[spec["detail"]]:
         raise AssetError(f"{spec['id']}: triangle budget exceeded ({m.triangle_count} > {TIERS[spec['detail']]})")
     return m
@@ -464,7 +472,8 @@ def export_gltf(mesh,dest,spec,*,material_maps=None):
                    "indexed_vertices":total_indexed_vertices,
                    "vertices_saved":total_source_corners-total_indexed_vertices,
                    "vertex_indexing":"exact-position-normal-uv-color-within-material",
-                   "rigged":False,"production_approved":False}}
+                   "rigged":False,"production_approved":False,
+                   "non_destructive_sculpt_layers":[row["id"] for row in spec.get("sculpt_layers",[])]}}
     if images:
         doc["images"]=images
         doc["textures"]=textures
@@ -502,6 +511,8 @@ def build_asset(catalog,ident,dest):
         "schema_version":1,"id":ident,"category":spec["category"],
         "detail":spec["detail"],"seed":spec["seed"],
         "scale":spec.get("scale",1),"tags":spec.get("tags",[]),
+        "sculpt_quality":getattr(mesh,"sculpt_report",None),
+        "sculpt_layer_recipe":spec.get("sculpt_layers",[]),
         "source_obj":obj.name,"gltf":gltf.name,"triangles":mesh.triangle_count,
         "source_vertex_corners":doc["extras"]["original_vertex_corners"],
         "indexed_vertices":doc["extras"]["indexed_vertices"],
