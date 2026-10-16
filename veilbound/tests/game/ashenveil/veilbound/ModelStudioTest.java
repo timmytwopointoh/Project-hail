@@ -31,6 +31,31 @@ public final class ModelStudioTest {
         ok(s.snapshot().zoom>1.80f&&s.snapshot().zoom<3f,"Detail framing should capture full glove without clipping");
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
+
+        // Regression: invalid touch and clock deltas previously poisoned the
+        // camera with NaN. Ignore them instead of jumping to clamp boundaries.
+        ModelStudio.Snapshot stable=s.snapshot();
+        s.orbit(Float.NaN,Float.NaN);
+        s.pan(Float.NaN,Float.POSITIVE_INFINITY);
+        s.dolly(Float.NaN);
+        s.dolly(Float.NEGATIVE_INFINITY);
+        s.toggleTurntable();s.tick(Float.NaN);s.tick(Float.POSITIVE_INFINITY);
+        ModelStudio.Snapshot safe=s.snapshot();
+        ok(safe.yaw==stable.yaw&&safe.pitch==stable.pitch,
+            "Invalid orbit/tick inputs must not move or poison camera");
+        ok(safe.zoom==stable.zoom&&safe.panX==stable.panX&&safe.panY==stable.panY,
+            "Invalid pan/dolly inputs must preserve stable camera");
+        ok(!Float.isNaN(safe.yaw)&&!Float.isNaN(safe.pitch)&&!Float.isNaN(safe.zoom),
+            "All camera state must remain finite");
+        s.toggleTurntable();
+        s.orbit(.20f,-.10f);
+        ok(Math.abs(s.snapshot().yaw-.70f)<.00001f,
+            "Normal finite yaw orbit must remain unchanged");
+        ok(Math.abs(s.snapshot().pitch-.02f)<.00001f,
+            "Normal finite pitch orbit must remain unchanged");
+        s.pan(Float.NaN,.25f);
+        ok(s.snapshot().panX==0f&&s.snapshot().panY==.25f,
+            "One invalid axis must not suppress valid movement on other axis");
         System.out.println("VEILBOUND_MODEL_STUDIO_PASS camera, zoom, pan, selector, lights, shaders, turntable");
     }
 }
