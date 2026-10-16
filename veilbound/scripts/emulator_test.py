@@ -382,12 +382,31 @@ def main():
                      timeout=20).decode("utf-8","replace")
         if "item=13" not in pose_log or "M24_POSE_PREVIEW_READY" not in pose_log:
             raise AssertionError("VEILFORGE M24 deforming human was not loaded in game")
+        # An earlier wireframe material is a deliberately STATIC inspection
+        # frame in ValeRenderer. Ensure we are in shaded motion mode before
+        # attempting to prove movement with screenshots. Never bypass the
+        # motion gate or mistake a camera orbit for vertex deformation.
+        for material_attempt in range(7):
+            pose_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                         timeout=20).decode("utf-8","replace")
+            states=[x for x in pose_log.splitlines()
+                    if "item=13" in x and "material=" in x]
+            value=re.search(r"material=(\d+)",states[-1]) if states else None
+            if value is not None and int(value.group(1))!=4:
+                break
+            if value is not None and int(value.group(1))==4:
+                touch(w*.52,h*.944)
+            time.sleep(.75)
+        else:
+            raise AssertionError("M24 animation still in frozen wireframe mode")
         report["screenshots"].append(shot("01_m24_pose_front.png"))
         # True animation evidence: same camera, moving *mesh pixels*,
         # not orbiting the camera or changing the model label.
         movement=[]
-        for attempt in range(3):
-            time.sleep(.21+.12*attempt)
+        for attempt in range(6):
+            # Stagger phase samples; emulator screenshots are slower than
+            # the 140 ms / 8-frame animation period and can alias frames.
+            time.sleep(.18+.11*(attempt%4))
             name="01_m24_pose_motion_"+str(attempt)+".png"
             report["screenshots"].append(shot(name))
             with Image.open(OUT/"01_m24_pose_front.png") as aa,Image.open(OUT/name) as bb:
@@ -473,6 +492,40 @@ def main():
             "game_preview":True,"four_actual_angles":True,
             "review_only":True,"visually_approved":False,
             "auto_promoted":False,"original_knight_preserved":True}
+        # M28 new full human uses physically different eye sockets/lids;
+        # capture the SAME stable game pipeline rather than static concept art.
+        touch(w*.65,h*.865)  # M26 study -> M28 anatomical face
+        time.sleep(1.5)
+        for candidate_wait in range(32):
+            log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                    timeout=20).decode("utf-8","replace")
+            if "item=16" in log and "M28_INTEGRATED_ORBITS_READY" in log:
+                break
+            time.sleep(.55)
+        else:
+            raise AssertionError("VEILFORGE M28 new face geometry not loaded in Android")
+        m28_front=OUT/"01_m28_orbital_front.png"
+        report["screenshots"].append(shot(m28_front.name))
+        last=m28_front
+        for angle in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)
+            time.sleep(1.2)
+            image_name="01_m28_orbital_"+angle+".png"
+            report["screenshots"].append(shot(image_name))
+            with Image.open(last) as a,Image.open(OUT/image_name) as b:
+                diff=ImageStat.Stat(ImageChops.difference(
+                    a.convert("RGB").resize((180,105)),
+                    b.convert("RGB").resize((180,105)))).mean
+            if sum(diff)/3<.12:
+                raise AssertionError("M28 face geometry failed actual camera "+angle)
+            last=OUT/image_name
+        touch(w*.65,h*.265) # precise face closeup / head inspection
+        time.sleep(1.0)
+        report["screenshots"].append(shot("01_m28_orbital_detail.png"))
+        atelier["m28_integrated_face"]={
+            "game_preview":True,"actual_angles":4,"detail_capture":True,
+            "new_eye_socket_and_lid_geometry":True,"manual_approval":False,
+            "old_knight_untouched":True,"hair_unchanged":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as

@@ -148,6 +148,44 @@
       },
       "decision": "needs_revision",
       "note": "Bridge and alae remain simplified; avoid additional isolated nose dots."
+    },
+    {
+      "id": "M28-02-EYE-PROFILE",
+      "stage": "S2",
+      "defect": "protruding_eyes",
+      "severity": 3,
+      "confidence": 0.87,
+      "evidence": {
+        "source_run": "38882167668",
+        "artifact": "m28-real-facial-anatomy-14-views-and-reference",
+        "views": [
+          "face_front.png",
+          "face_side.png",
+          "face_three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Corrected M28 orbital/eyelid geometry is smaller and brow is better embedded, but white eye surfaces still visibly protrude in profile; soft tissue and actual socket edge-loop retopology needed."
+    },
+    {
+      "id": "M28-02-LOWER-FACE",
+      "stage": "S2",
+      "defect": "puppet_jaw",
+      "severity": 4,
+      "confidence": 0.84,
+      "evidence": {
+        "source_run": "38882167668",
+        "artifact": "m28-real-facial-anatomy-14-views-and-reference",
+        "views": [
+          "face_front.png",
+          "face_side.png",
+          "face_three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Lower cheeks, mouth and jaw are still bulbous/faceted; more patches or global polygon count will not resolve anatomical surface topology."
     }
   ],
   "safety": {

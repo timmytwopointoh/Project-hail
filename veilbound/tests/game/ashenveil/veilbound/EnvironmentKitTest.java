@@ -52,6 +52,9 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M26 SCULPT"),
               "M26 learned geometry cannot be inspected in testing grounds");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M28 ORBITAL"),
+              "M28 connected facial anatomy reviewer was not registered");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");

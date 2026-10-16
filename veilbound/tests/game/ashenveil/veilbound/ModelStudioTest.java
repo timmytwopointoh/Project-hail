@@ -32,6 +32,13 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==16,"M28 integrated face must be a separate inspectable model");
+        ok(Math.abs(s.snapshot().zoom-1.45f)<.02f,"M28 head must start in closeup");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M28 orbital side view missing");
+        s.focusDetail();
+        ok(s.snapshot().zoom<1.3f,"M28 eye-detail view missing");
+        s.nextItem(-1);
         ok(s.snapshot().item==15,"M26 learned sculpt candidate must be a separate review slot");
         s.nextReviewView();
         ok("SIDE".equals(s.reviewViewName()),"M26 camera angle control missing");

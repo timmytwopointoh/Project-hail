@@ -1,0 +1,173 @@
+name: VEILFORGE M28 - Connected Facial Anatomy Review
+on:
+  push:
+    branches:
+      - feature/veilbound-m28-integrated-facial-sculpt
+    paths:
+      - '.github/workflows/veilforge-m28-face-refinement.yml'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M28*.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java'
+      - 'veilbound/tools/HumanVariantCLI.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M28AnatomyTest.java'
+      - 'veilforge/sculpt_learning.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-m28-real-face-${{ github.ref }}
+  cancel-in-progress: true
+
+# One real mesh iteration with independent M26 baseline and M28 face.
+# Offline screens do not substitute for synchronized Android screenshots.
+jobs:
+  sculpt-and-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit-test the reusable VEILFORGE learning system
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+      - name: Compile and physically test actual eye socket/lids and original five-digit hands
+        run: |
+          set -euo pipefail
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          mkdir -p /tmp/m28-sculpt
+          javac -d /tmp/m28-sculpt \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28SkinContinuity.java" "$SRC/M28FaceSculpt.java" \
+            "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            "$TEST/M28AnatomyTest.java" "$TEST/M26SculptLearningTest.java" \
+            veilbound/tools/HumanVariantCLI.java
+          java -cp /tmp/m28-sculpt game.ashenveil.veilbound.M28AnatomyTest
+          java -cp /tmp/m28-sculpt game.ashenveil.veilbound.M26SculptLearningTest
+      - name: Produce real M26 and M28 14-angle meshes and 3 face closeups
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/m28/{m26-baseline,m28-candidate}
+          BASE=1,1,1,1,1,1,1,1,1,1,1,1
+          DIALS=.42,.34,.38,.24,.43,.39,.38,.35
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m28-sculpt \
+            game.ashenveil.veilbound.HumanVariantCLI \
+            "$BASE" inspection_output/m28/m26-baseline "$DIALS"
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m28-sculpt \
+            game.ashenveil.veilbound.HumanVariantCLI \
+            "$BASE" inspection_output/m28/m28-candidate --m28
+          python3 veilforge/engine.py inspect \
+            --obj inspection_output/m28/m26-baseline/human_candidate.obj \
+            --out inspection_output/m28/m26-baseline/mesh_topology.json
+          python3 veilforge/engine.py inspect \
+            --obj inspection_output/m28/m28-candidate/human_candidate.obj \
+            --out inspection_output/m28/m28-candidate/mesh_topology.json
+      - name: Compare actual mesh metrics and visual pixels, without automatically approving
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageChops, ImageStat
+          from pathlib import Path
+          import json
+          root=Path("inspection_output/m28")
+          before=root/"m26-baseline";after=root/"m28-candidate"
+          b=json.loads((before/"mesh_evidence.json").read_text())
+          a=json.loads((after/"mesh_evidence.json").read_text())
+          assert b["model"]=="m26_review_conditioned_sculpt_candidate"
+          assert a["model"]=="m28_connected_orbital_anatomy_candidate"
+          assert not a["reviewed"] and not a["photo_realistic"]
+          assert len(a["camera_views"])==14
+          assert len(list(after.glob("*_hand_*.png")))==6
+          diffs={}
+          for view in ("front","side","three_quarter"):
+              p=before/("face_"+view+".png")
+              q=after/("face_"+view+".png")
+              assert p.stat().st_size>1500 and q.stat().st_size>1500
+              with Image.open(p) as im,Image.open(q) as next:
+                  value=sum(ImageStat.Stat(ImageChops.difference(
+                      im.convert("RGB"),next.convert("RGB"))).mean)/3
+              diffs[view]=round(value,4)
+          assert max(diffs.values())>.12,"M28 sculpt produced no visible geometry changes"
+          old=json.loads((before/"mesh_topology.json").read_text())
+          new=json.loads((after/"mesh_topology.json").read_text())
+          assert old["triangles"]>5000 and new["triangles"]>5000
+          assert new["nonmanifold_edges"]<=old["nonmanifold_edges"]
+          assert new["degenerate_triangles"]<=old["degenerate_triangles"]
+          report={"iteration":"M28","source_reference":"Bellwarden Base Body Test",
+                  "face_camera_pixel_delta":diffs,
+                  "m26":{"triangles":old["triangles"],
+                         "boundary_edges":old["boundary_edges"],
+                         "nonmanifold_edges":old["nonmanifold_edges"]},
+                  "m28":{"triangles":new["triangles"],
+                         "boundary_edges":new["boundary_edges"],
+                         "nonmanifold_edges":new["nonmanifold_edges"]},
+                  "quality_improvement_not_inferred_from_pixel_difference":True,
+                  "visual_signoff":False,"approved_for_game":False,
+                  "old_knight_preserved":True,"hair_unchanged":True}
+          (root/"m28_comparison.json").write_text(json.dumps(report,indent=2)+"\n")
+          print("VEILFORGE_M28_FACE_CANDIDATE_COMPARE_PASS",diffs)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m28-real-facial-anatomy-14-views-and-reference
+          path: inspection_output/m28/
+          retention-days: 21
+          if-no-files-found: warn
+
+  veilforge-export-review:
+    needs: sculpt-and-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m28-real-facial-anatomy-14-views-and-reference
+          path: inspection_output/m28
+      - name: Run conservative topological repair and glTF/skin bridge on isolated candidate
+        run: |
+          set -euo pipefail
+          SRC=inspection_output/m28/m28-candidate/human_candidate.obj
+          OUT=inspection_output/m28-veilforge
+          mkdir -p "$OUT"
+          test -s "$SRC"
+          python3 veilforge/topology.py --obj "$SRC" \
+            --out "$OUT/m28_topology_candidate.obj" --mode human
+          python3 veilforge/engine.py material --type skin --size 256 --out "$OUT/skin"
+          python3 veilforge/gltf_export.py \
+            --obj "$OUT/m28_topology_candidate.obj" \
+            --out "$OUT/m28_model.gltf" --profile skin --material-dir "$OUT/skin"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/m28-veilforge")
+          t=json.loads((root/"m28_topology_candidate_topology_report.json").read_text())
+          gltf=json.loads((root/"m28_model.gltf").read_text())
+          assert t["manual_visual_review_required"] and not t["ready_for_game"]
+          assert t["after"]["nonmanifold_edges"]==0 and t["after"]["degenerate_triangles"]==0
+          assert gltf["extras"]["manually_approved"] is False
+          assert (root/"m28_model.bin").stat().st_size>1000
+          print("M28_GLTF_SKIN_TOPOLOGY_PASS not_ready_for_game=true")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m28-veilforge-glTF-skin-and-topology-review
+          path: inspection_output/m28-veilforge/
+          retention-days: 21
+          if-no-files-found: warn
