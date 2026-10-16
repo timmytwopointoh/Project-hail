@@ -145,12 +145,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "float flesh=step(.53,vColor.r)*step(.28,vColor.g)*(1.-step(.54,vColor.g))*"+
         "step(.22,vColor.b)*(1.-step(.39,vColor.b));"+
         "if(uSkinMode>.5){"+
-        "float tone=.975+.045*grit(floor(vLocal*71.));"+
-        "if(flesh>.5){"+
-        "metallic=0.;rough=.90;ao=1.;"+
-        "base=vColor*uTint*vec3(1.03,.985,.95)*tone;"+
+        // Smooth continuous low-amplitude tone, not hard noise tiles.
+        // Anatomical pigments keep their original vertex colors. Dark
+        // embedded pupils gain a controlled corneal highlight only; hair
+        // and modest shorts stay matte without spending extra atlas budget.
+        "float tone=.994+.011*sin(vLocal.x*29.+vLocal.y*17.+vLocal.z*9.);"+
+        "float face=step(2.38,vLocal.y);"+
+        "float iris=face*step(.185,vLocal.z)*(1.-step(.345,vColor.r));"+
+        "float sclera=face*step(.185,vLocal.z)*step(.735,vColor.r);"+
+        "metallic=0.;ao=1.;rough=mix(.79,.70,face*flesh);"+
+        "rough=mix(rough,.46,iris);rough=mix(rough,.56,sclera);"+
+        "base=vColor*uTint*vec3(1.025,.989,.971)*tone;"+
         "n=normalize(vNormal);"+
-        "}else{metallic=0.;rough=.90;}"+
         "}"+
         "}"+
         "float ndl=max(dot(n,light),0.);"+
