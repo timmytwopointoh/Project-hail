@@ -14,6 +14,12 @@ on:
         description: 'Sixteen-character locally generated correlation code'
         required: true
         type: string
+      scale_adjust:
+        description: 'Reviewed geometric correction for the next source revision'
+        required: true
+        type: choice
+        default: original
+        options: ['original', 'smaller', 'larger']
 
 permissions:
   contents: read
@@ -40,6 +46,7 @@ jobs:
         env:
           ASSET: ${{ inputs.catalog_model }}
           REQUEST: ${{ inputs.request_id }}
+          VQ_SCALE: ${{ inputs.scale_adjust }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -50,21 +57,44 @@ jobs:
           assert re.fullmatch(r"[a-f0-9]{16}",request), "Invalid request ID"
           catalog=json.loads(Path("veilforge/catalog.json").read_text())
           assert asset in {x["id"] for x in catalog["assets"]}
-          print("VQ_ACCEPTED",asset,request)
+          assert os.environ["VQ_SCALE"] in {"original","smaller","larger"}
+          print("VQ_ACCEPTED",asset,request,"adjustment",os.environ["VQ_SCALE"])
           PY
       - name: Validate modeling and screenshot retention engines
         run: |
           python3 -m pip install --quiet pillow==11.3.0
           python3 -m unittest discover -s veilforge/tests -v
           python3 -m unittest discover -s vq-studio/tests -v
-      - name: Render baseline real OBJ and glTF source
+      - name: Generate non-destructive bounded correction catalog
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          VQ_SCALE: ${{ inputs.scale_adjust }}
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/vq-studio
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          path=Path("veilforge/catalog.json")
+          data=json.loads(path.read_text())
+          ratio={"original":1.0,"smaller":0.85,"larger":1.15}[os.environ["VQ_SCALE"]]
+          selected=[x for x in data["assets"] if x["id"]==os.environ["ASSET"]]
+          assert len(selected)==1
+          item=selected[0]
+          item["scale"]=round(float(item.get("scale",1.0))*ratio,6)
+          assert 0.25<=item["scale"]<=3.0
+          out=Path("inspection_output/vq-studio/corrected_catalog.json")
+          out.write_text(json.dumps(data,indent=2)+"\n")
+          print("VQ_CORRECTION",item["id"],"scale",item["scale"])
+          PY
+      - name: Render adjusted real OBJ and glTF source
         env:
           ASSET: ${{ inputs.catalog_model }}
         run: |
           set -euo pipefail
           mkdir -p inspection_output/vq-studio/source
           python3 veilforge/factory.py \
-            --catalog veilforge/catalog.json --id "$ASSET" \
+            --catalog inspection_output/vq-studio/corrected_catalog.json --id "$ASSET" \
             --out inspection_output/vq-studio/source
       - name: Publish real OBJ early for VQ black-space inspection
         uses: actions/upload-artifact@v4
