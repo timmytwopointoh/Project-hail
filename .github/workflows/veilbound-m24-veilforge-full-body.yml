@@ -50,7 +50,7 @@ jobs:
             "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
             "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
             "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
-            "$SRC/HumanAnatomy.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/HumanAnatomy.java" "$SRC/M24BodyRetarget.java" "$SRC/HumanSkeleton.java" \
             "$SRC/ObjMeshLoader.java" "$SRC/ModelStudio.java" \
             "$TEST/HumanHandsTest.java" "$TEST/HumanHandSculptTest.java" \
             "$TEST/M24FullBodyTest.java"
@@ -88,7 +88,8 @@ jobs:
             "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
             "$SRC/MaterialMapping.java" "$SRC/ContinuousHuman.java" \
             "$SRC/HumanHandSculpt.java" "$SRC/ShapeEngine.java" \
-            "$SRC/HumanAnatomy.java" veilbound/tools/HumanVariantCLI.java
+            "$SRC/HumanAnatomy.java" "$SRC/M24BodyRetarget.java" \
+            "$SRC/HumanSkeleton.java" veilbound/tools/HumanVariantCLI.java
       - name: Five bounded candidates, actual M24 OBJ and 14-angle renders
         env:
           TEAM: ${{ matrix.team }}
