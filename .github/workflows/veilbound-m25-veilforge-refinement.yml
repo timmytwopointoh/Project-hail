@@ -2,9 +2,9 @@ name: VEILFORGE M25 - Face, Skin and Attachment Refinement
 on:
   push:
     branches:
-      - feature/veilbound-m25-veilforge-full-body
+      - feature/veilbound-m25-facial-surface-material-alignment
     paths:
-      - .github/workflows/veilbound-m25-veilforge-full-body.yml
+      - .github/workflows/veilbound-m25-veilforge-refinement.yml
       - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java
