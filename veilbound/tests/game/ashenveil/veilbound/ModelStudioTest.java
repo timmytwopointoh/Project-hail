@@ -31,6 +31,16 @@ public final class ModelStudioTest {
         ok(s.snapshot().zoom>1.80f&&s.snapshot().zoom<3f,"Detail framing should capture full glove without clipping");
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
+        s.nextItem(-1);
+        ok(s.snapshot().item==11,"Human studio selection");
+        s.focusDetail();
+        ModelStudio.Snapshot hand=s.snapshot();
+        ok(Math.abs(2.12f+hand.panY-(.82f+.73f))<.15f,
+           "Hand close-up must target the actual world-space fingers");
+        ok(Math.abs(hand.panX-.554f)<.15f,"Hand center must be visible");
+        ok(hand.zoom>1.25f&&hand.zoom<1.85f,"Close-up distance");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"Human review cycle preserved");
         System.out.println("VEILBOUND_MODEL_STUDIO_PASS camera, zoom, pan, selector, lights, shaders, turntable");
     }
 }
