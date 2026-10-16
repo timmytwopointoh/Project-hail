@@ -60,7 +60,11 @@ public final class ModelStudio {
             // local y~0.49..1.02. The camera's baseline target is 2.12.
             // Previous -1.38 aimed at y=0.74 (feet!), hiding the fingers.
             // Keep the right hand centered, with enough room for its thumb.
-            yaw=.12f;pitch=-.06f;panX=.56f;panY=-.57f;zoom=1.45f;
+            yaw=.12f;pitch=-.06f;panX=.56f;
+            // Standalone hands have their own y=1.52 studio target;
+            // only the full body needs the -0.57 correction.
+            panY=item==11?-.57f:0f;
+            zoom=1.45f;
             return;
         }
         yaw=.18f;pitch=.08f;
