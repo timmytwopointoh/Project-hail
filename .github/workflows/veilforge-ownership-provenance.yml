@@ -1,0 +1,21 @@
+# Default-branch registration permits manual resnapshot on the reviewed
+# VEILFORGE ownership branch. This default-branch stub is intentionally
+# read-only and never starts compute-intensive workers.
+name: VEILFORGE - Ownership Provenance and Persistent Steward
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  select-reviewed-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Select the reviewed VEILFORGE ownership branch
+        run: |
+          echo '## VEILFORGE legal/provenance checkpoint' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Choose branch legal/veilforge-owner-20261016 when manually running this workflow.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The branch workflow records UTC and Eastern time, SHA256 source fingerprints, a signed GitHub attestation, and read-only stewardship handoff.' >> "$GITHUB_STEP_SUMMARY"
