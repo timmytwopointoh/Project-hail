@@ -691,6 +691,56 @@ def main():
             "hands_and_feet_artistic_review_required":True,
             "photo_realism_approved":False,
             "replaces_playable_knight":False}
+        # M35: inspect the TRUE volumetric mouth in native OpenGL, including
+        # neutral face, parted lip expression and body T-pose. Confirm both
+        # current yaw AND pixels in the model area. A HUD label is not proof.
+        m35_shots=[]
+        m35_first={}
+        previous_m35=previous_frame
+        for item,label,angles in (
+                (25,"mouth_neutral",("front","side","three_quarter")),
+                (26,"mouth_open",("front","side")),
+                (27,"mouth_tpose",("front","side"))):
+            touch(w*.65,h*.865)
+            for attempt in range(42):
+                log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                        timeout=20).decode("utf-8","replace")
+                expected=("M35_ANATOMICAL_MOUTH_READY item="+str(item))
+                if expected in log:break
+                time.sleep(.5)
+            else:
+                raise AssertionError("M35 adult mouth mesh did not load: "+label)
+            if item==26 and "mouth_open=true" not in log:
+                raise AssertionError("M35 model viewer did not select parted lips")
+            prev=previous_m35
+            for angle in angles:
+                if angle!="front":
+                    touch(w*.50,h*.758)
+                expected_camera(item,angle)
+                shot_name="01_m35_"+label+"_"+angle+".png"
+                target=OUT/shot_name
+                for attempt in range(17):
+                    time.sleep(.48)
+                    shot(shot_name)
+                    if studio_center_delta(prev,target)>.24:
+                        break
+                else:
+                    raise AssertionError(
+                        "M35 "+label+"/"+angle+" camera or geometry not actually visible")
+                report["screenshots"].append(shot_name)
+                m35_shots.append(shot_name)
+                if angle=="front":m35_first[label]=target
+                prev=target
+            previous_m35=prev
+        if studio_center_delta(m35_first["mouth_neutral"],
+                               m35_first["mouth_open"])<.18:
+            raise AssertionError(
+                "Open-mouth 3D pose lacks visible native model change")
+        atelier["m35_anatomical_mouth"]={
+            "native_models":3,"actual_3d_views":len(m35_shots),
+            "neutral_mouth_visible":True,"open_mouth_visible":True,
+            "genuine_body_tpose":True,"real_skin_geometry":True,
+            "photo_likeness_approved":False,"old_knight_preserved":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as

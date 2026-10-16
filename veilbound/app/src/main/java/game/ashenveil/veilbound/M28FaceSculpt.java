@@ -152,6 +152,13 @@ public final class M28FaceSculpt {
         return point(.043f*t,y,z);
     }
     public static ArtKit.Model build(boolean lite){
+        return build(lite,true); // preserve exact M28-M33 mouth baseline
+    }
+    /**
+     * M35 can reuse the original M28 eyes and brows without its old
+     * three-flat-strip mouth. False is opt-in only for the M35 replacement.
+     */
+    public static ArtKit.Model build(boolean lite,boolean includeLegacyLips){
         MeshWriter w=new MeshWriter();
         int sides=lite?16:28;
         for(int side:new int[]{-1,1}){
@@ -166,7 +173,7 @@ public final class M28FaceSculpt {
             // Alae nostrils with subtle underside shade: not black freckles.
             lens(w,side*.026f,2.301f,.217f,.0048f,.0022f,.0018f,NOSTRIL,12);
         }
-        lips(w,Math.max(12,sides));
+        if(includeLegacyLips)lips(w,Math.max(12,sides));
         return w.finish();
     }
 }
