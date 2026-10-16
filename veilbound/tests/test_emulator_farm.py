@@ -20,6 +20,25 @@ class EmulatorFarmTests(unittest.TestCase):
             self.assertTrue(all(x["api"] in (33, 34, 35)
                                 for x in p["matrix"]["include"]))
 
+    def test_production_workers_same_os_same_api_and_unique_runner_identity(self):
+        for count in (1, 2, 4, 8):
+            p = farm.make_matrix(count)
+            self.assertEqual("synchronized", p["mode"])
+            self.assertEqual({35}, {x["api"] for x in p["matrix"]["include"]})
+            self.assertEqual(count, len(set(x["id"] for x in p["matrix"]["include"])))
+            # 5–8 are repeatability checks on the SAME game/Android version.
+            self.assertTrue(all(x["id"].startswith("android35_")
+                                for x in p["matrix"]["include"]))
+
+    def test_old_android_compatibility_is_explicit_opt_in(self):
+        primary = farm.make_matrix(4)
+        legacy = farm.make_matrix(4, mode="compatibility")
+        self.assertEqual({35}, {x["api"] for x in primary["matrix"]["include"]})
+        self.assertEqual({33, 34, 35}, {x["api"] for x in legacy["matrix"]["include"]})
+        self.assertEqual("compatibility", legacy["mode"])
+        self.assertRaises(ValueError, farm.make_matrix, 4, mode="invalid")
+        self.assertRaises(ValueError, farm.summarize, ".", 4, mode="invalid")
+
     def test_invalid_budget_is_rejected(self):
         for count in (0, 9, -1, True, "4", 50):
             with self.assertRaises(ValueError):
@@ -67,6 +86,74 @@ class EmulatorFarmTests(unittest.TestCase):
             self.assertEqual(1, len(result["findings"]))
             self.assertEqual("cross-emulator", result["findings"][0]["scope"])
             self.assertEqual(2, len(result["findings"][0]["affected_emulators"]))
+
+    def test_real_runner_requires_immutable_commit_matching_images_and_qa(self):
+        sha = "a" * 40
+        with tempfile.TemporaryDirectory() as root:
+            for cfg in farm.CONFIGS[:2]:
+                folder = (Path(root) / ("veilbound-emulator-" + cfg["id"] + "-inspection"))
+                folder.mkdir()
+                photos = [{"path": "frame-%02d.png" % n} for n in range(12)]
+                for entry in photos:
+                    (folder / entry["path"]).write_bytes(b"PNG test payload")
+                (folder / "emulator_report.json").write_text(json.dumps({
+                    "status": "passed", "screenshots": photos}))
+                (folder / "visual_quality_metrics.json").write_text(json.dumps({
+                    "emulator_test": "passed", "screenshots": photos}))
+                (folder / "task_plan.json").write_text(json.dumps({
+                    "release_gate": "needs-review", "source_commit": sha,
+                    "emulator_status": "passed", "tasks": [
+                        {"id":"VB-SLOW-EMULATOR", "priority":"P2",
+                         "worker":"performance", "title":"Software GPU slow"}]}))
+            score = farm.summarize(root, 2, expected_sha=sha)
+            self.assertTrue(score["success"])
+            self.assertEqual(2, score["passed"])
+            self.assertTrue(all(row["source_matches"] for row in score["instances"]))
+            self.assertTrue(all(row["verified_images_present"] for row in score["instances"]))
+            self.assertFalse(farm.summarize(root, 2, expected_sha="b"*40)["success"])
+
+            second = Path(root) / ("veilbound-emulator-" + farm.CONFIGS[1]["id"] + "-inspection")
+            (second / "frame-07.png").unlink()
+            incomplete = farm.summarize(root, 2, expected_sha=sha)
+            self.assertFalse(incomplete["success"])
+            self.assertEqual(1, incomplete["passed"])
+
+    def test_all_emulators_must_use_same_compiled_apk(self):
+        sha = "a" * 64
+        with tempfile.TemporaryDirectory() as root:
+            for cfg in farm.CONFIGS[:2]:
+                folder = Path(root) / ("veilbound-emulator-" + cfg["id"] + "-inspection")
+                folder.mkdir()
+                (folder / "emulator_report.json").write_text(json.dumps({
+                    "status": "passed", "screenshots": [{} for _ in range(17)]}))
+                (folder / "visual_quality_metrics.json").write_text("{}")
+                (folder / "apk_sha256.txt").write_text(sha + "\n")
+            self.assertTrue(farm.summarize(root, 2, expected_apk_sha=sha)["success"])
+            wrong = Path(root) / ("veilbound-emulator-" + farm.CONFIGS[1]["id"] + "-inspection")
+            (wrong / "apk_sha256.txt").write_text("b" * 64)
+            result = farm.summarize(root, 2, expected_apk_sha=sha)
+            self.assertFalse(result["success"])
+            self.assertFalse(result["instances"][1]["apk_digest_matches"])
+
+    def test_real_runner_rejects_blocked_qa_even_when_emulator_says_passed(self):
+        sha = "a" * 40
+        with tempfile.TemporaryDirectory() as root:
+            cfg = farm.CONFIGS[0]
+            folder = Path(root) / ("veilbound-emulator-" + cfg["id"] + "-inspection")
+            folder.mkdir()
+            photos = [{"path": "f-%d.png" % n} for n in range(12)]
+            for item in photos:
+                (folder / item["path"]).write_bytes(b"PNG data")
+            (folder / "emulator_report.json").write_text(json.dumps({
+                "status":"passed", "screenshots": photos}))
+            (folder / "visual_quality_metrics.json").write_text(json.dumps({
+                "emulator_test":"passed", "screenshots": photos}))
+            (folder / "task_plan.json").write_text(json.dumps({
+                "release_gate":"blocked", "source_commit":sha,
+                "emulator_status":"passed", "tasks":[{
+                    "id":"VB-GL-ERROR","priority":"P0","worker":"renderer",
+                    "title":"Invalid OpenGL state"}]}))
+            self.assertFalse(farm.summarize(root, 1, expected_sha=sha)["success"])
 
     def test_missing_failure_plan_is_prioritized_for_review(self):
         with tempfile.TemporaryDirectory() as root:
