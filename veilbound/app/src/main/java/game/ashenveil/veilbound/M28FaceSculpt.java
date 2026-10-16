@@ -17,8 +17,8 @@ public final class M28FaceSculpt {
     private static final float[] PUPIL={.112f,.099f,.094f};
     private static final float[] LID={.672f,.423f,.337f};
     private static final float[] LID_EDGE={.495f,.320f,.275f};
-    private static final float[] BROW={.575f,.365f,.288f};
-    private static final float[] NOSTRIL={.386f,.258f,.216f};
+    private static final float[] BROW={.629f,.401f,.321f};
+    private static final float[] NOSTRIL={.480f,.304f,.251f};
     private static final float[] LIPS={.640f,.405f,.357f};
     private static final float[] MOUTH={.376f,.234f,.217f};
     private static final float[] FACE_NORMAL={0f,0f,1f};
@@ -125,9 +125,11 @@ public final class M28FaceSculpt {
         }
     }
     private static float[] browPoint(float x,float t,boolean lower){
-        float y=EYE_Y+.041f+.0080f*(1f-t*t)-.0020f*t;
-        float width=(.0030f+.0020f*(1f-t*t))*(lower?-1f:1f);
-        return point(x+t*.0425f,y+width,.1720f+.003f*(1f-t*t));
+        float y=EYE_Y+.041f+.0050f*(1f-t*t)-.0020f*t;
+        float width=(.0018f+.0010f*(1f-t*t))*(lower?-1f:1f);
+        // The brow mark now lies just under the connected orbital ridge.
+        // Avoid a detached slab visibly sticking out in profile.
+        return point(x+t*.0390f,y+width,.1585f+.0020f*(1f-t*t));
     }
     private static void lips(MeshWriter w,int sections){
         for(int layer=0;layer<3;layer++){
@@ -154,15 +156,15 @@ public final class M28FaceSculpt {
         int sides=lite?16:28;
         for(int side:new int[]{-1,1}){
             float x=side*EYE_X;
-            lens(w,x,EYE_Y,.2055f,.0308f,.0138f,.0108f,SCLERA,sides);
+            lens(w,x,EYE_Y,.2030f,.0293f,.0132f,.0100f,SCLERA,sides);
             // Cornea/iris do not extend outside sclera; both remain inspectable.
-            lens(w,x-side*.0025f,EYE_Y,.211f,.0094f,.0105f,.0032f,IRIS,sides);
-            lens(w,x-side*.0025f,EYE_Y,.2140f,.0044f,.0052f,.0016f,PUPIL,sides);
+            lens(w,x-side*.0025f,EYE_Y,.208f,.0080f,.0089f,.0030f,IRIS,sides);
+            lens(w,x-side*.0025f,EYE_Y,.211f,.0037f,.0046f,.0015f,PUPIL,sides);
             eyelid(w,x,true,sides/2);
             eyelid(w,x,false,sides/2);
             brow(w,x,Math.max(8,sides/2));
             // Alae nostrils with subtle underside shade: not black freckles.
-            lens(w,side*.026f,2.301f,.219f,.0055f,.0027f,.002f,NOSTRIL,12);
+            lens(w,side*.026f,2.301f,.217f,.0048f,.0022f,.0018f,NOSTRIL,12);
         }
         lips(w,Math.max(12,sides));
         return w.finish();
