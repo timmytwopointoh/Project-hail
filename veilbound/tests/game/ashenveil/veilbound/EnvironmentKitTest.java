@@ -70,6 +70,15 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M31 RIGGED RELAXED"),
               "M31 corrected relaxed pose not selectable");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M32 ANATOMY"),
+              "M32 whole human skin sculpt missing from game test grounds");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M32 SHOULDER"),
+              "M32 accurate shoulder T-pose missing");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M32 RELAXED"),
+              "M32 relaxed anatomy reference missing");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");
