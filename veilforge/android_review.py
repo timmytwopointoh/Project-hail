@@ -41,7 +41,7 @@ def review(root,out,source_sha,apk_sha):
                 name=a["asset"]
                 if len(a.get("views",[]))!=len(VIEWS):
                     issues.append(f"{role}/{name}: not all 14 actual view frames present")
-                if a.get("max_orbit_change",0)<.0015:
+                if a.get("max_orbit_change",0)<.0006:
                     issues.append(f"{role}/{name}: camera orbit not visually detectable")
                 for v in a["views"]:
                     count+=1

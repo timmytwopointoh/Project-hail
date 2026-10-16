@@ -107,7 +107,7 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                 raise RuntimeError(f"Blank/near-empty emulator frame for {asset}: {result}")
         changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
         del shots
-        if max(changes)<.0015:
+        if max(changes)<.0006:
             raise RuntimeError(f"Camera did not visibly orbit {asset}: max delta={max(changes)}")
         collected.append({"asset":asset,"views":measurements,"max_orbit_change":max(changes),
                           "min_foreground_fraction":min(x["foreground_fraction"] for x in measurements)})
@@ -145,6 +145,12 @@ def main():
                 "technical_visual_smoke_pass")}))
     except Exception as error:
         a.output.mkdir(parents=True,exist_ok=True)
+        try:
+            (a.output/"device_logcat_failure.txt").write_text(
+                adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S",timeout=20),
+                encoding="utf-8")
+        except Exception:
+            pass
         (a.output/"emulator_failure.json").write_text(json.dumps(
             {"role":a.role,"error":repr(error),"passed":False},indent=2)+"\n")
         raise

@@ -281,11 +281,24 @@ public final class ViewerActivity extends Activity {
                 if(!"scene".equals(filter)&&!filter.equals(item.asset))continue;
                 selected++;
                 MeshData shape=models.get(item.mesh);
-                float localRadius=0f;
-                for(int k=0;k<3;k++)localRadius=Math.max(localRadius,Math.max(Math.abs(shape.min[k]),Math.abs(shape.max[k]))*item.scale);
+                // Use bounds around the mesh's own center rather than
+                // the world origin; the old radius inflated tall trees,
+                // making their 14 emulator camera views nearly identical.
+                float[] local=new float[3],half=new float[3];
                 for(int k=0;k<3;k++){
-                    min[k]=Math.min(min[k],item.position[k]-localRadius);
-                    max[k]=Math.max(max[k],item.position[k]+localRadius);
+                    local[k]=(shape.min[k]+shape.max[k])*.5f;
+                    half[k]=(shape.max[k]-shape.min[k])*.5f;
+                }
+                float localRadius=(float)Math.sqrt(half[0]*half[0]+
+                    half[1]*half[1]+half[2]*half[2])*item.scale;
+                float theta=(float)(2*Math.atan2(item.rotation[1],item.rotation[3]));
+                float sn=(float)Math.sin(theta),cs=(float)Math.cos(theta);
+                float[] center={item.position[0]+item.scale*(cs*local[0]+sn*local[2]),
+                    item.position[1]+item.scale*local[1],
+                    item.position[2]+item.scale*(-sn*local[0]+cs*local[2])};
+                for(int k=0;k<3;k++){
+                    min[k]=Math.min(min[k],center[k]-localRadius);
+                    max[k]=Math.max(max[k],center[k]+localRadius);
                 }
             }
             if(selected==0){Log.e(TAG,"ASSET_NOT_FOUND "+filter);return;}
@@ -295,7 +308,7 @@ public final class ViewerActivity extends Activity {
                 radius=Math.max(radius,(max[k]-min[k])*.5f);
             }
             float yawRad=(float)Math.toRadians(yaw), pitchRad=(float)Math.toRadians(Math.max(-70,Math.min(70,pitch)));
-            float eyeRadius=radius*3.2f+3;
+            float eyeRadius=Math.max(3.0f,radius*2.35f+1.2f);
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
