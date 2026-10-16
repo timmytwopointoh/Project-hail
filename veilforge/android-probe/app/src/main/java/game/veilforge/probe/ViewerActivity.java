@@ -189,6 +189,12 @@ public final class ViewerActivity extends Activity {
             return out;
         }
         void load()throws Exception{
+            // GLSurfaceView may create a new EGL context for every test-view
+            // Activity restart. Never append old glTF meshes repeatedly:
+            // this previously inflated 7 models into >200 in emulator QA.
+            loaded=false;
+            models.clear();
+            instances.clear();
             JSONObject doc=new JSONObject(new String(read("scene/ruin_courtyard_demo.gltf"),"UTF-8"));
             if(!"2.0".equals(doc.getJSONObject("asset").getString("version")))throw new Exception("Not glTF 2.0");
             JSONArray sources=doc.getJSONArray("buffers");
@@ -214,7 +220,10 @@ public final class ViewerActivity extends Activity {
                     float[] n=floats(attr.getInt("NORMAL"),doc,binary);
                     float[] c=attr.has("COLOR_0")?floats(attr.getInt("COLOR_0"),doc,binary):null;
                     int[] idx=indices(prim.getInt("indices"),doc,binary);
-                    if(p.length%3!=0||n.length!=p.length||(c!=null&&c.length!=(p.length/3)*4))
+                    int colorStride=c==null?0:c.length/(p.length/3);
+                    if(p.length%3!=0||n.length!=p.length||
+                       (c!=null&&c.length!=(p.length/3)*colorStride)||
+                       (c!=null&&colorStride!=3&&colorStride!=4))
                         throw new Exception("Invalid vertex stream");
                     JSONArray base=gltfMaterials.getJSONObject(prim.getInt("material"))
                             .getJSONObject("pbrMetallicRoughness").getJSONArray("baseColorFactor");
@@ -231,7 +240,7 @@ public final class ViewerActivity extends Activity {
                         mesh.expand(bounds);
                         for(int t=0;t<4;t++){
                             float tint=(float)base.getDouble(t);
-                            color[k*4+t]=tint*(c==null?1f:c[v*4+t]);
+                            color[k*4+t]=tint*(c==null||t>=colorStride?1f:c[v*colorStride+t]);
                         }
                     }
                     mesh.shapes.add(new Geometry(xyz,normal,color));

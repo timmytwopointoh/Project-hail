@@ -14,8 +14,8 @@ SCENES=ROOT/"scenes.json"
 class SceneTest(unittest.TestCase):
     def test_scene_catalog_supports_repeated_asset_instances(self):
         scene=load_scenes(SCENES)["ruin_courtyard_demo"]
-        self.assertEqual(len(scene["instances"]),8)
-        self.assertLess(len({a["asset"] for a in scene["instances"]}),8)
+        self.assertEqual(len(scene["instances"]),9)
+        self.assertLess(len({a["asset"] for a in scene["instances"]}),9)
     def test_compiled_scene_has_multiple_independent_meshes_and_nodes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

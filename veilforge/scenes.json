@@ -92,6 +92,17 @@
           ],
           "yaw": 28,
           "scale": 0.85
+        },
+        {
+          "id": "gate_mobile_probe",
+          "asset": "ancient_gate_mobile",
+          "position": [
+            -2,
+            0,
+            2.2
+          ],
+          "yaw": 0,
+          "scale": 0.75
         }
       ]
     }

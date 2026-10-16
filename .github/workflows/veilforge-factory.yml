@@ -165,10 +165,10 @@ jobs:
           root=Path("inspection_output/scene-package")
           manifest=json.loads((root/"scene_manifest.json").read_text())
           scene=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
-          assert manifest["instances"]==8
-          assert manifest["unique_asset_sources"]==7
-          assert len(scene["nodes"])==8
-          assert len(scene["meshes"])==7
+          assert manifest["instances"]==9
+          assert manifest["unique_asset_sources"]==8
+          assert len(scene["nodes"])==9
+          assert len(scene["meshes"])==8
           assert all((root/b["uri"]).stat().st_size==b["byteLength"]
                      for b in scene["buffers"])
           assert manifest["production_approved"] is False
@@ -206,6 +206,34 @@ jobs:
         with:
           name: veilforge-assembled-world-scene
           path: veilforge/android-probe/app/src/main/assets/scene/
+      - name: Forge existing high-detail human and armored candidate for Android
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/forge-java"
+          javac -d "$RUNNER_TEMP/forge-java" \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/{ArtKit,DetailArtKit,CinematicArtKit,ShapeEngine,BellwardenAnatomy,HumanAnatomy,HumanSkeleton,ContinuousHuman,MaterialMapping,HeroPose,CombatMotion,CharacterRig,WorldState,ModelStudio,EnvironmentKit,SurfaceAtlas,MaterialTextures,ObjMeshLoader,BootAssets}.java \
+            veilbound/tools/TeamEngineCLI.java veilforge/ForgeHumanCLI.java
+          mkdir -p inspection_output/android-character-human inspection_output/android-character-armor
+          java -Xmx1700m -Djava.awt.headless=true -cp "$RUNNER_TEMP/forge-java" \
+            game.ashenveil.veilbound.ForgeHumanCLI inspection_output/android-character-human
+          java -Xmx1500m -Djava.awt.headless=true -cp "$RUNNER_TEMP/forge-java" \
+            game.ashenveil.veilbound.TeamEngineCLI models inspection_output/android-character-armor
+          python3 veilforge/topology.py \
+            --obj inspection_output/android-character-human/human_source.obj \
+            --out inspection_output/android-character-human/human_repaired.obj --mode human
+          python3 veilforge/gltf_export.py \
+            --obj inspection_output/android-character-human/human_repaired.obj \
+            --out inspection_output/android-character-human/human_repaired.gltf --profile skin
+          python3 veilforge/topology.py \
+            --obj inspection_output/android-character-armor/bellwarden_full_anatomy.obj \
+            --out inspection_output/android-character-armor/bellwarden_full_anatomy_repaired.obj --mode assembly
+          python3 veilforge/gltf_export.py \
+            --obj inspection_output/android-character-armor/bellwarden_full_anatomy_repaired.obj \
+            --out inspection_output/android-character-armor/bellwarden_full_anatomy_repaired.gltf --profile steel --double-sided
+          python3 veilforge/probe_pack.py \
+            --scene veilforge/android-probe/app/src/main/assets/scene \
+            --human inspection_output/android-character-human/human_repaired.gltf \
+            --armor inspection_output/android-character-armor/bellwarden_full_anatomy_repaired.gltf
       - name: Assert package uses actual worker-generated glTF buffers
         run: |
           set -euo pipefail
@@ -216,8 +244,8 @@ jobs:
           from pathlib import Path
           root=Path("veilforge/android-probe/app/src/main/assets/scene")
           doc=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
-          assert len(doc["meshes"])==7
-          assert len(doc["nodes"])==8
+          assert len(doc["meshes"])==10
+          assert len(doc["nodes"])==11
           assert all((root/b["uri"]).stat().st_size==b["byteLength"] for b in doc["buffers"])
           assert doc["extras"]["production_approved"] is False
           print("VEILFORGE_REAL_SCENE_EMBEDDED",len(doc["meshes"]),"meshes")
@@ -252,6 +280,7 @@ jobs:
           - { role: scene-world, profile: pixel_6, api: 35 }
           - { role: nature-mobile, profile: pixel_7, api: 35 }
           - { role: props-equipment, profile: pixel_5, api: 35 }
+          - { role: characters, profile: pixel_4, api: 35 }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -338,5 +367,38 @@ jobs:
         with:
           name: veilforge-android-final-review
           path: inspection_output/android-review/
+          if-no-files-found: warn
+          retention-days: 14
+
+  visual-lod-review:
+    name: Check mobile-vs-standard model silhouette using Android images
+    needs: [android-visual-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image inspection dependency
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-android-*
+          path: inspection_output/android-collected
+      - name: Compare actual independent emulator frames at equal viewpoints
+        run: |
+          set -euo pipefail
+          python3 veilforge/visual_lod.py \
+            --root inspection_output/android-collected \
+            --out inspection_output/android-lod
+          cat inspection_output/android-lod/visual_lod_report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: veilforge-android-visual-lod-review
+          path: inspection_output/android-lod/
           if-no-files-found: warn
           retention-days: 14

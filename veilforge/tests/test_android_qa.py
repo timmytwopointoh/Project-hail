@@ -16,9 +16,9 @@ class AndroidVisualQATest(unittest.TestCase):
     def test_all_catalog_meshes_and_scene_covered_on_emulators(self):
         assigned=[id for assets in ROLES.values() for id in assets]
         self.assertEqual(len(VIEWS),14)
-        self.assertEqual(len(ROLES),3)
+        self.assertEqual(len(ROLES),4)
         self.assertEqual(len(assigned),len(set(assigned)))
-        self.assertEqual(set(assigned),set(load_catalog(CATALOG))|{"scene"})
+        self.assertEqual(set(assigned),set(load_catalog(CATALOG))|{"scene","human_repaired","bellwarden_full_anatomy_repaired"})
         self.assertEqual(BACKGROUND,(17,21,29))
     def test_reviewer_fails_closed_when_emulators_did_not_run(self):
         with tempfile.TemporaryDirectory() as tmp:

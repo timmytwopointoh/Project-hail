@@ -23,6 +23,7 @@ ROLES={
     "scene-world":("scene","rolling_terrain","ancient_gate_standard"),
     "nature-mobile":("ancient_tree","forest_tree_mobile","ancient_gate_mobile"),
     "props-equipment":("treasure_chest","ceremonial_sword","cargo_cart"),
+    "characters":("human_repaired","bellwarden_full_anatomy_repaired"),
 }
 BACKGROUND=(17,21,29)
 
@@ -68,6 +69,10 @@ def wait_frame(asset,yaw,pitch,timeout=15):
     end=time.monotonic()+timeout
     while time.monotonic()<end:
         data=adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S",timeout=15)
+        for line in data.splitlines():
+            if "GLTF_LOADED actual_scene=true" in line and (
+                    "models=10 nodes=11" not in line):
+                raise RuntimeError("Renderer reloaded duplicate meshes or imported wrong pack: "+line)
         if marker in data and any(marker in line and target in line for line in data.splitlines()):
             return data
         if "LOAD_FAIL" in data or "GL_ERROR" in data or "ASSET_NOT_FOUND" in data:

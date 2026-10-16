@@ -104,3 +104,9 @@ or artist/aesthetic signoff. Those remain open milestone acceptance gates.
 Next priority: texture-backed GLES PBR comparison, image segmentation and
 reference-aware silhouette regression, motion/LOD stress tests, then
 target-hardware telemetry and artist signoff before game promotion.
+
+### M4+ character and mobile silhouette enhancement
+
+The same self-contained Android test APK also embeds freshly generated, non-destructively repaired **VEILBOUND human** and **Bellwarden armor** mesh exports. This adds a fourth Android 15 emulator specialist (Pixel 4 profile) and 28 character screenshots, bringing the full catalog/character/scene coverage to 154 real images per complete run. The viewer accepts glTF COLOR_0 in VEC3 or VEC4 form without corrupting the artist-authored vertex attributes.
+
+A separate image-analysis worker computes the standard-versus-mobile ancient gate silhouette intersection-over-union over 14 paired emulator camera views (real screenshot data, normalized across device dimensions). Its machine-readable warning is advisory until cross-device thresholds have been independently calibrated; it does not equate simple pixel similarity with artistic or material quality. Dynamic rigging/animation, scanned PBR materials and physical-phone frame-rate verification remain open milestones.
