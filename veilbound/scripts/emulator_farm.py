@@ -28,7 +28,11 @@ def make_matrix(count):
             "min_required": count,
             "note": "Each emulator runs separately on its own Ubuntu runner and checks one immutable APK."}
 
-def summarize(root, expected, *, expected_sha=None):
+def summarize(root, expected, *, expected_sha=None, expected_apk_sha=None):
+    if expected_apk_sha is not None and (
+            not isinstance(expected_apk_sha, str) or len(expected_apk_sha) != 64 or
+            any(c not in '0123456789abcdef' for c in expected_apk_sha.lower())):
+        raise ValueError('Invalid shared APK SHA256')
     if expected_sha is not None and (not isinstance(expected_sha, str)
                                      or len(expected_sha) != 40
                                      or any(c not in '0123456789abcdef' for c in expected_sha.lower())):
@@ -94,6 +98,11 @@ def summarize(root, expected, *, expected_sha=None):
                              row.get("qa_release_gate") != "blocked" and
                              row.get("qa_emulator_result") == "passed" and
                              row.get("qa_release_gate") in ("clear", "needs-review"))
+        if expected_apk_sha is not None:
+            digest_path = folder / "apk_sha256.txt"
+            digest = digest_path.read_text(encoding="utf-8").strip() if digest_path.is_file() else ""
+            row["apk_digest_matches"] = digest == expected_apk_sha
+            row["passed"] = row["passed"] and row["apk_digest_matches"]
         checked.append(row)
         if tasks_file.is_file():
             try:
@@ -137,6 +146,8 @@ def main():
     parser.add_argument("--summarize", type=Path)
     parser.add_argument('--expected-sha', default=None,
                         help='Full immutable APK source SHA (required for strict real CI)')
+    parser.add_argument('--expected-apk-sha', default=None,
+                        help='Common artifact SHA256 for every independent emulator')
     parser.add_argument("--out", type=Path,
                         default=Path("inspection_output/emulator-farm"))
     args = parser.parse_args()
@@ -149,7 +160,8 @@ def main():
                 file.write("matrix=" + json.dumps(result["matrix"], separators=(",", ":")) + "\n")
                 file.write("count=" + str(result["count"]) + "\n")
     else:
-        result = summarize(args.summarize, args.count, expected_sha=args.expected_sha)
+        result = summarize(args.summarize, args.count, expected_sha=args.expected_sha,
+                           expected_apk_sha=args.expected_apk_sha)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "emulator_farm_report.json").write_text(json.dumps(result, indent=2) + "\n")
     text = ["# VEILBOUND parallel Android emulator farm", ""]
