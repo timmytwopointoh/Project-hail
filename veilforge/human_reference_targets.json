@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "model": "VEILFORGE adult male reference fit",
+  "source": "user-created image reference in conversation",
+  "reference_image": "athletic_man_in_t_pose_studio_portrait.png",
+  "image_dimensions": [
+    1122,
+    1402
+  ],
+  "model_reference_rights": "user-provided generated reference; only derived measurements committed",
+  "pixels_in_repository": false,
+  "bounding_box_pixels": {
+    "left": 11,
+    "right": 1107,
+    "top": 117,
+    "bottom": 1253
+  },
+  "measurement_method": "background-separated front-view silhouette, sampled horizontal rows (approximate); no correspondence solver or identity recognition",
+  "pose": "full_body_true_tpose_front",
+  "normalized_target": {
+    "arm_span_over_height": 0.965,
+    "slices": [
+      {
+        "name": "head",
+        "top_fraction": 0.082,
+        "width_over_height": 0.114,
+        "reference_y_pixel": 210
+      },
+      {
+        "name": "shoulder_chest",
+        "top_fraction": 0.179,
+        "width_over_height": 0.326,
+        "reference_y_pixel": 320
+      },
+      {
+        "name": "outstretched_arms",
+        "top_fraction": 0.218,
+        "width_over_height": 0.965,
+        "reference_y_pixel": 365
+      },
+      {
+        "name": "waist",
+        "top_fraction": 0.399,
+        "width_over_height": 0.178,
+        "reference_y_pixel": 570
+      },
+      {
+        "name": "pelvis",
+        "top_fraction": 0.46,
+        "width_over_height": 0.198,
+        "reference_y_pixel": 640
+      },
+      {
+        "name": "thighs",
+        "top_fraction": 0.584,
+        "width_over_height": 0.222,
+        "reference_y_pixel": 780
+      },
+      {
+        "name": "knees",
+        "top_fraction": 0.671,
+        "width_over_height": 0.148,
+        "reference_y_pixel": 880
+      },
+      {
+        "name": "calves",
+        "top_fraction": 0.746,
+        "width_over_height": 0.141,
+        "reference_y_pixel": 965
+      },
+      {
+        "name": "ankles",
+        "top_fraction": 0.91,
+        "width_over_height": 0.073,
+        "reference_y_pixel": 1150
+      },
+      {
+        "name": "feet",
+        "top_fraction": 0.98,
+        "width_over_height": 0.128,
+        "reference_y_pixel": 1230
+      }
+    ]
+  },
+  "uncertainty": {
+    "relative_width_tolerance": 0.06,
+    "fit_is_advisory": true,
+    "face_identity_not_measured": true,
+    "reference_not_camera_calibrated": true,
+    "photorealism_not_verified": true
+  },
+  "secondary_pose": {
+    "reference_image": "studio_portrait_of_a_single_adult_male_model_on_a_2_batch_2.png",
+    "subject": "same intended character in relaxed three-quarter stance",
+    "landmark_matching_not_implemented": true
+  },
+  "historic_gameplay_model_must_remain_unchanged": true
+}
