@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 OUTPUTS = {
-    "models": ("bellwarden_forged_armor.obj",),
+    "models": ("bellwarden_full_anatomy.obj",),
     "world": ("carved_cenotaph.obj",),
     "studio": ("bellwarden_studio_preview.obj",),
     "animation": ("hero_pose_180_frames.csv",),
