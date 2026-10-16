@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
    * UID-restricted read-only provider; VQ rechecks SHA and retains camera.
    */
   private boolean maybeRunPairedTest(Intent intent){
-    if(!BuildConfig.DEBUG||intent==null||
+    if((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0||intent==null||
        !intent.getBooleanExtra("vq_pair_test",false))return false;
     int revision=intent.getIntExtra("vq_pair_revision",0);
     if(revision!=1&&revision!=2)return false;
