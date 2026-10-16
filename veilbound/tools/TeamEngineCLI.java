@@ -28,9 +28,16 @@ public final class TeamEngineCLI {
                     n(v[i+6])+" "+n(v[i+7])+" "+n(v[i+8])+"\n");
             for(int i=0;i<v.length;i+=9)
                 out.write("vn "+n(v[i+3])+" "+n(v[i+4])+" "+n(v[i+5])+"\n");
+            // Original mesh atlas UV slot for DCC editing/retopology.
+            for(int i=0;i<v.length;i+=9){
+                float[] uv=MaterialMapping.uv(v[i],v[i+1],v[i+2],
+                    v[i+3],v[i+4],v[i+5],v[i+6],v[i+7],v[i+8]);
+                out.write("vt "+n(uv[0])+" "+n(uv[1])+"\n");
+            }
             for(int k=0;k<mesh.triangleCount;k++){
-                int a=k*3+1;out.write("f "+a+"//"+a+" "+(a+1)+"//"+
-                                (a+1)+" "+(a+2)+"//"+(a+2)+"\n");
+                int a=k*3+1;out.write("f "+a+"/"+a+"/"+a+" "+
+                    (a+1)+"/"+(a+1)+"/"+(a+1)+" "+
+                    (a+2)+"/"+(a+2)+"/"+(a+2)+"\n");
             }
         }
     }
@@ -48,7 +55,7 @@ public final class TeamEngineCLI {
     }
     private static void csvAnimation(Path file)throws Exception{
         try(BufferedWriter out=Files.newBufferedWriter(file,StandardCharsets.UTF_8)){
-            out.write("frame,time,bob,hip_shift,root_pitch,root_yaw,left_leg,right_leg,left_toe,right_toe,helmet_yaw,helmet_pitch,cape_pitch,cape_yaw\n");
+            out.write("frame,time,bob,hip_shift,root_pitch,root_yaw,left_leg,right_leg,left_knee,right_knee,left_elbow,right_elbow,left_toe,right_toe,helmet_yaw,helmet_pitch,cape_pitch,cape_yaw\n");
             HeroPose.Frame pose=new HeroPose.Frame();
             for(int i=0;i<180;i++){
                 float time=i/60f,phase=time*5.4f;
@@ -57,6 +64,8 @@ public final class TeamEngineCLI {
                 out.write(i+","+n(time)+","+n(pose.bob)+","+n(pose.hipShift)+","+
                           n(pose.rootPitch)+","+n(pose.rootYaw)+","+
                           n(pose.leftLegPitch)+","+n(pose.rightLegPitch)+","+
+                          n(pose.leftKneePitch)+","+n(pose.rightKneePitch)+","+
+                          n(pose.leftElbowPitch)+","+n(pose.rightElbowPitch)+","+
                           n(pose.leftFootLift)+","+n(pose.rightFootLift)+","+
                           n(pose.helmetYaw)+","+n(pose.helmetPitch)+","+
                           n(pose.mantlePitch)+","+n(pose.mantleYaw)+"\n");
