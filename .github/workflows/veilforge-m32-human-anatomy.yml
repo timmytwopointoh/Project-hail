@@ -11,6 +11,7 @@ on:
       - 'veilbound/tests/game/ashenveil/veilbound/M32AnatomyPerfectionTest.java'
       - 'veilforge/vq_model_tools.py'
       - 'veilforge/vq_brushes.py'
+      - 'veilforge/vq_refinement_pipeline.py'
       - 'veilforge/vq_adaptive_remesh.py'
       - 'veilforge/m32_shoulder_brush.json'
       - 'veilforge/m32_anatomy_remesh.json'
