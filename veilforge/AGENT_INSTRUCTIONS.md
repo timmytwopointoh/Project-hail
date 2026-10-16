@@ -16,6 +16,14 @@ The historical VEILBOUND manager scripts are compatibility modules of
 VQ; preserve existing workflow names until their subscribers and
 test suites are migrated together.
 
+## Newly integrated model-tool surface
+
+Use the copyable commands in veilforge/VQ_MODEL_TOOLS.md to inspect actual
+OBJ exported by modeling workers. The CLI produces independent SHA256-verified
+14-angle preview evidence, optional mask IoU and actionable repair findings.
+It is read-only to the input mesh and never confers artistic approval.
+The existing ten-slot manager now requires that proof from asset workers.
+
 ## Minimum explicit runtime state
 
 Any external AI or new ChatGPT session must be given:
