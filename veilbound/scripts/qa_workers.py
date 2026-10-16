@@ -16,7 +16,7 @@ PURE = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
 SUITES = {
     "combat": ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay"],
     "assets": ["EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
-               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
+               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "M24BodyRetarget", "M24AnimationLab", "M25Refinement", "M25AttachmentAudit", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
 }
 
 def command(*args):
