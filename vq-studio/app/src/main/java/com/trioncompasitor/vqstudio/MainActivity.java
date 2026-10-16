@@ -130,6 +130,7 @@ public final class MainActivity extends Activity {
         MeshData mesh=MeshData.read(in,"Imported real OBJ / "+uri.getLastPathSegment());
         runOnUiThread(()->{
           autoLoad=false;
+          loadedSnapshotKey="";
           small.setText("AUTO OFF • manually imported model protected; enable auto loading to follow VQ.");
           viewport.setMesh(mesh);
           meshLabel.setText(mesh.label+" • "+mesh.triangles.length+" triangles");
