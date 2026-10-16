@@ -23,18 +23,18 @@ def grid(path,size=7,split_uv=False,two_materials=False):
         for x in range(size-1):
             group="stone" if not two_materials or x<size//2 else "wood"
             lines.append("usemtl "+group)
-            for tri in (((z*size+x,z*size+x+1,(z+1)*size+x+1),
-                         (z*size+x,(z+1)*size+x+1,(z+1)*size+x))):
-                for ids in tri:
-                    coords=[((i%size)/(size-1),(i//size)/(size-1)) for i in ids]
-                    if split_uv:
-                        coords=[(uv[0]+.1*(x%2),uv[1]+.1*(z%2)) for uv in coords]
-                    index=[]
-                    for u,v in coords:
-                        lines.append(f"vt {u:.8f} {v:.8f}")
-                        index.append(sum(line.startswith("vt ") for line in lines))
-                    items=[f"{i+1}/{ui}/1" for i,ui in zip(ids,index)]
-                    lines.append("f "+" ".join(items))
+            triangles=((z*size+x,z*size+x+1,(z+1)*size+x+1),
+                       (z*size+x,(z+1)*size+x+1,(z+1)*size+x))
+            for ids in triangles:
+                coords=[((i%size)/(size-1),(i//size)/(size-1)) for i in ids]
+                if split_uv:
+                    coords=[(uv[0]+.1*(x%2),uv[1]+.1*(z%2)) for uv in coords]
+                index=[]
+                for u,v in coords:
+                    lines.append(f"vt {u:.8f} {v:.8f}")
+                    index.append(sum(line.startswith("vt ") for line in lines))
+                items=[f"{i+1}/{ui}/1" for i,ui in zip(ids,index)]
+                lines.append("f "+" ".join(items))
     path.write_text("\n".join(lines)+"\n")
     return path
 
