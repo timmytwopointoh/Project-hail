@@ -87,9 +87,11 @@ public final class ShapeEngine {
         return f.finish();
     }
     /**
-     * An outlined, raised forged plate: individual hand-shaped perimeter with
-     * beveled shoulder, thick edge and peaked central ridge. Convex outlines.
-     * Coordinates are front-facing x/y pairs, z is surface depth.
+     * Forged plate with FOUR purposeful surfaces: base flange, 45-degree
+     * dressed edge, inset bevel and a BROAD low-relief face. A uniform
+     * peaked triangle fan made these look like artificial pyramids; this
+     * actual inset surface reads as worked steel with hard, narrow edge glints.
+     * Convex hand-authored outlines, mobile-safe fixed triangle budget.
      */
     public static ArtKit.Model bevelPlate(float[] xy,float backZ,float height,
                                            float thickness,Palette face,Palette edge){
@@ -101,14 +103,27 @@ public final class ShapeEngine {
         for(int i=0;i<n;i++){cx+=xy[i*2];cy+=xy[i*2+1];}
         cx/=n;cy/=n;
         Forge f=new Forge();
-        float[] peak={cx,cy,backZ+thickness+height};
+        // Nearly-flat center is deliberately 70% of the silhouette. The
+        // narrow successive bevel widths break up highlights naturally.
+        final float topZ=backZ+thickness+height;
+        float[] center={cx,cy,topZ+.001f};
         for(int i=0;i<n;i++){
             int j=(i+1)%n;
-            float[] p={xy[i*2],xy[i*2+1],backZ+thickness};
-            float[] q={xy[j*2],xy[j*2+1],backZ+thickness};
-            float[] bp={p[0],p[1],backZ},bq={q[0],q[1],backZ};
-            f.triangle(peak,p,q,face);
-            f.quad(bp,bq,q,p,edge);
+            float ax=xy[i*2],ay=xy[i*2+1];
+            float bx=xy[j*2],by=xy[j*2+1];
+            float[] backA={ax,ay,backZ},backB={bx,by,backZ};
+            float[] outerA={ax,ay,backZ+thickness};
+            float[] outerB={bx,by,backZ+thickness};
+            float[] flangeA={cx+(ax-cx)*.95f,cy+(ay-cy)*.95f,
+                              backZ+thickness+height*.33f};
+            float[] flangeB={cx+(bx-cx)*.95f,cy+(by-cy)*.95f,
+                              backZ+thickness+height*.33f};
+            float[] innerA={cx+(ax-cx)*.82f,cy+(ay-cy)*.82f,topZ};
+            float[] innerB={cx+(bx-cx)*.82f,cy+(by-cy)*.82f,topZ};
+            f.quad(backA,backB,outerB,outerA,edge);
+            f.quad(outerA,outerB,flangeB,flangeA,edge);
+            f.quad(flangeA,flangeB,innerB,innerA,face);
+            f.triangle(center,innerA,innerB,face);
         }
         return f.finish();
     }
