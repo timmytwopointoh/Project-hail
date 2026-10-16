@@ -102,6 +102,15 @@ def main():
         report["launch_output"]=adb("shell","am","start","-W","-n",ACTIVITY,
                                      timeout=85).decode("utf-8","replace").strip()
         report["launched"]=True
+        # Capture the genuine startup overlay while background CPU assets bake.
+        # The user will see this on physical Android, not a fake loading timer.
+        try:
+            loading_png=adb("exec-out","screencap","-p",timeout=40)
+            if loading_png.startswith(bytes.fromhex("89504e470d0a1a0a")):
+                (OUT/"00_startup_loading.png").write_bytes(loading_png)
+                report["startup_capture"]=True
+        except (OSError,subprocess.SubprocessError):
+            report["startup_capture"]=False
         time.sleep(6)
         dismiss_android_overlay()
         time.sleep(1.5)
@@ -114,6 +123,14 @@ def main():
             except AssertionError:
                 if retry==2:raise
         report["screenshots"].append(first);w,h=first["width"],first["height"]
+        boot_log=adb("logcat","-d","-s","VEILBOUND_BOOT:I","*:S",timeout=25).decode("utf-8","replace")
+        (OUT/"startup_stages.txt").write_text(boot_log)
+        report["loading_real_stages"]=all(x in boot_log for x in (
+            "SPLASH_VISIBLE", "Forging shaped Bellwarden armor",
+            "Baking steel, leather and cloth materials",
+            "Compiling native OpenGL shaders", "FIRST_FRAME_READY"))
+        if not report["loading_real_stages"]:
+            raise AssertionError("Actual startup stages or first-frame completion are missing")
         report["initial_mode"]=diagnostic_state()
         # Visit the ACTUAL model workshop, inspect its 3D stage and take
         # orbit/material snapshots before progressing into the existing game.
