@@ -1,0 +1,13 @@
+name: VEILBOUND - Local AI End-to-End Studio Pilot
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+# Run actual local inference only after selecting AI development branch.
+jobs:
+  choose-ai-development-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Choose feature/veilbound-parallel-ai-qa in the Run workflow branch picker."
+          exit 1
