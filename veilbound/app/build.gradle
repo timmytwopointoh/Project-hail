@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 18
-        versionName '0.17.0-human-anatomy-worker-lab'
+        versionCode 19
+        versionName '0.18.0-skinned-human-foundation'
     }
     buildTypes {
         debug { minifyEnabled false }
