@@ -161,6 +161,24 @@ public final class ContinuousHuman {
         }
         return f;
     }
+    /**
+     * Pure distance-field probes for anatomical acceptance. Four fingertip
+     * columns must be occupied, three web gaps open, and the thumb distinct.
+     * Negative field is flesh; positive field is actual open air.
+     */
+    static float[] digitSeparationProbe(int side){
+        if(side!=1&&side!=-1)throw new IllegalArgumentException("Hand side");
+        Field f=anatomy(BASE);
+        float center=side*.554f;
+        float[] samples=new float[9];
+        for(int finger=0;finger<4;finger++)
+            samples[finger]=f.sample(center+(finger-1.5f)*.061f,.614f,.095f);
+        for(int gap=0;gap<3;gap++)
+            samples[4+gap]=f.sample(center+(gap-1f)*.061f,.614f,.095f);
+        samples[7]=f.sample(center+side*.161f,.703f,.142f);
+        samples[8]=f.sample(center+side*.120f,.700f,.140f);
+        return samples;
+    }
     private static int idx(int x,int y,int z,int nx,int ny){
         return (z*ny+y)*nx+x;
     }
