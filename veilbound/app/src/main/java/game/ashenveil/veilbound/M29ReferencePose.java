@@ -38,7 +38,10 @@ public final class M29ReferencePose {
             float shoulderY=M24BodyRetarget.y(side*.445f,1.82f);
             float arm=smooth((ax-.375f)/.125f)*
                       smooth((y-.94f)/.22f)*
-                      (1f-smooth((y-shoulderY+.10f)/.22f));
+                      // Stop the high-deltoid movement before the fixed chest/neck
+                      // junction; otherwise identical welded seam edges
+                      // become four-face nonmanifold pairs in a strict T-pose.
+                      (1f-smooth((y-shoulderY+.22f)/.18f));
             if(arm>.0001f){
                 float radians=pose==T_POSE?side*1.39f:
                     side*(side<0?.24f:.39f);
