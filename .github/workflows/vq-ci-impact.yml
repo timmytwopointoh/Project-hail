@@ -1,0 +1,47 @@
+name: VQ M34 - Impact-Aware Factory Routing Source QA
+
+on:
+  push:
+    branches: ['feature/engine-m34-impact-*']
+    paths:
+      - 'tools/vq_ci_impact.py'
+      - 'tests/test_vq_ci_impact.py'
+      - '.github/workflows/vq-ci-impact.yml'
+      - '.github/workflows/veilforge-factory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vq-impact-source-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-only-impact-qa:
+    name: Validate routing without building models or launching emulators
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pinned source and adversarial impact tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m unittest discover -s tests -p 'test_vq_ci_impact.py' -v
+          python3 -m compileall -q tools/vq_ci_impact.py
+          python3 veilforge/vq_emulator_efficiency.py --root . --out inspection_output/impact/emulator_config.json
+      - name: Retain static QA (not real Android evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-m34-impact-source-${{ github.sha }}
+          path: inspection_output/impact/
+          if-no-files-found: warn
+          retention-days: 30

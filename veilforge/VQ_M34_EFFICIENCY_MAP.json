@@ -66,7 +66,7 @@
       "name": "Impact-aware changed-asset scheduling",
       "status": "partial",
       "acceptance": "Only skip costly Android test for provably unrelated docs/source, full Android on scene/renderer/material/mesh changes; maintain a separate source QA job.",
-      "implementation_note": "Six-team high-detail production now triggers only on its actual geometry/manager/export source, not every unrelated veilforge file. Full impact-based factory/emulator routing remains planned."
+      "implementation_note": "An isolated M34-06 branch now contains a fail-closed, Git-ancestry-verified changed-path classifier; only an explicit Markdown documentation allowlist may skip factory producers/Android, while unconditional source tests remain in library-manager. Adversarial local tests passed; source-only Actions and both factory routing branches must be independently verified before declaring milestone complete. No runtime speedup or real Android evidence from this branch yet."
     },
     {
       "id": "M34-07",
@@ -122,5 +122,11 @@
   ],
   "claims_limit": "Parallelism reduces a three-plus-one emulator wave to one wave when runners are available. Do not claim a specific wall-time or cost improvement until comparable real Actions jobs prove it.",
   "definition_of_done": "All P0/P1 gates have independent green CI evidence, compatible Android captures remain genuine and the changes have not removed model/visual/hardware release gates. Exact photorealism and physical-device acceptance remain outside this optimization track.",
-  "base_run_status": "Factory Actions run 38916145322 passed 18 jobs with 125 tests and four genuine Android 15 emulator roles; high-detail run 38916145745 also passed. M34-08 new streaming change requires independent CI; no speedup or physical-device claims."
+  "base_run_status": "Factory Actions run 38916145322 passed 18 jobs with 125 tests and four genuine Android 15 emulator roles; high-detail run 38916145745 also passed. M34-08 new streaming change requires independent CI; no speedup or physical-device claims.",
+  "current_iteration": {
+    "milestone": "M34-06",
+    "branch": "feature/engine-m34-impact-routing-20261016",
+    "technical_gate": "Verify source-only CI, fail-closed classifier and workflow job dependency wiring. Full factory on a source change and source-only skip on docs-only must still be checked in real GitHub Actions; do not assume either from local tests.",
+    "game_release_approved": false
+  }
 }

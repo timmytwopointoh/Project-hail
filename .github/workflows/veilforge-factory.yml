@@ -4,6 +4,8 @@ on:
     branches: ['feature/veilforge-*']
     paths:
       - 'veilforge/**'
+      - 'tools/vq_ci_impact.py'
+      - 'tests/test_vq_ci_impact.py'
       - '.github/workflows/veilforge-factory.yml'
   workflow_dispatch:
 permissions:
@@ -16,6 +18,41 @@ concurrency:
 # worker assignment, four true geometry previews, binary glTF, deterministic QA.
 # Never edits a game, merges generated code or promotes assets without review.
 jobs:
+  impact-gate:
+    name: Classify pinned changes; fail closed to full factory
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    outputs:
+      run_full_factory: ${{ steps.impact.outputs.run_full_factory }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Route only strictly documented changes away from Android
+        id: impact
+        env:
+          VQ_BEFORE: ${{ github.event.before }}
+          VQ_AFTER: ${{ github.sha }}
+          VQ_EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          python3 tools/vq_ci_impact.py --root . \
+            --base "$VQ_BEFORE" --head "$VQ_AFTER" --event "$VQ_EVENT" \
+            --out inspection_output/impact/decision.json \
+            --github-output "$GITHUB_OUTPUT"
+          cat inspection_output/impact/decision.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: veilforge-impact-decision
+          path: inspection_output/impact/
+          if-no-files-found: warn
+          retention-days: 14
+
   library-manager:
     name: Validate library and allocate scoped asset jobs
     runs-on: ubuntu-latest
@@ -35,6 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s veilforge/tests -v
+          python3 -m unittest discover -s tests -p 'test_vq_ci_impact.py' -v
           python3 -m compileall -q veilforge
           python3 veilforge/vq_emulator_efficiency.py \
             --root . --out inspection_output/library-manager/emulator_efficiency_audit.json
@@ -56,7 +94,9 @@ jobs:
 
   asset-producers:
     name: Factory asset / ${{ matrix.id }}
-    needs: library-manager
+    needs: [library-manager, impact-gate]
+    # On classifier failure, execute the full factory and retain the red gate.
+    if: always() && needs.library-manager.result == 'success' && (needs.impact-gate.result != 'success' || needs.impact-gate.outputs.run_full_factory != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -106,8 +146,8 @@ jobs:
 
   library-review:
     name: Independently audit entire game-asset catalog
-    needs: [library-manager, asset-producers]
-    if: always()
+    needs: [library-manager, impact-gate, asset-producers]
+    if: always() && (needs.impact-gate.result != 'success' || needs.impact-gate.outputs.run_full_factory != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
