@@ -1,0 +1,40 @@
+name: Veilbound M23 bounded refinement preflight
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_limit:
+        description: Maximum anatomy candidate slots (1-50)
+        required: true
+        default: '50'
+        type: string
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify branch and candidate budget
+        shell: bash
+        env:
+          LIMIT: ${{ inputs.candidate_limit }}
+        run: |
+          set -euo pipefail
+          [[ "$LIMIT" =~ ^[0-9]+$ ]] && (( LIMIT >= 1 && LIMIT <= 50 ))
+          test -f docs/veilbound/M23_EXTREME_REFINEMENT.md
+          echo "M23 candidate capacity: $LIMIT"
+      - name: Inventory candidate-related source files and available workers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p m23-report
+          git rev-parse HEAD > m23-report/commit.txt
+          git ls-files | grep -Ei '(veilbound|anatom|human|model|rig|emulator|worker)' > m23-report/source-inventory.txt || true
+          printf '%s\n' 'M23 preflight only: no geometry changes or worker execution are claimed.' > m23-report/STATUS.txt
+          printf '%s\n' 'Hand gate: four separately modeled fingers + one opposable thumb per hand.' >> m23-report/STATUS.txt
+          printf '%s\n' 'Human visual review and Android 15 screenshots are required before promotion.' >> m23-report/STATUS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m23-preflight-report
+          path: m23-report/
