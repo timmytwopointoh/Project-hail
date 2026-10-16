@@ -130,3 +130,28 @@ source branch is feature/veilforge-m34-shared-android-qa-20261016;
 the refreshed archive branch is feature/vq-library-snapshot-m34-10-20261016.
 The older pinned recovery base remains valid. Separate M30 Android normal-map
 comparison, physical-device performance and artist signoff remain open.
+
+
+## UV-01 source distortion audit (new verified source-only milestone)
+
+Latest independent source QA: Git commit
+`cfe85d30cea6ff6efae09f2b73adaa0b32f7e823`, branch
+`feature/vq-uv01-distortion-gates-20261016`, GitHub Actions
+[run 38974882647](https://github.com/timmytwopointoh/Project-hail/actions/runs/38974882647)
+(**171 tests passed**, real source OBJ SHA256 pinned in the playbook).
+The new recovery branch is `feature/vq-library-snapshot-uv01-20261016`.
+Prior M34-10 Android source backup remains a separate last-known-good version.
+
+After preparing a source OBJ with valid UVs, run:
+
+```bash
+python3 veilforge/vq_uv_distortion.py --obj input.obj \
+  --out build/uv01_audit.json --texture-size 1024
+```
+
+Use `--strict` to reject triangles exceeding the default 4:1 Jacobian
+anisotropy or 2:1 area-equivalent density deviation; tune thresholds only
+for a documented asset target. The audit never changes the OBJ. It is
+**not** an overlap, pixel seam, normal-map lighting, Android screenshot,
+real-hardware FPS or artistic approval test. See the playbook and ledger
+before adopting its output as a release gate.

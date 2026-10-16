@@ -177,3 +177,38 @@ the shared implementation instead of relaxing the screenshot policy.
 ## M34-10 factory verification
 
 Factory Actions run 38971117494 passed 164 tests, eight producers, four Android 15 roles, 154 real captures, independent PNG pixel recomputation, and LOD/semantic reviews. Source commit 5aec7a0d681896996be9c58e88d6a493c6af4a5a. M30 Android shader comparison and physical device/artistic approval remain pending.
+
+
+## UV-01 — Source-derived Jacobian stretch and texel-density audit (2026-10-16)
+
+Read-only `veilforge/vq_uv_distortion.py` measures the singular-value ratio
+of each OBJ triangle's UV-to-world Jacobian, a world-area-weighted median
+area-equivalent texel density, per-face density outliers, positive/negative UV
+winding, outside-unit UVs, and welded UV seam counts. The input OBJ is never
+rewritten; the report pins its SHA256. A negative UV winding is diagnostic,
+not automatically a defect. Strict optional thresholds fail closed on severe
+anisotropy/density inconsistency; missing/collapsed UVs, invalid numeric
+thresholds, nonmanifold welded edges and unsafe source symlinks are rejected.
+
+The source-only workflow `.github/workflows/vq-uv01-distortion-audit.yml`
+ran the **full 171-test engine suite**, produced a report from a genuine
+32-triangle sculpt-source mesh, and passed at
+[run 38974882647](https://github.com/timmytwopointoh/Project-hail/actions/runs/38974882647),
+source commit `cfe85d30cea6ff6efae09f2b73adaa0b32f7e823`.
+The real test source SHA256 was
+`0b96462c2ae46871015980b77b2b574c5d8b4e104cf7bc2d68bc1c115b3e8e06`.
+M31 triangle-local atlas and M32 welded UV continuity regression tests remain
+part of the same full suite. This is a separate unmerged engine branch.
+
+**Failure retained:** initial CI run
+[38974695540](https://github.com/timmytwopointoh/Project-hail/actions/runs/38974695540)
+failed because a proposed nonmanifold fixture actually had only two faces
+per shared edge. The fixture was corrected to triple-share one edge, without
+weakening the production seam validator. Follow-up focused CI
+[38974756315](https://github.com/timmytwopointoh/Project-hail/actions/runs/38974756315)
+and full suite above passed.
+
+This does **not** detect UV island overlap, pixel-level black seams, mip
+bleeding, MikkTSpace compatibility, target Android material appearance,
+organic UV quality, photorealism or physical-phone GPU performance. UV-01
+remains **partial** until those applicable independent gates are measured.

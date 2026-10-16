@@ -3,14 +3,14 @@
   "as_of": "2026-10-16",
   "repository": "timmytwopointoh/Project-hail",
   "source_of_truth": {
-    "branch": "feature/vq-library-snapshot-m34-10-20261016",
-    "derived_from_sha": "5aec7a0d681896996be9c58e88d6a493c6af4a5a",
+    "branch": "feature/vq-library-snapshot-uv01-20261016",
+    "derived_from_sha": "cfe85d30cea6ff6efae09f2b73adaa0b32f7e823",
     "source_ci": {
-      "run_id": 38971117494,
+      "run_id": 38974882647,
       "conclusion": "success",
-      "scope": "164 tests, eight asset producers, four Android 15 roles, 154 screenshots, LOD and semantic review"
+      "scope": "171 full engine source tests, read-only 32-face UV audit, M31/M32 compatibility; no new Android emulator run"
     },
-    "important": "Single snapshot commit. Separate M30 Android normal/flat control and physical device review remain open."
+    "important": "Source-only UV-01 improvement atop previously verified M34-10 Android snapshot afe9b3fd. No merge, hardware, texture-seam or artist signoff."
   },
   "verified_workstreams": [
     {
@@ -82,6 +82,25 @@
       "run": 38971117494,
       "tests": 164,
       "screenshots": 154
+    },
+    {
+      "name": "UV-01 read-only distortion and density evidence",
+      "branch": "feature/vq-uv01-distortion-gates-20261016",
+      "sha": "cfe85d30cea6ff6efae09f2b73adaa0b32f7e823",
+      "status": "source_only_full_171_tests_pass_uv01_partial",
+      "run": 38974882647,
+      "initial_failed_fixture_run": 38974695540,
+      "focused_repair_run": 38974756315,
+      "real_fixture_source_sha256": "0b96462c2ae46871015980b77b2b574c5d8b4e104cf7bc2d68bc1c115b3e8e06",
+      "note": "No renderer or game edits; no UV pixel seam, overlap, physical hardware or artistic signoff."
+    },
+    {
+      "name": "M34-10 durable full-source snapshot",
+      "branch": "feature/vq-library-snapshot-m34-10-20261016",
+      "sha": "afe9b3fdcc18f7928d672e4f9c410c64ebe4f1b4",
+      "status": "verified_library_archive",
+      "run": 38971914976,
+      "note": "Preserved last-known-good 164-test four-Android-role baseline; do not overwrite prior Library backup."
     }
   ],
   "separate_projects": [
@@ -112,15 +131,18 @@
     "Actions artifacts expire; use Library ZIP or git checkout for recovery.",
     "No private keys/signing secrets are archived.",
     "Manual artistic and real-device performance gates remain open.",
-    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release."
+    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release.",
+    "UV-01 numeric Jacobian/density audit does not detect overlapping UV islands, black seam pixels or artistic defects."
   ],
   "in_progress_workstreams": [
     {
       "name": "M34-10 shared Android PNG evidence SDK",
       "branch": "feature/veilforge-m34-shared-android-qa-20261016",
       "derived_from_sha": "40f1519078d3340266e99d7d6d434934a6cbb938",
-      "status": "pending_full_factory_android_ci",
-      "note": "One shared framebuffer acceptance contract; both independent reviewers recompute actual PNG pixels and reject forged metrics, unsafe paths and SHA mismatches. M30 logcat streaming remains legacy; no physical-device or aesthetic claim."
+      "status": "factory_android_pass_m30_pending",
+      "note": "One shared framebuffer acceptance contract; both independent reviewers recompute actual PNG pixels and reject forged metrics, unsafe paths and SHA mismatches. M30 logcat streaming remains legacy; no physical-device or aesthetic claim. Later factory run 38971117494 passed; this record is retained to preserve the earlier pending state.",
+      "historical_status_at_prior_snapshot": "pending_full_factory_android_ci",
+      "resolution_run": 38971117494
     }
   ]
 }

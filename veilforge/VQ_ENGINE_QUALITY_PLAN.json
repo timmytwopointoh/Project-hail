@@ -149,7 +149,7 @@
       "acceptance": "UV distortions, seam continuity and black seam pixel regressions are tested.",
       "status": "partial",
       "automatic_game_approval": false,
-      "implementation_note": "M32 adds read-only source-welded UV seam continuity counts and adversarial missing-UV/nonmanifold rejection. Distortion metrics, black-seam pixel comparison and organic unwrapping remain unverified."
+      "implementation_note": "M32 adds read-only source-welded UV seam continuity counts and adversarial missing-UV/nonmanifold rejection. Distortion metrics, black-seam pixel comparison and organic unwrapping remain unverified. UV-01 2026-10-16: source-only Jacobian anisotropy, area-equivalent texel density, winding, seam and invalid-input audit verified on 171 full engine tests, source cfe85d30cea6ff6efae09f2b73adaa0b32f7e823, Actions run 38974882647. Black-seam pixels, overlap, mip bleed, Android appearance and artistic signoff still pending."
     },
     {
       "id": "UV-02",
