@@ -17,7 +17,6 @@ from vq_brushes import apply_brushes
 from vq_adaptive_remesh import refine
 from vq_model_tools import inspect
 from gltf_export import export
-from vq_multimaterial_export import export as material_preserving_export
 
 def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_faces=4200,
              source_gltf=None,source_manifest=None):
@@ -40,6 +39,10 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
     gltf=export(refined,preview_gltf,profile=profile)
     material_gltf=None
     if source_gltf is not None:
+        # Only the *optional* multi-material branch needs VQ's catalog
+        # factory. Human anatomy studies with an ordinary source OBJ should
+        # work without importing the unrelated asset-catalog dependency.
+        from vq_multimaterial_export import export as material_preserving_export
         material_gltf=out/"stage2_material_preserved.gltf"
         material_preserving_export(refined,material_gltf,
             source_gltf=source_gltf,source_manifest=source_manifest)
