@@ -132,6 +132,7 @@ public final class MainActivity extends Activity {
   }
   private void handleIntent(Intent intent){
     if(intent==null)return;
+    CompanionRoute.remember(this,intent.getStringExtra("trion_package"));
     if(VQProtocol.SHOW_JOB.equals(intent.getAction())){
       String id=intent.getStringExtra("request_id");
       String run=intent.getStringExtra("run_id");
@@ -161,9 +162,12 @@ public final class MainActivity extends Activity {
   }
   private void openTrion(){
     Intent intent=new Intent();
-    intent.setClassName(VQProtocol.TRION_PACKAGE,VQProtocol.TRION_BRIDGE);
-    intent.putExtra("request_id",requestId);intent.putExtra("run_id",runId);
-    try{startActivity(intent);}catch(Exception e){
+    try{
+      String pkg=CompanionRoute.trionPackage(this);
+      intent.setClassName(pkg,VQProtocol.TRION_BRIDGE);
+      intent.putExtra("request_id",requestId);intent.putExtra("run_id",runId);
+      startActivity(intent);
+    }catch(Exception e){
       new AlertDialog.Builder(this).setTitle("Trion bridge not installed")
         .setMessage("Install the companion version of Trion Assistant to submit, stop and correct VQ jobs. VQ Studio never receives or stores your GitHub token.")
         .setPositiveButton("OK",null).show();
@@ -249,7 +253,7 @@ public final class MainActivity extends Activity {
       args.putString("request_id",requested);
       args.putString("run_id",wanted);
       android.os.Bundle out=getContentResolver().call(
-         Uri.parse("content://com.trioncompasitor.assistant.vq.snapshots"),
+         CompanionRoute.provider(this),
          "status",null,args);
       if(out==null)return false;
       String state=out.getString("state","");
