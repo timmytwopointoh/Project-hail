@@ -57,5 +57,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--role", choices=list(ROLES), default="animation")
     parser.add_argument("--out", type=Path, default=Path("inspection_output/local-coding-pilot"))
+    parser.add_argument("--backlog", type=Path, default=Path("veilbound/worker_backlog.json"))
     args = parser.parse_args()
-    raise SystemExit(pilot(args.role, args.out))
+    raise SystemExit(pilot(args.role, args.out, backlog=args.backlog))
