@@ -36,7 +36,7 @@ def run(role, out):
     }
     # Real draft_code executes javac and every existing pure-Java test suite.
     # Only the external model response is simulated in this test.
-    with patch.object(ai_worker, "ask_gemini", return_value=json.dumps(fixture)):
+    with patch.object(ai_worker, "ask_local", return_value=json.dumps(fixture)):
         result = ai_worker.draft_code(role, out)
     if result["status"] != "proposed_change_passed_java_tests":
         raise AssertionError("Worker did not compile/test actual proposed Java: " +
