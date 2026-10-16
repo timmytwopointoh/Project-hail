@@ -53,6 +53,19 @@ def dialog_overlay_fraction(image):
     values=[frame.getpixel((x,y)) for y in range(36,63) for x in range(32,128)]
     return sum(min(rgb)>210 and max(rgb)-min(rgb)<35 for rgb in values)/len(values)
 
+def renderer_background_confirmed(image):
+    """Require the GLES clear color at independent sky coordinates.
+
+    A launcher or Android splash screen can contain high-contrast pixels,
+    yet is not a legitimate rendered model. Sample the actual source image
+    once, rather than repeatedly fetching emulator screenshot/logcat data.
+    """
+    frame=image.convert("RGB")
+    probes=((.50,.08),(.30,.10),(.65,.12))
+    return all(max(abs(int(frame.getpixel((int(frame.width*x),
+                                           int(frame.height*y)))[k])-BACKGROUND[k])
+                   for k in range(3))<=9 for x,y in probes)
+
 def metrics(image):
     from PIL import ImageStat
     # Static GL background is uniform; require actual colored geometry,
@@ -66,6 +79,7 @@ def metrics(image):
     contrast=max(stat.stddev)
     return {"foreground_fraction":round(frac,5),"channel_stddev":round(contrast,3),
             "modal_overlay_fraction":round(dialog_overlay_fraction(image),5),
+            "renderer_background_confirmed":renderer_background_confirmed(image),
             "dimensions":list(image.size)}
 
 def capture_visible_frame(path, *, attempts=8, interval=.75):
@@ -94,7 +108,9 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
                 str(round(pic.height*.66)),timeout=20)
             if attempt<attempts:time.sleep(interval)
             continue
-        if last["foreground_fraction"] >= .0015 and last["channel_stddev"] >= 3:
+        if (last["foreground_fraction"] >= .0015 and
+                last["channel_stddev"] >= 3 and
+                last.get("renderer_background_confirmed") is True):
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
@@ -105,7 +121,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
                                + log[-1800:])
         if attempt < attempts:
             time.sleep(interval)
-    raise RuntimeError(f"Blank, obscured by Android system UI, or near-empty frame after {attempts} "
+    raise RuntimeError(f"Blank, launcher/splash, system UI, or near-empty GLES frame after {attempts} "
                        f"real screenshot attempts: {last}")
 
 

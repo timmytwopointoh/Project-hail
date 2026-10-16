@@ -9,7 +9,8 @@ from android_visual_qa import capture_visible_frame
 class PresentedFrameTest(unittest.TestCase):
     def test_waits_for_real_visible_frame(self):
         blank={"foreground_fraction":1.0,"channel_stddev":0.0}
-        visible={"foreground_fraction":.14,"channel_stddev":19.5}
+        visible={"foreground_fraction":.14,"channel_stddev":19.5,
+                 "renderer_background_confirmed":True}
         with patch("android_visual_qa.screenshot", side_effect=["blank","visible"]) as shot, \
              patch("android_visual_qa.metrics", side_effect=[blank,visible]), \
              patch("android_visual_qa.adb", return_value="FRAME_OK"), \
@@ -18,6 +19,28 @@ class PresentedFrameTest(unittest.TestCase):
         self.assertEqual((pic,measured,attempt),("visible",visible,2))
         self.assertEqual(shot.call_count,2)
         delay.assert_called_once_with(.1)
+
+    def test_launcher_foreground_is_not_genuine_gles_geometry(self):
+        # Contrast and foreground alone cannot distinguish a splash screen.
+        launcher={"foreground_fraction":.65,"channel_stddev":45,
+                  "renderer_background_confirmed":False}
+        with patch("android_visual_qa.screenshot",return_value="launcher") as shot, \
+             patch("android_visual_qa.metrics",return_value=launcher), \
+             patch("android_visual_qa.adb",return_value="FRAME_OK"), \
+             patch("android_visual_qa.time.sleep"):
+            with self.assertRaisesRegex(RuntimeError,"launcher/splash"):
+                capture_visible_frame("actual.png",attempts=2,interval=0)
+        self.assertEqual(shot.call_count,2)
+
+    def test_renderer_background_pixels_are_checked_on_real_images(self):
+        from PIL import Image,ImageDraw
+        from android_visual_qa import metrics
+        valid=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(valid).rectangle((180,110,490,300),fill=(96,83,60))
+        splash=Image.new("RGB",(640,360),(48,48,48))
+        ImageDraw.Draw(splash).rectangle((180,110,490,300),fill=(96,83,60))
+        self.assertTrue(metrics(valid)["renderer_background_confirmed"])
+        self.assertFalse(metrics(splash)["renderer_background_confirmed"])
 
     def test_persistent_blank_fails_closed(self):
         blank={"foreground_fraction":.999,"channel_stddev":1.0}

@@ -58,16 +58,14 @@ def capture_real_model_frame(dest, *, retries=18):
     for attempt in range(1,retries+1):
         frame=screenshot(dest)
         score=metrics(frame)
-        expected=[
-            frame.getpixel((int(frame.width*x),int(frame.height*y)))
-            for x,y in ((.50,.08),(.30,.10),(.65,.12))]
-        background_ok=all(max(abs(int(c[i])-BACKGROUND[i]) for i in range(3))<=9
-                          for c in expected)
+        # Reuse the same strict GLES background gate as all VQ emulators,
+        # avoiding duplicated splash-screen sampling and mismatched criteria.
+        background_ok=score["renderer_background_confirmed"]
         if (background_ok and score["foreground_fraction"]>=.0015 and
                 score["channel_stddev"]>=3 and
                 score.get("modal_overlay_fraction",1)<.70):
             return frame,score,attempt
-        last={"background":expected,"background_ok":background_ok,
+        last={"background_ok":background_ok,
               "score":score}
         print("VQ_M30_FRAME_UNTRUSTED",attempt,last,flush=True)
         if attempt<retries:time.sleep(.70)

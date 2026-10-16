@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "engine": "VEILFORGE / VEYLQUORIN",
+  "track": "M34 emulator orchestration and zero-regression efficiency",
+  "base_commit": "fac032d982ae4df97790b04dae5d15ff3c7e1a1a",
+  "branch": "feature/veilforge-m34-efficient-emulator-qa",
+  "goal": "Reduce duplicated startup, artifact IO and wasted serial emulator wall time while preserving or strengthening every existing quality gate.",
+  "success_requirements": {
+    "android_devices": 4,
+    "per_asset_angles": 14,
+    "required_roles": [
+      "scene-world",
+      "nature-mobile",
+      "props-equipment",
+      "characters"
+    ],
+    "visual_algorithms": [
+      "visual_lod",
+      "visual_semantics"
+    ],
+    "verified_apk_sha_per_role": true,
+    "real_frame_background_gating": true,
+    "retain_prior_report_artifact_names": true,
+    "artistic_approval": false,
+    "game_source_modification": false
+  },
+  "milestones": [
+    {
+      "id": "M34-01",
+      "priority": "P0",
+      "name": "Reuse one hash-verified APK across emulator devices",
+      "status": "verified_prior",
+      "acceptance": "Check one Android APK build job, one SHA-256 propagated to every emulator and independent aggregator."
+    },
+    {
+      "id": "M34-02",
+      "priority": "P0",
+      "name": "Use all four independent emulator runners without a three-worker queue",
+      "status": "implemented_pending_ci",
+      "acceptance": "Matrix has exactly four roles, max-parallel four, immutable artifact from one builder."
+    },
+    {
+      "id": "M34-03",
+      "priority": "P0",
+      "name": "Unify duplicate advanced-review job setup and downloads",
+      "status": "implemented_pending_ci",
+      "acceptance": "Both independent review algorithms run even if either fails, one image download and pip install, preserve historical artifact identities."
+    },
+    {
+      "id": "M34-04",
+      "priority": "P0",
+      "name": "Reject Android launch screens in ALL emulator screenshots",
+      "status": "implemented_pending_ci",
+      "acceptance": "Explicit GLES sky background + nonempty geometry + system modal rejection, genuine 14 angles."
+    },
+    {
+      "id": "M34-05",
+      "priority": "P0",
+      "name": "Enforce fail-closed evidence without weakening artistic gates",
+      "status": "implemented_pending_ci",
+      "acceptance": "Missing emulator, launcher capture, wrong SHA, missing view, failed visual reviewer always fails evidence gate."
+    },
+    {
+      "id": "M34-06",
+      "priority": "P1",
+      "name": "Impact-aware changed-asset scheduling",
+      "status": "planned",
+      "acceptance": "Only skip costly Android test for provably unrelated docs/source, full Android on scene/renderer/material/mesh changes; maintain a separate source QA job."
+    },
+    {
+      "id": "M34-07",
+      "priority": "P1",
+      "name": "Optimize emulator boot and AVD image caching",
+      "status": "planned",
+      "acceptance": "Prove reduced boot duration in repeated Actions runs; key cache by API/device/runner; invalidate corrupted or stale AVD, cold boot fallback."
+    },
+    {
+      "id": "M34-08",
+      "priority": "P1",
+      "name": "Bound incremental logcat streaming and capture retries",
+      "status": "planned",
+      "acceptance": "One process or bounded append-only log cursor per device, no repeated entire log buffer retrieval, no missed GPU error/frame markers."
+    },
+    {
+      "id": "M34-09",
+      "priority": "P1",
+      "name": "Measure real CI runtime and artifact size",
+      "status": "planned",
+      "acceptance": "Collect before/after job times, APK size and capture bytes over >=3 comparable clean runs, no invented speed percentages."
+    },
+    {
+      "id": "M34-10",
+      "priority": "P1",
+      "name": "Shared single emulator QA SDK for M30, factory and unified queue",
+      "status": "planned",
+      "acceptance": "One tested ADB, screenshot, image and log validator API; compatibility tests for existing reviewers."
+    },
+    {
+      "id": "M34-11",
+      "priority": "P1",
+      "name": "Targeted source health audit and orphan-code investigation",
+      "status": "planned",
+      "acceptance": "Reachable import and workflow references across all engine/test entrypoints, never delete externally referenced code or game sources."
+    },
+    {
+      "id": "M34-12",
+      "priority": "P2",
+      "name": "Hardware performance and memory regression budgets",
+      "status": "planned",
+      "acceptance": "Actual target hardware measurements of GPU frame time, memory and artifact loading with P95 budgets."
+    },
+    {
+      "id": "M34-13",
+      "priority": "P2",
+      "name": "Final visual regression and asset release approval",
+      "status": "planned",
+      "acceptance": "Actual source 14 views, four verified Android roles as applicable, separate artist reference signoff and no automatic game promotion."
+    }
+  ],
+  "claims_limit": "Parallelism reduces a three-plus-one emulator wave to one wave when runners are available. Do not claim a specific wall-time or cost improvement until comparable real Actions jobs prove it.",
+  "definition_of_done": "All P0/P1 gates have independent green CI evidence, compatible Android captures remain genuine and the changes have not removed model/visual/hardware release gates. Exact photorealism and physical-device acceptance remain outside this optimization track."
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "engine": "VEYLQUORIN / VEILFORGE",
-  "version": "M32-UV-AUDIT",
+  "version": "M34-EFFICIENCY-TRACK",
   "mission": "Universal reusable game asset creation, editing and verification; not an individual game.",
   "definition_of_done": "All applicable quality gates pass with reproducible source, target-game import, visual reference signoff, representative hardware and recorded provenance. Perfect aesthetics cannot be guaranteed or declared by automation.",
   "scope": {
@@ -394,6 +394,13 @@
     }
   ],
   "current_iteration": {
+    "milestone": "M34-02..M34-05",
+    "branch": "feature/veilforge-m34-efficient-emulator-qa",
+    "technical_gate": "Four real Android emulator jobs, full capture/splash protection, independent LOD+semantic review and self-audited workflow must pass; no measured runtime claims until comparable Actions timings.",
+    "game_release_approved": false
+  },
+  "operational_efficiency_map": "veilforge/VQ_M34_EFFICIENCY_MAP.json",
+  "last_completed_iteration": {
     "milestone": "UV-01",
     "branch": "feature/vq-m32-coherent-organic-uv-20261016",
     "depends_on": "verified M31 source e665867b431b787f237e38eb2f450f4e240d7b67",
