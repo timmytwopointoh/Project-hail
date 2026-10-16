@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "description": "M20 second-track original human code specialists. Complement 50 numeric morphology workers; the user photo and Android screenshots were inspected externally by the supervising assistant. Qwen2.5 1.5B text coding model has no image understanding, and proposals do NOT auto-merge.",
+  "tasks": [
+    {
+      "id": "M20-FACE-STRUCTURE",
+      "role": "models",
+      "priority": "P0",
+      "goal": "A supervising reviewer saw the real Android human front/side: face is an undifferentiated smooth shape, hands are crude, feet flattened. Make ONE short bounded syntax-correct functional change in ContinuousHuman.java improving facial projection/profile or thumb/finger/foot anatomy (the actual fused human); preserve smooth isosurface connectedness and all existing tests. No primitive armor, no major method rewrites."
+    },
+    {
+      "id": "M20-WEIGHT-DEFORMATION",
+      "role": "animation",
+      "priority": "P0",
+      "goal": "One small safe gait/weight/arm interpolation improvement in HeroPose.java for weight shift, realistic shoulders, or planted feet, preserving existing attack tests and game behavior. Unarmored model is viewer-only and will not replace the playable character."
+    },
+    {
+      "id": "M20-SKIN-PROPERTIES",
+      "role": "materials",
+      "priority": "P0",
+      "goal": "Supervising screenshots found shiny flesh from old material mapping. Runtime shader now isolates flesh as nonmetal; propose one small compile-safe MaterialMapping.java or SurfaceAtlas.java improvement for matte skin classifications or UV projection, preserving all original armor/stone/cloth atlas tests."
+    },
+    {
+      "id": "M20-FOUR-CAMERA",
+      "role": "studio",
+      "priority": "P0",
+      "goal": "Improve only the M20 four calibrated front/side/back/3quarter human viewer; make one short safe functional ModelStudio.java zoom/orbit framing edit and preserve all original model entries, orbit controls, and IMPORTED OBJ last slot."
+    }
+  ]
+}
