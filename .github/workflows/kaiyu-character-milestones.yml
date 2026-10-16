@@ -147,12 +147,12 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          target: default
           arch: x86_64
-          profile: pixel_7
+          profile: pixel_2
           disable-animations: true
-          emulator-boot-timeout: 1200
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048 -cores 2
           script: python3 assets/kaiyu/android_qa_kaiyu.py --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --out inspection_output/kaiyu/android-evidence
       - uses: actions/upload-artifact@v4
         if: always()
