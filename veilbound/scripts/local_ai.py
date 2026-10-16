@@ -49,7 +49,7 @@ def make_request(prompt, *, structured=False, model=None):
         "options": {
             "temperature": 0.15,
             "num_ctx": 8192,
-            "num_predict": 1536 if structured else 360,
+            "num_predict": 2304 if structured else 360,
             "num_thread": 2,
         },
         "keep_alive": "2m",
