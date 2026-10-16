@@ -64,13 +64,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final String VERTEX=
         "uniform mat4 uMvp; uniform mat4 uModel; attribute vec3 aPos; "+
         "attribute vec3 aNormal; attribute vec3 aColor; "+
-        "varying vec3 vNormal; varying vec3 vColor; varying vec3 vWorld; "+
+        "varying vec3 vNormal; varying vec3 vColor; varying vec3 vWorld; varying vec3 vLocal; "+
         "void main(){ vec4 w=uModel*vec4(aPos,1.); vWorld=w.xyz; "+
-        "vNormal=normalize(mat3(uModel)*aNormal); vColor=aColor; "+
+        "vNormal=normalize(mat3(uModel)*aNormal); vColor=aColor; vLocal=aPos; "+
         "gl_Position=uMvp*vec4(aPos,1.); }";
     private static final String FRAGMENT=
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
-        "varying vec3 vWorld; uniform vec3 uTint; uniform vec3 uEye; "+
+        "varying vec3 vWorld; varying vec3 vLocal; uniform vec3 uTint; uniform vec3 uEye; "+
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
         "uniform sampler2D uDetail; uniform float uStudioMode; "+
         "uniform float uStudioMaterial; uniform vec3 uStudioLight; uniform vec3 uStudioKeyColor; "+
@@ -126,7 +126,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "float cloth=step(vColor.r*1.13,vColor.b)*(1.-step(.46,vColor.r));"+
         "float id=uSurface>.5?0.:(gold+steel>0.?1.:(cloth>0.?2.:3.));"+
         "vec3 an=abs(n);"+
-        "vec2 uv=an.y>.62?vWorld.xz:(an.x>an.z?vWorld.zy:vWorld.xy);"+
+        "vec3 texPos=uHeroShading>.5?vLocal:vWorld;"+
+        "vec2 uv=an.y>.62?texPos.xz:(an.x>an.z?texPos.zy:texPos.xy);"+
         "vec2 atlas=atlasUV(uv*3.12,id);"+
         "vec4 micro=texture2D(uSurfaceAtlas,atlas);"+
         "vec3 albedoGrain=texture2D(uAlbedoAtlas,atlas).rgb;"+
