@@ -30,7 +30,10 @@ def length(p,q):return math.dist(p,q)
 def mask(region,p):
     x,y,z=p
     if region=="face":
-        return -0.18<x<0.18 and 2.35<y<2.52 and .09<z<.27
+        # Limit diagnostic bake to actual forehead skin, outside eyelid,
+        # cornea and nose folds. Those zones need proper curved UV seams and
+        # connected facial topology before a strict high-to-low bake.
+        return -.15<x<.15 and 2.47<y<2.55 and .08<z<.235
     if region=="shoulders":
         return .23<abs(x)<.53 and 1.82<y<2.10 and -.02<z<.22
     if region=="hands":
@@ -151,7 +154,9 @@ def build(source,out,region):
             # cap based on source edge length to protect narrow facial detail.
             dx,dy,dz=p
             wave=math.sin(dx*119+dy*29)*math.cos(dy*97+dz*47)
-            amplitude=min(.0014,max(0.,min_edge.get(group,0.)*.08))
+            regional_limit=.00085 if region=="face" else .0014
+            edge_factor=.048 if region=="face" else .08
+            amplitude=min(regional_limit,max(0.,min_edge.get(group,0.)*edge_factor))
             displacement=amplitude*wave
             max_disp=max(max_disp,abs(displacement))
             if abs(displacement)>1e-8:touched+=1
