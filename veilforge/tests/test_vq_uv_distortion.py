@@ -90,7 +90,7 @@ f 4/1 5/2 6/3
 
     def test_nonmanifold_thresholds_and_symlink(self):
         with tempfile.TemporaryDirectory() as tmp:
-            path=self._source(tmp,SQUARE+"f 1/1 2/2 4/4\n")
+            path=self._source(tmp,SQUARE+"f 1/1 3/3 2/2\n")
             with self.assertRaisesRegex(ValueError,"Nonmanifold"):
                 audit_obj(path)
             path=self._source(tmp)
