@@ -72,6 +72,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/HumanAnatomyTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
+            veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
             veilbound/tests/game/ashenveil/veilbound/MaterialMappingTest.java \
             veilbound/tests/game/ashenveil/veilbound/BootAssetsTest.java \
             veilbound/tests/game/ashenveil/veilbound/CombatGameplayTest.java \
@@ -95,6 +96,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanAnatomyTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.MaterialMappingTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.BootAssetsTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatGameplayTest
