@@ -11,6 +11,14 @@ game modules are downstream compatibility targets, not an engine rebrand.
 The full name VEYLQUORIN and the abbreviation VQ are provisional internal labels; external trademark clearance
 is not complete (see docs/ownership/BRAND_NAME_CLEARANCE.md).
 
+## VQ universal model inspection tool
+
+Read veilforge/VQ_MODEL_TOOLS.md before editing 3D meshes. Run the real-export
+OBJ inspector (veilforge/vq_model_tools.py) for technical geometry, UV,
+glTF, fourteen-angle source-mesh diagnostics and optional externally supplied
+binary reference-silhouette QA. Preserve the JSON results and images.
+Do not promote previews into a game or confuse CPU renders with PBR graphics.
+
 ## Before undertaking development
 
 1. Read veilforge/VEILFORGE_CHARTER.md.
