@@ -116,3 +116,49 @@ Real-life editing quality is not proven by smoke tests. More capable
 models may require stronger memory/CPU/GPU runners or a dedicated
 inference host. Multiple isolated proposals against the same Java
 file are alternatives, not automatically mergeable patches.
+
+## AI quality loop (new gates)
+
+The current code worker runs **up to two model attempts** on a single
+authorized task. It first checks an exact-schema, 1-3-edit JSON proposal,
+blocks no-op or dangerous new Java features (including process/network/file
+bridges), compiles the proposed Java in a temporary copy and runs all existing
+Java regression suites. If the source match is wrong, the model output is
+truncated or Java compilation/tests fail, a **second bounded attempt** can
+read the real diagnostic and repair the proposal. No third attempt runs.
+A failed final status blocks the GitHub coding job and remains in artifacts
+as explicit evidence; it cannot pass as a normal review-only patch.
+
+For manually selected emulator runs, `evidence_guard.py` rejects a missing,
+malformed or contradictory `task_plan.json`. A failed Studio model/material/
+light interaction is now routed to its own named Studio specialty work item
+instead of the generic smoke-test queue. Source-run and source-commit
+identifiers are retained for traceability.
+
+Manual `coding_proposals` dispatches now include a downstream **independent
+worker-auditor**. Its `worker_scorecard.json` requires every allocated job to
+present the exact slot, task, role, approved path list, actual local model
+metadata and genuine `proposed_change_passed_java_tests` status. Missing,
+duplicated or failing results block the aggregate gate. An accepted score is
+not authorization to auto-merge.
+
+The manual **Approve Worker Patch Into Draft PR** workflow now applies the
+reviewed exact patch to an isolated checkout **without persisting GitHub write
+credentials**, builds a real APK, installs it on the Android 15 emulator at
+the Motorola Moto G (2025) viewport, runs actual studio/gameplay touch tests
+and saves screenshot/GL evidence. It only opens a draft PR after success.
+GitHub write authentication is provided only to the final push step,
+following all model-authored Java execution.
+
+Proof hierarchy:
+1. **Mocked source selftests** verify planner, exact-match proposal and
+   compile/test/promotion mechanics without claiming AI intelligence.
+2. **Actual local inference smoke** proves the Qwen 0.5B and 1.5B model can
+   run and return valid structured text.
+3. **Actual hierarchical local Studio pilot** tests the model generating
+   and repairing a real Java candidate. A failed pilot must be reported
+   as failed, not as a successful model improvement.
+4. **Manual reviewed-patch Android gate** proves the selected candidate
+   also built, installed and passed real emulator touch tests.
+5. **Physical Moto G (2025)** remains necessary for real graphics speed,
+   thermals, interaction feel, battery and final visual acceptance.
