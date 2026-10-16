@@ -15,7 +15,7 @@
     "top": 117,
     "bottom": 1253
   },
-  "measurement_method": "background-separated front-view silhouette, sampled horizontal rows (approximate); no correspondence solver or identity recognition",
+  "measurement_method": "T-pose photo pixel foreground row x-max minus x-min, normalized by subject bounding-box height 1136 pixels. Do not confuse foreground pixel COUNT with left-to-right span; perspective, camera and pose matching remain advisory.",
   "pose": "full_body_true_tpose_front",
   "normalized_target": {
     "arm_span_over_height": 0.965,
@@ -23,62 +23,72 @@
       {
         "name": "head",
         "top_fraction": 0.082,
-        "width_over_height": 0.114,
-        "reference_y_pixel": 210
+        "width_over_height": 0.11356,
+        "reference_y_pixel": 210,
+        "pixel_span_estimated": 129
       },
       {
         "name": "shoulder_chest",
         "top_fraction": 0.179,
-        "width_over_height": 0.326,
-        "reference_y_pixel": 320
+        "width_over_height": 0.32658,
+        "reference_y_pixel": 320,
+        "pixel_span_estimated": 371
       },
       {
         "name": "outstretched_arms",
         "top_fraction": 0.218,
-        "width_over_height": 0.965,
-        "reference_y_pixel": 365
+        "width_over_height": 0.96479,
+        "reference_y_pixel": 365,
+        "pixel_span_estimated": 1096
       },
       {
         "name": "waist",
         "top_fraction": 0.399,
-        "width_over_height": 0.178,
-        "reference_y_pixel": 570
+        "width_over_height": 0.17782,
+        "reference_y_pixel": 570,
+        "pixel_span_estimated": 202
       },
       {
         "name": "pelvis",
         "top_fraction": 0.46,
-        "width_over_height": 0.198,
-        "reference_y_pixel": 640
+        "width_over_height": 0.19806,
+        "reference_y_pixel": 640,
+        "pixel_span_estimated": 225
       },
       {
         "name": "thighs",
         "top_fraction": 0.584,
-        "width_over_height": 0.222,
-        "reference_y_pixel": 780
+        "width_over_height": 0.23592,
+        "reference_y_pixel": 780,
+        "pixel_span_estimated": 268
       },
       {
         "name": "knees",
         "top_fraction": 0.671,
-        "width_over_height": 0.148,
-        "reference_y_pixel": 880
+        "width_over_height": 0.21039,
+        "reference_y_pixel": 880,
+        "pixel_span_estimated": 239
       },
       {
         "name": "calves",
         "top_fraction": 0.746,
-        "width_over_height": 0.141,
-        "reference_y_pixel": 965
+        "width_over_height": 0.23856,
+        "reference_y_pixel": 965,
+        "pixel_span_estimated": 271
       },
       {
         "name": "ankles",
         "top_fraction": 0.91,
-        "width_over_height": 0.073,
-        "reference_y_pixel": 1150
+        "width_over_height": 0.21831,
+        "reference_y_pixel": 1150,
+        "pixel_span_estimated": 248
       },
       {
         "name": "feet",
         "top_fraction": 0.98,
-        "width_over_height": 0.128,
-        "reference_y_pixel": 1230
+        "width_over_height": 0.28257,
+        "reference_y_pixel": 1230,
+        "pixel_span_estimated": 321
       }
     ]
   },
@@ -87,7 +97,8 @@
     "fit_is_advisory": true,
     "face_identity_not_measured": true,
     "reference_not_camera_calibrated": true,
-    "photorealism_not_verified": true
+    "photorealism_not_verified": true,
+    "note": "All ten heights are matched by body-height fraction; M31 head-to-shoulder anatomical position differs from reference. Apparent shoulder error may indicate head/neck placement mismatch rather than shoulder width."
   },
   "secondary_pose": {
     "reference_image": "studio_portrait_of_a_single_adult_male_model_on_a_2_batch_2.png",
