@@ -17,6 +17,12 @@ RECOMMENDATIONS = {
     "studio-orbit": ("P1", "studio", "Model Atelier orbit control not visibly responding",
         "Check real touch orbit gesture, GL draw readiness and studio camera framing.",
         "Repeat real ADB swipe 3 times and assert quantifiable scene pixel movement."),
+    "studio-controls": ("P1", "studio", "Model Atelier model/material/lighting controls failed",
+        "Verify Android touch zones, dispatch ordering, and GL state transitions for model selector, lights and material modes. Do not assume a renderer bug.",
+        "On Moto G (2025) viewport run real ADB taps; assert distinct item/light/material log transitions and capture visible stage frames."),
+    "studio-enter": ("P1", "studio", "Model Atelier entrance or mesh initialization failed",
+        "Trace title-screen atelier touch routing, initialization barriers and GL load markers without bypassing input.",
+        "Launch the APK on Moto G-sized Android 15 emulator, open Model Atelier by touch and assert the expected GL readiness markers."),
     "missing-qa": ("P1", "qa", "No machine-readable visual QA report",
         "Make sure qa_analyze.py executes after the emulator and always uploads reports.",
         "Run emulator workflow and confirm visual_quality_metrics.json is uploaded."),
@@ -72,8 +78,16 @@ def create_plan(emulator=None, visual=None, *, commit=None):
                        "confidence": "measurement" if code not in ("unknown-warning", "slow-emulator", "lock-untested") else "needs-verification"}
     if emulator.get("status") != "passed":
         error = str(emulator.get("error", "not recorded"))[:240]
-        if "studio orbit" in error.lower() or "model studio orbit" in error.lower():
+        failure = error.lower()
+        if "studio orbit" in failure or "model studio orbit" in failure:
             add("studio-orbit", "emulator_report.status=failed; error=" + error)
+        elif ("studio model/material/light" in failure or
+              "studio model/material" in failure):
+            add("studio-controls", "emulator_report.status=failed; error=" + error)
+        elif ("atelier button did not open" in failure or
+              "atelier gl high-poly" in failure or
+              "atlas / sculpt initialization" in failure):
+            add("studio-enter", "emulator_report.status=failed; error=" + error)
         else:
             add("emulator-smoke", "emulator_report.status=" + str(emulator.get("status", "missing")) +
                 "; error=" + error)
