@@ -21,9 +21,9 @@ class SceneTest(unittest.TestCase):
             root=Path(tmp)
             scene={"schema_version":1,"scenes":[
                 {"id":"example","instances":[
-                    {"id":"a","asset":"treasure_chest","position":[1,0,1],"yaw":0,"scale":1},
-                    {"id":"b","asset":"treasure_chest","position":[2,0,1],"yaw":45,"scale":.5},
-                    {"id":"c","asset":"ceremonial_sword","position":[0,1,0],"yaw":-32,"scale":1}]}]}
+                    {"id":"a1","asset":"treasure_chest","position":[1,0,1],"yaw":0,"scale":1},
+                    {"id":"b1","asset":"treasure_chest","position":[2,0,1],"yaw":45,"scale":.5},
+                    {"id":"c1","asset":"ceremonial_sword","position":[0,1,0],"yaw":-32,"scale":1}]}]}
             path=root/"scene.json"
             path.write_text(json.dumps(scene))
             assets=root/"assets"
