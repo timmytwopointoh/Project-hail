@@ -54,20 +54,22 @@ class BehavioralRetryTests(unittest.TestCase):
             [response(naive), response(safe)], verifier)
         self.assertEqual("proposed_change_passed_java_tests", result["status"])
         self.assertEqual(2, calls)
-        self.assertEqual(2, len(inspected))
+        self.assertEqual(1, len(inspected))
         self.assertEqual(
-            ["proposed_change_failed_postcondition", "proposed_change_passed_java_tests"],
+            ["rejected_by_proposal_guard", "proposed_change_passed_java_tests"],
             [r["status"] for r in result["attempt_history"]])
         self.assertTrue(result["behavioral_postcondition"]["passed"])
         self.assertIn("Float.isNaN(x)", patch_text)
         self.assertNotIn("x != Float.NaN", patch_text)
 
     def test_postcondition_failure_never_counts_as_verified(self):
-        naive = CLAMP.replace(
+        # An edit can be valid Java and pass the static NaN comparator guard,
+        # yet still fail the authentic behavior test; retry must not fake pass.
+        wrong = CLAMP.replace(
             "return Math.max(lo,Math.min(hi,x));",
-            "return x != Float.NaN ? Math.max(lo,Math.min(hi,x)) : lo;")
+            "return Float.isInfinite(x) ? lo : Math.max(lo,Math.min(hi,x));")
         result, calls, _ = self.run_trial(
-            [response(naive), response(naive)],
+            [response(wrong), response(wrong)],
             lambda changes: (False, "trusted NaN-camera test failed"))
         self.assertEqual("proposed_change_failed_postcondition", result["status"])
         self.assertEqual(2, calls)
