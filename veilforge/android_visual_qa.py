@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Android emulator visual QA: real ADB screenshots of the built glTF scene APK.
+
+Objective gates: installed APK checksum, GLES2 load/frame markers for each view,
+nonblank pixel foreground, camera-change evidence, screenshots+per-asset hashes,
+memory snapshot. Subjective photorealism is NOT certified by these checks.
+"""
+from __future__ import annotations
+import argparse
+import hashlib
+import io
+import json
+from pathlib import Path
+import re
+import subprocess
+import time
+
+ANDROID_PACKAGE="game.veilforge.probe"
+ACTIVITY=ANDROID_PACKAGE+"/.ViewerActivity"
+VIEWS=[(yaw,15 if index%3==0 else 25 if index%3==1 else 42)
+       for index,yaw in enumerate(range(0,350,25))][:14]
+ROLES={
+    "scene-world":("scene","rolling_terrain","ancient_gate_standard"),
+    "nature-mobile":("ancient_tree","forest_tree_mobile","ancient_gate_mobile"),
+    "props-equipment":("treasure_chest","ceremonial_sword","cargo_cart"),
+}
+BACKGROUND=(17,21,29)
+
+def adb(*args,timeout=50,binary=False):
+    proc=subprocess.run(["adb",*args],check=True,stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,timeout=timeout)
+    return proc.stdout if binary else proc.stdout.decode("utf-8","replace")
+
+def screenshot(path):
+    from PIL import Image
+    raw=adb("exec-out","screencap","-p",timeout=40,binary=True)
+    if not raw.startswith(b"\x89PNG"):
+        raise RuntimeError("ADB screenshot was not PNG data")
+    path.write_bytes(raw)
+    pic=Image.open(io.BytesIO(raw)).convert("RGB")
+    if min(pic.size)<240 or max(pic.size)<450:
+        raise RuntimeError("Screenshot resolution was too small")
+    return pic
+
+def metrics(image):
+    from PIL import ImageStat
+    # Static GL background is uniform; require actual colored geometry,
+    # sampled at low resolution to make the gate device-independent.
+    small=image.resize((240,135))
+    pixels=list(small.getdata())
+    mask=sum(1 for r,g,b in pixels if max(
+        abs(r-BACKGROUND[0]),abs(g-BACKGROUND[1]),abs(b-BACKGROUND[2]))>=23)
+    frac=mask/len(pixels)
+    stat=ImageStat.Stat(small)
+    contrast=max(stat.stddev)
+    return {"foreground_fraction":round(frac,5),"channel_stddev":round(contrast,3),
+            "dimensions":list(image.size)}
+
+def change_fraction(a,b):
+    from PIL import ImageChops
+    a=a.resize((240,135));b=b.resize((240,135))
+    diff=ImageChops.difference(a,b)
+    return sum(1 for px in diff.getdata() if max(px)>=12)/(240*135)
+
+def wait_frame(asset,yaw,pitch,timeout=15):
+    marker=f"FRAME_OK asset={asset} "
+    target=f" yaw={yaw} pitch={pitch}"
+    end=time.monotonic()+timeout
+    while time.monotonic()<end:
+        data=adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S",timeout=15)
+        if marker in data and any(marker in line and target in line for line in data.splitlines()):
+            return data
+        if "LOAD_FAIL" in data or "GL_ERROR" in data or "ASSET_NOT_FOUND" in data:
+            raise RuntimeError("Actual GLES viewer failed: "+data[-1800:])
+        time.sleep(.35)
+    raise RuntimeError(f"Timed out waiting for GLES frame asset={asset} view={yaw}/{pitch}")
+
+def capture(role,apk,output,expected_apk_sha,source_sha):
+    if role not in ROLES:raise ValueError("Unknown worker role")
+    output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    apk=Path(apk)
+    real_sha=hashlib.sha256(apk.read_bytes()).hexdigest()
+    if real_sha!=expected_apk_sha:raise RuntimeError("APK integrity mismatch")
+    observed_api=int(adb("shell","getprop","ro.build.version.sdk").strip())
+    if observed_api!=35:raise RuntimeError(f"Unexpected Android API {observed_api}")
+    adb("install","-r",str(apk),timeout=180)
+    packages=adb("shell","pm","path",ANDROID_PACKAGE)
+    if "package:" not in packages:raise RuntimeError("APK not installed")
+    adb("logcat","-c")
+    collected=[]
+    for asset in ROLES[role]:
+        base=output/asset;base.mkdir(parents=True,exist_ok=True)
+        shots=[];measurements=[]
+        for index,(yaw,pitch) in enumerate(VIEWS):
+            adb("shell","am","start","--activity-single-top",
+                "-n",ACTIVITY,"--es","asset",asset,
+                "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
+            log=wait_frame(asset,yaw,pitch)
+            dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
+            pic=screenshot(dest)
+            result=metrics(pic)
+            result.update({"index":index,"yaw":yaw,"pitch":pitch,
+                            "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
+                            "image":str(dest.relative_to(output))})
+            shots.append(pic);measurements.append(result)
+            if result["foreground_fraction"]<.0015 or result["channel_stddev"]<3:
+                raise RuntimeError(f"Blank/near-empty emulator frame for {asset}: {result}")
+        changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
+        del shots
+        if max(changes)<.0015:
+            raise RuntimeError(f"Camera did not visibly orbit {asset}: max delta={max(changes)}")
+        collected.append({"asset":asset,"views":measurements,"max_orbit_change":max(changes),
+                          "min_foreground_fraction":min(x["foreground_fraction"] for x in measurements)})
+    log=adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S")
+    (output/"device_logcat.txt").write_text(log,encoding="utf-8")
+    if "GLTF_LOADED actual_scene=true" not in log or "GLES_READY renderer=" not in log:
+        raise RuntimeError("No real GLES geometry-import/GPU evidence")
+    mem=adb("shell","dumpsys","meminfo",ANDROID_PACKAGE,timeout=40)
+    (output/"android_meminfo.txt").write_text(mem,encoding="utf-8")
+    report={"schema_version":1,"role":role,"source_commit":source_sha,
+        "apk_sha256":real_sha,"device_android_api":observed_api,
+        "source_gltf_imported":True,"real_gles2_draws":True,
+        "screenshot_count":sum(len(x["views"]) for x in collected),
+        "assets":collected,"memory_snapshot_saved":True,
+        "technical_visual_smoke_pass":True,"artistic_quality_approved":False,
+        "physical_device_qa_pass":False,"photorealism_verified":False,
+        "quality_limitations":["Emulator uses software GPU not phone hardware",
+            "Screenshot heuristics detect blank and frozen renders, not aesthetics",
+            "Static renderer; no rigged animation, textures, FPS or physical GPU VRAM claims"]}
+    (output/"emulator_visual_qa.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
+    return report
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument("--role",choices=sorted(ROLES),required=True)
+    p.add_argument("--apk",type=Path,required=True)
+    p.add_argument("--output",type=Path,required=True)
+    p.add_argument("--apk-sha",required=True)
+    p.add_argument("--source-sha",required=True)
+    a=p.parse_args()
+    try:
+        result=capture(a.role,a.apk,a.output,a.apk_sha,a.source_sha)
+        print("VEILFORGE_ANDROID_VISUAL_PASS",json.dumps({
+            k:result[k] for k in ("role","device_android_api","screenshot_count",
+                "technical_visual_smoke_pass")}))
+    except Exception as error:
+        a.output.mkdir(parents=True,exist_ok=True)
+        (a.output/"emulator_failure.json").write_text(json.dumps(
+            {"role":a.role,"error":repr(error),"passed":False},indent=2)+"\n")
+        raise
+
+if __name__=="__main__":
+    main()

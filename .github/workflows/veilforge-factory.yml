@@ -183,3 +183,160 @@ jobs:
           path: inspection_output/scene-package/
           if-no-files-found: warn
           retention-days: 14
+
+  build-android-visual-probe:
+    name: Build independent Android glTF renderer APK
+    needs: [scene-package, library-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      sha256: ${{ steps.digest.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - uses: actions/download-artifact@v4
+        with:
+          name: veilforge-assembled-world-scene
+          path: veilforge/android-probe/app/src/main/assets/scene/
+      - name: Assert package uses actual worker-generated glTF buffers
+        run: |
+          set -euo pipefail
+          test -s veilforge/android-probe/app/src/main/assets/scene/ruin_courtyard_demo.gltf
+          test -s veilforge/android-probe/app/src/main/assets/scene/buffers/ancient_tree.bin
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("veilforge/android-probe/app/src/main/assets/scene")
+          doc=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
+          assert len(doc["meshes"])==7
+          assert len(doc["nodes"])==8
+          assert all((root/b["uri"]).stat().st_size==b["byteLength"] for b in doc["buffers"])
+          assert doc["extras"]["production_approved"] is False
+          print("VEILFORGE_REAL_SCENE_EMBEDDED",len(doc["meshes"]),"meshes")
+          PY
+      - name: Build debug-only Android OpenGL test APK, not a game APK
+        run: gradle -p veilforge/android-probe :app:assembleDebug --no-daemon
+      - name: Verify byte identity and Android executable
+        id: digest
+        run: |
+          set -euo pipefail
+          APK=veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'classes[.]dex'
+          echo "sha256=$(sha256sum "$APK" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-android-shared-probe-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  android-visual-workers:
+    name: Android 15 / ${{ matrix.role }} / ${{ matrix.profile }}
+    needs: [build-android-visual-probe]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - { role: scene-world, profile: pixel_6, api: 35 }
+          - { role: nature-mobile, profile: pixel_7, api: 35 }
+          - { role: props-equipment, profile: pixel_5, api: 35 }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: veilforge-android-shared-probe-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/
+      - name: Verify exact same compiled APK on all virtual devices
+        run: |
+          echo "${{ needs.build-android-visual-probe.outputs.sha256 }}  veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk" | sha256sum -c -
+      - name: Install independent screenshot analysis
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Enable KVM for this isolated emulator runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Render 14 actual GLES views per model and reject blank/frozen frames
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ASSET_ROLE: ${{ matrix.role }}
+          SOURCE_SHA: ${{ github.sha }}
+          APK_SHA: ${{ needs.build-android-visual-probe.outputs.sha256 }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 veilforge/android_visual_qa.py --role "$ASSET_ROLE" --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --output "inspection_output/visual/$ASSET_ROLE" --apk-sha "$APK_SHA" --source-sha "$SOURCE_SHA"
+      - name: Preserve all real screenshots, logcat, memory and defect reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-android-${{ matrix.role }}
+          path: inspection_output/visual/${{ matrix.role }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  android-visual-review:
+    name: Fail closed on incomplete emulator visual QA evidence
+    needs: [build-android-visual-probe, android-visual-workers]
+    if: always() && needs.build-android-visual-probe.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-android-*
+          path: inspection_output/android-collected
+      - name: Aggregate real screenshot integrity, source SHA, GLES and repair findings
+        run: |
+          set -euo pipefail
+          python3 veilforge/android_review.py \
+            --root inspection_output/android-collected \
+            --out inspection_output/android-review \
+            --source-sha "${{ github.sha }}" \
+            --apk-sha "${{ needs.build-android-visual-probe.outputs.sha256 }}"
+          cat inspection_output/android-review/android_gate_report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish auditable screenshots summary and scoped repair queue
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-android-final-review
+          path: inspection_output/android-review/
+          if-no-files-found: warn
+          retention-days: 14

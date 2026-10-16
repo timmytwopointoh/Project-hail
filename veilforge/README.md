@@ -77,3 +77,30 @@ The manager-of-managers now publishes separate **CI evidence gates** and **topol
 ## M3 universal asset library
 
 The independent general-purpose 3D asset builders and world scene-pack system live in [ASSET_FACTORY.md](ASSET_FACTORY.md). This extends the engine beyond characters with six new procedural model families, a catalog, multi-material glTF exports, actual mesh previews, and reusable scene composition. Working game code is not changed.
+
+## M4: Real Android Emulator Visual QA
+
+The existing catalog generates real geometry, multi-material glTF 2.0 and a
+multi-mesh scene. The isolated Android probe app under veilforge/android-probe
+packages that EXACT generated scene and all binary meshes as APK assets.
+It is not a game; no VEILBOUND runtime source files are touched.
+
+The Universal Factory workflow builds one shared APK, then runs three
+independent Android 15 virtual devices using the proven emulator farm
+pattern (Pixel 6, 7 and 5 profiles, GLES2, SwiftShader GPU). Each renders
+three asset or scene selections from 14 yaw/pitch views: a full cycle captures
+126 actual device screenshots, archived by per-file SHA256. It also records
+Android GLES renderer/load/draw logcat markers and process memory snapshots.
+
+The manager veilforge/android_review.py independently checks every role,
+all images, APK/source identity, 14 frames per asset, viewport silhouette
+presence and visible camera changes. Missing or corrupted evidence fails
+the workflow and creates android_repair_backlog.json for future workers.
+
+A passing emulator test is NOT proof of photorealism, dynamic rigging,
+correct PBR textures, measured target-phone FPS, physical hardware VRAM,
+or artist/aesthetic signoff. Those remain open milestone acceptance gates.
+
+Next priority: texture-backed GLES PBR comparison, image segmentation and
+reference-aware silhouette regression, motion/LOD stress tests, then
+target-hardware telemetry and artist signoff before game promotion.

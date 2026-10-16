@@ -259,7 +259,7 @@
       "id": "VF-021",
       "domain": "quality",
       "name": "GPU/Android device tests and target platform budgets",
-      "status": "planned",
+      "status": "partial",
       "gate": "real-device or emulator import, screenshots, FPS/VRAM and memory measurements for 3 tiers",
       "depends_on": [
         "VF-010",
