@@ -1,0 +1,38 @@
+name: VEILBOUND - Master AI Worker Manager
+on:
+  workflow_dispatch:
+    inputs:
+      max_workers:
+        description: 'Max separately reviewed AI coding workers'
+        required: true
+        type: choice
+        default: '6'
+        options: ['6', '12', '24', '50']
+      max_parallel:
+        description: 'Concurrent local AI runner machines'
+        required: true
+        type: choice
+        default: '2'
+        options: ['2', '4', '8', '12']
+      run_mode:
+        description: 'Planning only or run local AI coding proposals'
+        required: true
+        type: choice
+        default: 'plan_only'
+        options: ['plan_only', 'coding_proposals']
+      emulator_run_id:
+        description: 'Optional real Moto G-sized emulator QA run ID'
+        required: false
+        type: string
+permissions:
+  contents: read
+# Registration stub only. To run actual manager code, select the feature
+# branch in the GitHub Actions "Run workflow" branch dropdown.
+jobs:
+  choose-ai-development-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Direct use to reviewed feature-branch pipeline
+        run: |
+          echo "::error::Choose feature/veilbound-parallel-ai-qa in the Run workflow branch picker."
+          exit 1
