@@ -298,7 +298,10 @@ public final class ContinuousHuman {
     }
     /** Palm/wrist mesh without the M21 cylinders; M23 loft digits attach here. */
     static ArtKit.Model buildWithoutDigits(boolean lite){
-        return build(lite,BASE,false);
+        return buildWithoutDigits(lite,BASE);
+    }
+    static ArtKit.Model buildWithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false);
     }
     private static ArtKit.Model build(boolean lite,float[] controls,boolean includeDigits){
         validate(controls);
