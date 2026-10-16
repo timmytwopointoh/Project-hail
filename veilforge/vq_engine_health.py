@@ -20,8 +20,8 @@ def audit(root,out):
     root=Path(root).resolve()
     directory=root/"veilforge"
     issues=[];rows=[]
-    if not (root/".github/workflows/vq-model-tools.yml").is_file():
-        issues.append("Existing automated VQ tool workflow missing")
+    if not (root/".github/workflows/veilforge-m33-vq-human-bake.yml").is_file():
+        issues.append("M33 model-baking workflow missing")
     for name in REQUIRED:
         p=directory/name
         if not p.is_file() or p.is_symlink() or not p.resolve().is_relative_to(root):
