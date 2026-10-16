@@ -1,4 +1,4 @@
-# VEILFORGE — Agent continuation instructions
+# VEYLQUORIN (VQ) — Agent continuation instructions
 
 This file is the portable and non-secret project handoff for future ChatGPT,
 Codex, GitHub coding agents, locally deployed Qwen/Ollama, and human maintainers.
@@ -6,9 +6,9 @@ It does NOT contain a copy of any proprietary ChatGPT model, system prompt,
 hidden reasoning, or access token.
 
 Project steward (self-reported): **Timothy Harris**.
-Project engine identity: **VEILFORGE**. Legacy VEILBOUND filenames and Android
+Project engine identity: **VEYLQUORIN (VQ)**. Previous engine name **VEILFORGE** is a historical and technical compatibility identifier. Legacy VEILBOUND filenames and Android
 game modules are downstream compatibility targets, not an engine rebrand.
-The name is a provisional internal working mark; external trademark clearance
+The full name VEYLQUORIN and the abbreviation VQ are provisional internal labels; external trademark clearance
 is not complete (see docs/ownership/BRAND_NAME_CLEARANCE.md).
 
 ## Before undertaking development
