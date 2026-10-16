@@ -2,9 +2,13 @@ name: VQ - Universal 3D Model Tools
 
 on:
   push:
-    branches: ['brand/veylquorin-20261016']
+    branches: ['brand/veylquorin-20261016', 'feature/vq-*']
     paths:
       - 'veilforge/vq_model_tools.py'
+      - 'veilforge/vq_brushes.py'
+      - 'veilforge/vq_brush_demo.json'
+      - 'veilforge/tests/test_vq_brushes.py'
+      - 'veilforge/VQ_BRUSH_TOOLS.md'
       - 'veilforge/tests/test_vq_model_tools.py'
       - 'veilforge/queue.py'
       - 'veilforge/provenance.py'
@@ -97,6 +101,42 @@ jobs:
           print("VQ_MODEL_TECHNICAL_SMOKE_PASS",r["source_obj"],"angles",len(r["visual"]["views"]))
           PY
           cat inspection_output/vq-smoke/inspection/vq_model_report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Exercise real VQ sculpt, smoothing and detail-stamp tools on actual terrain mesh
+        run: |
+          set -euo pipefail
+          python3 veilforge/factory.py \
+            --catalog veilforge/catalog.json \
+            --id rolling_terrain \
+            --out inspection_output/vq-smoke/brush-source
+          python3 veilforge/vq_brushes.py \
+            --obj inspection_output/vq-smoke/brush-source/rolling_terrain.obj \
+            --recipe veilforge/vq_brush_demo.json \
+            --out inspection_output/vq-smoke/brushes/terrain_refined.obj
+          python3 veilforge/vq_model_tools.py \
+            --obj inspection_output/vq-smoke/brushes/terrain_refined.obj \
+            --out inspection_output/vq-smoke/brushes/inspected \
+            --render-faces 4000
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-smoke/brushes")
+          r=json.loads((root/"terrain_refined_brush_review.json").read_text())
+          v=json.loads((root/"inspected/vq_model_report.json").read_text())
+          assert r["engine"]=="VEYLQUORIN"
+          assert len(r["strokes"])==3
+          assert [x["op"] for x in r["strokes"]]==["sculpt","smooth","stamp"]
+          assert all(x["mesh_faces_inserted"]==0 for x in r["strokes"])
+          assert r["integrity_metrics_before"]==r["integrity_metrics_after"]
+          assert sum(x["groups_moved"] for x in r["strokes"])>0
+          assert v["technical_geometry_smoke_passed"] is True
+          assert len(v["visual"]["views"])==14
+          assert r["android_emulator_verified"] is False
+          assert r["ready_for_game"] is False
+          print("VQ_ADAPTIVE_BRUSH_PASS",
+                "source_faces",r["source_triangles"],
+                "strokes",len(r["strokes"]),
+                "orbit_views",len(v["visual"]["views"]))
+          PY
       - name: Sign immutable VQ model inspection report under GitHub OIDC
         uses: actions/attest@v4
         with:
