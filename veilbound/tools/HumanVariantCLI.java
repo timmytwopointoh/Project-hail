@@ -181,7 +181,7 @@ public final class HumanVariantCLI {
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
         ArtKit.Model mesh=HumanAnatomy.buildWithSculptedHands(false,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
-        obj(HumanHandSculpt.build(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
+        obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
         for(int view=0;view<VIEWS.length;view++)
             render(mesh,view,dir.resolve(VIEWS[view]+".png"));
         for(int side:new int[]{-1,1})
