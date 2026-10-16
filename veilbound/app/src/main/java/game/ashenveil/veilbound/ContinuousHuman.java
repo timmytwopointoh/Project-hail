@@ -117,13 +117,15 @@ public final class ContinuousHuman {
         // nasal bridge and lip mass all fused into the original skin surface.
         f.add(0,2.075f,0,.106f,.185f,.106f);
         f.add(0,2.392f,.014f,.177f*g[6],.234f,.167f);
-        f.add(0,2.260f,.062f,.132f*g[7],.108f,.126f);
+        f.add(0,2.260f,.059f,(m25?.122f:.132f)*g[7],.108f,m25?.116f:.126f);
         f.add(0,2.506f,-.022f,.164f*g[6],.129f,.153f);
-        f.add(0,2.347f,.177f,.044f*g[9],.095f,.065f*g[9]);
+        f.add(0,2.347f,m25?.167f:.177f,(m25?.039f:.044f)*g[9],
+              m25?.081f:.095f,(m25?.062f:.065f)*g[9]);
         f.add(0,2.259f,.171f,.064f,.021f,.036f);
         for(int side:new int[]{-1,1}){
-            f.add(side*.122f,2.376f,.11f,.073f,.075f,.074f);
-            f.add(side*.177f*g[6],2.393f,-.015f,.038f,.066f,.038f);
+            f.add(side*.120f,2.376f,.11f,m25?.063f:.073f,.075f,m25?.061f:.074f);
+            f.add(side*.174f*g[6],2.393f,-.015f,m25?.030f:.038f,
+                  m25?.051f:.066f,m25?.030f:.038f);
             // Clavicle joins shoulder before deltoid. No floating arm barrel.
             float sx=side*.445f*g[0];
             f.add(side*.325f,1.90f,-.002f,.156f,.109f,.146f);
@@ -203,7 +205,7 @@ public final class ContinuousHuman {
                       .025f,.032f,.067f);
             }
         }
-        if(m24)refineWholeBody(f,g);
+        if(m24)refineWholeBody(f,g,m25);
         return f;
     }
     /**
@@ -213,7 +215,7 @@ public final class ContinuousHuman {
      * Hair and all historical baseline geometry remain unchanged.
      * Future retopology, texture painting and joint-weight review still needed.
      */
-    private static void refineWholeBody(Field f,float[] g){
+    private static void refineWholeBody(Field f,float[] g,boolean facePolish){
         // Thoracic / abdominal form: serratus, upper oblique and erector
         // spinae soften the formerly featureless barrel-shaped torso.
         for(int side:new int[]{-1,1}){
@@ -241,9 +243,12 @@ public final class ContinuousHuman {
             f.add(side*.548f*g[0],1.196f,-.059f,.082f*g[10],.169f,.075f);
             // Upper cheekbone, jaw musculature and brow: modest volumes,
             // deliberately no artificial bead eyes, no hair modification.
-            f.add(side*.097f,2.410f,.138f,.068f,.044f,.052f);
-            f.add(side*.121f,2.308f,.103f,.067f*g[7],.075f,.066f);
-            f.add(side*.081f,2.474f,.130f,.057f,.035f,.036f);
+            f.add(side*.097f,2.410f,.138f,facePolish?.053f:.068f,
+                  .044f,facePolish?.043f:.052f);
+            f.add(side*.118f,2.308f,.103f,(facePolish?.056f:.067f)*g[7],
+                  .075f,facePolish?.057f:.066f);
+            f.add(side*.081f,2.474f,.130f,facePolish?.048f:.057f,
+                  .035f,facePolish?.028f:.036f);
             f.add(side*.040f,2.275f,.179f,.035f,.023f,.031f);
         }
         f.add(0,1.461f,.184f,.114f,.153f,.039f); // subtle rectus contour
@@ -381,7 +386,7 @@ public final class ContinuousHuman {
                                       boolean smoothSkin){
         validate(controls);
         Field field=anatomy(controls,includeDigits,refined,smoothSkin);
-        float h=lite?.062f:.039f;
+        float h=smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
             nz=2+(int)Math.ceil(1.14f/h);
