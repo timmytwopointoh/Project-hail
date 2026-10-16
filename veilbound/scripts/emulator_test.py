@@ -111,7 +111,18 @@ def main():
                 report["startup_capture"]=True
         except (OSError,subprocess.SubprocessError):
             report["startup_capture"]=False
-        time.sleep(6)
+        # M13 startup now does REAL CPU preprocessing. Wait on the actual
+        # first-frame log gate, not an arbitrary fixed six-second delay.
+        for boot_attempt in range(72):
+            boot_logs=adb("logcat","-d","-s","VEILBOUND_BOOT:I","*:S",
+                          timeout=25).decode("utf-8","replace")
+            if "FIRST_FRAME_READY" in boot_logs:
+                report["first_frame_ready"]=True
+                break
+            time.sleep(1.65)
+        else:
+            (OUT/"startup_timeout_log.txt").write_text(boot_logs)
+            raise AssertionError("Native loader did not reach its first rendered frame")
         dismiss_android_overlay()
         time.sleep(1.5)
         for retry in range(3):
