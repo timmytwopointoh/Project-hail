@@ -31,6 +31,11 @@ public final class ModelViewport extends View {
     invalidate();
   }
   public String meshName(){return mesh.label;}
+  /** Test the exact camera and effect values before/after a source revision. */
+  public String cameraFingerprint(){
+    return Float.floatToIntBits(yaw)+":"+Float.floatToIntBits(pitch)+":"+
+           Float.floatToIntBits(zoom)+":"+wire+":"+spin;
+  }
   public void toggleWire(){wire=!wire;invalidate();}
   public void toggleOrbit(){spin=!spin;invalidate();}
   @Override protected void onDraw(Canvas canvas){
