@@ -402,3 +402,38 @@ jobs:
           path: inspection_output/android-lod/
           if-no-files-found: warn
           retention-days: 14
+
+  semantic-android-visual-review:
+    name: Diagnose actual Android silhouettes and assign repair workers
+    needs: [android-visual-review, android-visual-workers]
+    if: always() && needs.android-visual-review.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install screenshot tools
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-android-*
+          path: inspection_output/android-collected
+      - name: Audit signed-frame integrity, camera geometry and clipping indicators
+        run: |
+          set -euo pipefail
+          python3 veilforge/visual_semantics.py \
+            --root inspection_output/android-collected \
+            --out inspection_output/semantic-review
+          cat inspection_output/semantic-review/semantic_visual_review.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish semantic findings and bounded repair queue
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-android-semantic-review
+          path: inspection_output/semantic-review/
+          if-no-files-found: warn
+          retention-days: 14
