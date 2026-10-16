@@ -1,0 +1,81 @@
+name: VEILFORGE - Ownership Provenance and Persistent Steward
+
+on:
+  push:
+    branches:
+      - 'feature/veilforge-ownership-provenance-20261016'
+    paths:
+      - 'LICENSE'
+      - 'docs/ownership/**'
+      - 'veilforge/VEILFORGE_CHARTER.md'
+      - 'veilforge/steward_state.json'
+      - 'veilforge/steward.py'
+      - 'veilforge/provenance.py'
+      - 'veilforge/tests/test_provenance_steward.py'
+      - '.github/workflows/veilforge-ownership-provenance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: veilforge-ownership-${{ github.ref }}
+  cancel-in-progress: true
+
+# This workflow creates timestamped evidence and a read-only next-task plan.
+# No models, game commits, emulator jobs, or source mutations are performed.
+jobs:
+  timestamp-and-steward:
+    name: Sign source fingerprint and record safe restart instructions
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test source ownership evidence and safe continuation controls
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
+      - name: Read-only VEILFORGE next-work handoff
+        run: |
+          python3 veilforge/steward.py plan \
+            --out inspection_output/veilforge-ownership/handoff
+      - name: Snapshot actual GitHub commit and clock to legal provenance manifest
+        run: |
+          set -euo pipefail
+          python3 veilforge/provenance.py snapshot \
+            --root . --out inspection_output/veilforge-ownership/source_manifest.json
+          python3 veilforge/provenance.py verify \
+            --root . --snapshot inspection_output/veilforge-ownership/source_manifest.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          info=json.loads(Path('inspection_output/veilforge-ownership/source_manifest.json').read_text())
+          with Path(__import__('os').environ['GITHUB_STEP_SUMMARY']).open('a') as f:
+              f.write('# VEILFORGE provenance checkpoint\n\n')
+              f.write(f"Claimant: **{info['claimed_owner']}**  \n")
+              f.write(f"GitHub identity: **{info['github_account']}**  \n")
+              f.write(f"Recorded UTC: **{info['observed_at_utc']}**  \n")
+              f.write(f"Recorded Eastern: **{info['observed_at_america_new_york']}**  \n")
+              f.write(f"Source commit: **{info['source_commit_sha']}**  \n")
+              f.write(f"Hashed tracked source files: **{info['file_count']}**  \n")
+              f.write('This is a technical provenance record, not a legal signature or ownership adjudication.\n')
+          PY
+      - name: Upload independent provenance snapshot and steward restart handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-ownership-provenance-${{ github.sha }}
+          path: inspection_output/veilforge-ownership/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Sign source manifest with GitHub OIDC artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/veilforge-ownership/source_manifest.json
