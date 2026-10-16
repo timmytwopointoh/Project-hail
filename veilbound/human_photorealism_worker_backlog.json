@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "description": "M19 user-approved photo human reference: visually iterate toward realistic original adult male unarmored figure, natural skin and hair, neutral dark shorts, 4 angle comparison. CI Java green is necessary but NOT proof of photorealism; manual image review required.",
+  "tasks": [
+    {
+      "id": "M19-ANATOMY",
+      "role": "models",
+      "priority": "P0",
+      "goal": "ONE concise functional Java logic edit in HumanAnatomy.java only. Fix boxy anatomy: shoulder deltoid smooth taper, chest silhouette or neck jaw profile toward realistic photo adult male. Do not use armor assets; avoid new imports/classes. Preserve other assets."
+    },
+    {
+      "id": "M19-SKIN",
+      "role": "materials",
+      "priority": "P0",
+      "goal": "ONE concise safe material improvement for more natural non-metal skin using existing MaterialMapping.java or SurfaceAtlas.java. Keep other materials. Do not fabricate photorealism results."
+    },
+    {
+      "id": "M19-RIG",
+      "role": "animation",
+      "priority": "P0",
+      "goal": "ONE concise functional interpolation improvement to elbow/knee/torso weight shift; preserve gameplay API and existing enemies, avoid untested switches."
+    },
+    {
+      "id": "M19-STUDIO",
+      "role": "studio",
+      "priority": "P0",
+      "goal": "ONE concise functional change to ModelStudio.java to give HUMAN BASE (item=11) reproducible camera framing for front/side/back and head close-up. Keep existing asset indices and Imported OBJ final slot."
+    }
+  ]
+}
