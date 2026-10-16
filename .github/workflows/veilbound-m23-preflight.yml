@@ -37,6 +37,42 @@ jobs:
           printf '%s\n' 'M23 preflight only: no geometry changes or worker execution are claimed.' > m23-report/STATUS.txt
           printf '%s\n' 'Hand gate: four separately modeled fingers + one opposable thumb per hand.' >> m23-report/STATUS.txt
           printf '%s\n' 'Human visual review and Android 15 screenshots are required before promotion.' >> m23-report/STATUS.txt
+      - name: Compile anatomy and verify five-digit SDF probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m23-check/game/ashenveil/veilbound /tmp/m23-classes
+          cat > /tmp/m23-check/game/ashenveil/veilbound/ArtKit.java <<'JAVA'
+          package game.ashenveil.veilbound;
+          public final class ArtKit {
+            public static final class Model {
+              public Model(float[] vertices) {}
+            }
+          }
+          JAVA
+          cat > /tmp/m23-check/game/ashenveil/veilbound/HandProbe.java <<'JAVA'
+          package game.ashenveil.veilbound;
+          public final class HandProbe {
+            public static void main(String[] args) {
+              for (int side : new int[]{-1,1}) {
+                float[] p=ContinuousHuman.digitSeparationProbe(side);
+                if (p.length!=9) throw new AssertionError("Unexpected digit probe length");
+                for(int i=0;i<4;i++)
+                  if(!Float.isFinite(p[i]) || p[i]>=0)
+                    throw new AssertionError("Missing digit "+i+" side "+side+": "+p[i]);
+                for(int i=4;i<7;i++)
+                  if(!Float.isFinite(p[i]) || p[i]<=0)
+                    throw new AssertionError("Fused finger gap "+i+" side "+side+": "+p[i]);
+                if (!Float.isFinite(p[7]) || p[7]>=0)
+                  throw new AssertionError("Missing opposable thumb side "+side);
+                System.out.println("PASS side "+side+" four fingers, three gaps, thumb; probes "+
+                  java.util.Arrays.toString(p));
+              }
+            }
+          }
+          JAVA
+          javac -d /tmp/m23-classes /tmp/m23-check/game/ashenveil/veilbound/ArtKit.java veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java /tmp/m23-check/game/ashenveil/veilbound/HandProbe.java
+          java -cp /tmp/m23-classes game.ashenveil.veilbound.HandProbe | tee m23-report/hand-probe.txt
       - uses: actions/upload-artifact@v4
         with:
           name: m23-preflight-report
