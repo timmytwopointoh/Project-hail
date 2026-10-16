@@ -73,6 +73,21 @@ class ProposalGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "repeated an exact match"):
             self.validate(obj)
 
+    def test_invalid_nan_comparisons_are_rejected_with_corrective_feedback(self):
+        source = ("package game.ashenveil.veilbound;\\n"
+                  "public final class CharacterRig { private static float clamp(float x,float lo,float hi)"
+                  "{return Math.max(lo,Math.min(hi,x));} }\\n")
+        old = "return Math.max(lo,Math.min(hi,x));"
+        for wrong in ("return x != Float.NaN ? Math.max(lo,Math.min(hi,x)) : lo;",
+                      "return x == Float.NaN ? lo : Math.max(lo,Math.min(hi,x));",
+                      "return Double.NaN != x ? x : lo;"):
+            with self.subTest(wrong=wrong):
+                with self.assertRaisesRegex(ValueError, "Float.isNaN"):
+                    self.validate(proposal(old=old, new=wrong), source=source)
+        correct = ("return Float.isNaN(x) ? lo : Math.max(lo,Math.min(hi,x));")
+        result = self.validate(proposal(old=old, new=correct), source=source)
+        self.assertIn(correct, result[PATH_OK])
+
     def test_dangerous_generated_java_is_rejected(self):
         banned = (
             "Runtime.getRuntime().exec(\"x\");",
