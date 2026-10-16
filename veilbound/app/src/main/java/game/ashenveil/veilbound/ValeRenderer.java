@@ -477,9 +477,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
-        float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
+        float targetY=(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset?1.46f:
+            (m.item==2?2.72f:(m.item==6?3.50f:
             m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
-            m.item==10?1.07f:2.12f))+m.panY;
+            m.item==10?1.07f:2.12f)))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -542,7 +543,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             default:
                 chosen=studioImported!=null?studioImported:studioWarden;
-                if(m.item==ModelStudio.ITEMS.length-1 && vesperIdle!=null){
+                if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset &&
+                    vesperIdle!=null && studioImported==vesperIdle[0]){
                     Mesh[] animated=m.pose==1?vesperTPose:
                                     m.pose==2?vesperLegUp:
                                     m.pose==3?vesperDance:vesperIdle;
@@ -577,7 +579,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(nextAnimatedFrame!=null)
             drawInterpolated(chosen,nextAnimatedFrame,animationAlpha,model,1,1,1,.06f);
         else draw(chosen,model,1,1,1,.06f);
-        if(m.item==ModelStudio.ITEMS.length-1 && vesperIdle!=null){
+        if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset &&
+                    vesperIdle!=null && studioImported==vesperIdle[0]){
             GLES20.glUniform1f(uSurfaceQuality,0f);
             drawVesperAura(0f,.82f,0f,qualityClock);
         }
