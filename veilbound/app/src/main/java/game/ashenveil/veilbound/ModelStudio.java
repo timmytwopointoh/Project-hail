@@ -45,7 +45,7 @@ public final class ModelStudio {
         if(item>=11&&item<=21){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:
-            item==12?2.20f:(item==14||item==16)?1.45f:item==17?5.10f:4.50f;
+            item==12?2.20f:(item==14||item==16)?1.45f:(item==17||item==20)?5.10f:4.50f;
     }
     public synchronized void selectImported(){item=ITEMS.length-1;reset();zoom=5.3f;}
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
@@ -80,7 +80,7 @@ public final class ModelStudio {
         yaw=.50f;pitch=.12f;panX=0;panY=0;
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:
-            item==12?2.20f:(item==14||item==16)?1.45f:item==17?5.10f:4.50f;
+            item==12?2.20f:(item==14||item==16)?1.45f:(item==17||item==20)?5.10f:4.50f;
         autoTurn=false;
     }
     public synchronized void orbit(float dx,float dy){
