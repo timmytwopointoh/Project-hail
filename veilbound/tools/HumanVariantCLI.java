@@ -251,7 +251,7 @@ public final class HumanVariantCLI {
             if(views.length()>0)views.append(',');
             views.append('"').append(view).append('"');
         }
-        String json="{\"model\":\"m24_veilforge_full_body_candidate\",\"triangles\":"+
+        String json="{\"model\":\"m25_refined_face_skin_candidate\",\"triangles\":"+
             mesh.triangleCount+",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":true,\"hand_closeups_per_side\":3,\"camera_views\":["+views+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");
