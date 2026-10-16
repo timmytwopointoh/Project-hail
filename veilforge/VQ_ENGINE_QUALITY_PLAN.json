@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "engine": "VEYLQUORIN / VEILFORGE",
-  "version": "M31",
+  "version": "M32-UV-AUDIT",
   "mission": "Universal reusable game asset creation, editing and verification; not an individual game.",
   "definition_of_done": "All applicable quality gates pass with reproducible source, target-game import, visual reference signoff, representative hardware and recorded provenance. Perfect aesthetics cannot be guaranteed or declared by automation.",
   "scope": {
@@ -148,7 +148,8 @@
       "objective": "Check UV coverage, collapsed islands, stretch, mirrored triangles and texel consistency.",
       "acceptance": "UV distortions, seam continuity and black seam pixel regressions are tested.",
       "status": "partial",
-      "automatic_game_approval": false
+      "automatic_game_approval": false,
+      "implementation_note": "M32 adds read-only source-welded UV seam continuity counts and adversarial missing-UV/nonmanifold rejection. Distortion metrics, black-seam pixel comparison and organic unwrapping remain unverified."
     },
     {
       "id": "UV-02",
@@ -393,10 +394,10 @@
     }
   ],
   "current_iteration": {
-    "milestone": "UV-02",
-    "branch": "feature/vq-m31-uv-atlas-bake",
-    "depends_on": "verified M30 source bake",
-    "technical_gate": "atlas geometry/UV invariants and high-to-low bake on an actual source-derived refinement",
+    "milestone": "UV-01",
+    "branch": "feature/vq-m32-coherent-organic-uv-20261016",
+    "depends_on": "verified M31 source e665867b431b787f237e38eb2f450f4e240d7b67",
+    "technical_gate": "source-derived 32-face low mesh has 40 continuous interior UV edges; triangle-local M31 atlas intentionally has 40 seams; CI suite required",
     "game_release_approved": false
   }
 }

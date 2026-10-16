@@ -94,3 +94,14 @@ python3 veilforge/vq_mesh_baker.py \
   --high build/source_high_uv_matched.obj \
   --out build/normal_baked --size 256
 ```
+
+## M32 independent seam-continuity regression
+
+The read-only `vq_uv_seams.py` counts continuous and discontinuous UV
+edges using welded source geometry, rather than assuming matching OBJ
+texture-coordinate indices. `test_vq_uv_seams.py` checks the actual M30
+32-triangle low source: 40 continuous interior edges before M31 atlas
+preparation, and 40 intentionally disconnected edges afterward. This is a
+measurable prerequisite for future continuous organic chart unwrapping.
+It does **not** implement the organic unwrap, fix visible seams, or grant
+Android/artistic approval. The original M30/M31 baselines remain unchanged.
