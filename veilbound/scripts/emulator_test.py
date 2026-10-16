@@ -327,6 +327,13 @@ def main():
                 raise AssertionError("M20 human "+label+
                   " angle did not visibly update geometry: "+str(value))
             prior=OUT/("01_human_review_"+label+".png")
+        # A separate hand-level inspection image; the normal full-body
+        # turnaround is not enough to verify four fingers and thumb.
+        touch(w*.65,h*.265)  # Native human hand focus preset.
+        time.sleep(1.6)
+        hand_frame=shot("01_human_five_finger_closeup.png")
+        report["screenshots"].append(hand_frame)
+        atelier["human_hand_focus_capture"]=True
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
