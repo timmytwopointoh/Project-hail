@@ -1,0 +1,256 @@
+name: VEILFORGE M31 - Ultimate Human Anatomy and Skin
+on:
+  push:
+    branches:
+      - feature/veilbound-m31-reference-driven-realism
+    paths:
+      - '.github/workflows/veilforge-m31-ultimate-human.yml'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M29*.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java'
+      - 'veilbound/tools/HumanVariantCLI.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M29ReferenceSkinTest.java'
+      - 'docs/veilbound/M29_REFERENCE_AND_SKIN_PLAN.md'
+      - 'veilforge/pose_deformation_audit.py'
+      - 'veilforge/human_reference_fit.py'
+      - 'veilforge/human_reference_targets.json'
+      - 'veilforge/human_angle_review.py'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M30ReferenceRig.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M31SkinSurfaceNormals.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M30ReferenceRigTest.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M31SkinSurfaceNormalsTest.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-m31-human-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  anatomy-and-skin:
+    name: Deterministic pose/skin anatomy tests and preserved knight
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and test actual T-pose, standing reference and skin texture
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m29-java
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m29-java \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/M30ReferenceRig.java" "$SRC/M31SkinSurfaceNormals.java" \
+            "$SRC/ModelStudio.java" "$TEST/M29ReferenceSkinTest.java" \
+            "$TEST/M30ReferenceRigTest.java" "$TEST/M31SkinSurfaceNormalsTest.java" \
+            veilbound/tools/HumanVariantCLI.java
+          java -Xmx2g -cp /tmp/m29-java game.ashenveil.veilbound.M29ReferenceSkinTest
+          java -Xmx2g -cp /tmp/m29-java game.ashenveil.veilbound.M30ReferenceRigTest
+          java -Xmx2g -cp /tmp/m29-java game.ashenveil.veilbound.M31SkinSurfaceNormalsTest
+          python3 -m unittest discover -s veilforge/tests -v
+          test -s docs/veilbound/M29_REFERENCE_AND_SKIN_PLAN.md
+
+  reference-geometry-workers:
+    name: Source-reference pose renderer / ${{ matrix.pose }}
+    needs: anatomy-and-skin
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pose: [neutral, tpose, relaxed, old_tpose]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile real source geometry and the 14-view renderer
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m29-export
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          javac -d /tmp/m29-export \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/M30ReferenceRig.java" "$SRC/M31SkinSurfaceNormals.java" \
+            veilbound/tools/HumanVariantCLI.java
+      - name: Real 14-angle mesh views, head and hands with bounded source
+        env:
+          POSE: ${{ matrix.pose }}
+        run: |
+          set -euo pipefail
+          ROOT="inspection_output/m31-$POSE"
+          mkdir -p "$ROOT"
+          export ROOT
+          BASE=1,1,1,1,1,1,1,1,1,1,1,1
+          case "$POSE" in
+            neutral) FLAG=--m31-neutral ;;
+            tpose) FLAG=--m31-tpose ;;
+            relaxed) FLAG=--m31-relaxed ;;
+            old_tpose) FLAG=--m29-tpose ;;
+          esac
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m29-export \
+            game.ashenveil.veilbound.HumanVariantCLI "$BASE" "$ROOT" "$FLAG"
+          python3 veilforge/engine.py inspect \
+            --obj "$ROOT/human_candidate.obj" --out "$ROOT/mesh_quality.json"
+          python3 -m pip install --quiet Pillow
+          python3 veilforge/human_angle_review.py \
+            --root "$ROOT" --out "$ROOT/technical_angle_review.json"
+          python3 - <<'PY'
+          import os,json
+          from pathlib import Path
+          r=Path(os.environ["ROOT"])
+          q=json.loads((r/"mesh_quality.json").read_text())
+          a=json.loads((r/"mesh_evidence.json").read_text())
+          assert q["triangles"]>10000
+          assert len(a["camera_views"])==14
+          assert not a["reviewed"] and not a["photo_realistic"]
+          for angle in ("front","side","three_quarter"):
+              assert (r/("face_"+angle+".png")).stat().st_size>1500
+          assert len(list(r.glob("*_hand_*.png")))==6
+          assert q["nonmanifold_edges"]==0 and q["degenerate_triangles"]==0
+          semantic=json.loads((r/"technical_angle_review.json").read_text())
+          assert semantic["technical_pass"] and not semantic["artistic_approval"]
+          print("M31_REAL_SKIN_REFERENCE_VIEWS_PASS",os.environ["POSE"],
+                "tris",q["triangles"],"open",q["boundary_edges"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m31-actual-geometry-${{ matrix.pose }}
+          path: inspection_output/m31-${{ matrix.pose }}/
+          retention-days: 21
+          if-no-files-found: warn
+
+  reference-director:
+    name: Comparative reference and VEILFORGE material review
+    needs: reference-geometry-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m31-actual-geometry-*
+          path: inspection_output/reviews
+      - name: Learn unsafe pose strain from real exported vertices
+        run: |
+          set -euo pipefail
+          ROOT=inspection_output/reviews
+          OUT=inspection_output/m31-director
+          mkdir -p "$OUT"
+          for POSE in tpose relaxed; do
+            python3 veilforge/pose_deformation_audit.py \
+              --baseline "$ROOT/m31-actual-geometry-neutral/human_candidate.obj" \
+              --posed "$ROOT/m31-actual-geometry-$POSE/human_candidate.obj" \
+              --variant "$POSE" --out "$OUT/pose_strain_$POSE.json"
+          done
+          python3 veilforge/pose_deformation_audit.py \
+            --baseline "$ROOT/m31-actual-geometry-neutral/human_candidate.obj" \
+            --posed "$ROOT/m31-actual-geometry-old_tpose/human_candidate.obj" \
+            --variant tpose --out "$OUT/pose_strain_old_tpose.json"
+          python3 veilforge/human_reference_fit.py \
+            --obj "$ROOT/m31-actual-geometry-tpose/human_candidate.obj" \
+            --out "$OUT/reference_silhouette.json"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/m31-director")
+          old=json.loads((root/"pose_strain_old_tpose.json").read_text())
+          t=json.loads((root/"pose_strain_tpose.json").read_text())
+          relaxed=json.loads((root/"pose_strain_relaxed.json").read_text())
+          fit=json.loads((root/"reference_silhouette.json").read_text())
+          assert t["geometric_stretch_accepted"] and relaxed["geometric_stretch_accepted"]
+          assert old["triangle_faces_stretched_over_3x"]>t["triangle_faces_stretched_over_3x"]
+          assert fit["source_vertices"]>10000 and not fit["artistic_approval"]
+          assert fit["reference_pixels_in_repository"] is False
+          print("M31_MESH_REFERENCE_RIG_SIGNIFICANT_IMPROVEMENT",
+                "old",old["triangle_faces_stretched_over_3x"],
+                "new",t["triangle_faces_stretched_over_3x"],
+                "armspan",fit["model_armspan_over_height"])
+          PY
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/m31-director")
+          tests={key:json.loads((root/("pose_strain_"+key+".json")).read_text())
+                 for key in ("tpose","relaxed")}
+          assert all(x["triangles_evaluated"]>10000 for x in tests.values())
+          assert all(not x["auto_promoted"] and
+                     not x["manual_reference_likeness_approved"] for x in tests.values())
+          print("M31_POSE_STRAIN_LESSONS",{
+              k:{"strain_accepted":v["geometric_stretch_accepted"],
+                 "over3x":v["triangle_faces_stretched_over_3x"],
+                 "hip_leaks":v["lower_torso_and_pelvis_vertices_displaced"]}
+              for k,v in tests.items()})
+          PY
+      - name: Validate all three real 3D poses; preserve manual image gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/reviews")
+          quality={}
+          for name in ("neutral","tpose","relaxed","old_tpose"):
+              path=root/("m31-actual-geometry-"+name)
+              info=json.loads((path/"mesh_quality.json").read_text())
+              quality[name]={"triangles":info["triangles"],
+                             "boundary_edges":info["boundary_edges"],
+                             "nonmanifold_edges":info["nonmanifold_edges"]}
+          assert len({x["triangles"] for x in quality.values()})==1
+          assert all(x["nonmanifold_edges"]==0 for x in quality.values())
+          out=Path("inspection_output/m31-director")
+          out.mkdir(parents=True,exist_ok=True)
+          data={"engine":"VEILFORGE","iteration":"M31",
+                "source": "M28 reviewed unarmored candidate",
+                "reference_images":"T-pose and secondary 3/4 generated in conversation",
+                "source_image_pixels_available_in_repository":False,
+                "reference_silhouette_report":json.loads((out/"reference_silhouette.json").read_text()),
+                "old_m29_pose_strain":json.loads((out/"pose_strain_old_tpose.json").read_text()),
+                "poses":quality,"real_mesh_reference_poses":2,
+                "pose_strain_reports":{
+                    name:json.loads((out/("pose_strain_"+name+".json")).read_text())
+                    for name in ("tpose","relaxed")},
+                "pose_geometric_stretch_approved":all(x["geometric_stretch_accepted"] for x in (json.loads((out/("pose_strain_"+name+".json")).read_text()) for name in ("tpose","relaxed"))),
+                "new_skin_material":"deterministic micro-normal roughness atlas",
+                "skin_atlas_photographic":False,
+                "human_visual_reference_alignment":"PENDING",
+                "android_emulator_result":"SEPARATE WORKFLOW",
+                "ready_for_playable_hero":False,
+                "original_knight_preserved":True,"hair_unchanged":True}
+          (out/"M31_ULTIMATE_HUMAN_REPORT.json").write_text(json.dumps(data,indent=2)+"\n")
+          print(json.dumps(data,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m31-ultimate-human-review-only
+          path: inspection_output/m31-director/
+          retention-days: 21
+          if-no-files-found: warn
