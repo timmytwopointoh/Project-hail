@@ -125,23 +125,36 @@ public final class ContinuousHuman {
             // thumb: exactly five digits per hand. Individual fingertip
             // lengths follow little/ring/middle/index proportions; the webbing
             // stays fused into the palm but tips do NOT join one another.
-            final float[] tips={.576f,.517f,.493f,.538f};
-            for(int finger=0;finger<4;finger++){
-                float spread=(finger-1.5f)*.061f;
-                float fx=side*.554f*g[0]+spread;
-                f.bone(fx,.794f,.087f,fx,tips[finger],.095f,
-                       .019f,.021f,2);
-                // Very subtle raised proximal knuckle mass. This supports
-                // believable webbing without visually merging fingertips.
-                f.add(fx,.791f,.079f,.025f,.035f,.024f);
-            }
-            // Thumb emerges from the lateral palm and bends away from the
-            // index fingertip, rather than looking like a fifth straight
-            // finger or an extra knuckle embedded in the mitten.
+            final float[] tips={.576f,.517f,.493f,.538f}; // little, ring, middle, index
             float handCenter=side*.554f*g[0];
-            f.bone(handCenter+side*.074f,.844f,.100f,
-                   handCenter+side*.161f,.698f,.142f,
-                   .027f,.029f,2);
+            for(int finger=0;finger<4;finger++){
+                // The thumb is lateral on BOTH hands. Reverse anatomical
+                // finger order on the left; otherwise its little finger
+                // incorrectly sits beside the thumb.
+                int anatomicalFinger=side>0?finger:3-finger;
+                float spread=(finger-1.5f)*.067f;
+                float fx=handCenter+spread;
+                float jointY=.667f;
+                float tipY=tips[anatomicalFinger];
+                // Two joined phalange segments with slightly slimmer distal
+                // tissue. The knuckle transition stays organic, but the
+                // four tips are separated by actual open-air SDF gaps.
+                f.bone(fx,.795f,.087f,fx,jointY,.093f,
+                       .024f,.025f,2);
+                f.bone(fx,jointY,.093f,fx,tipY,.100f,
+                       .021f,.022f,2);
+                f.add(fx,.790f,.078f,.027f,.034f,.026f);
+                f.add(fx,jointY,.093f,.022f,.024f,.022f);
+            }
+            // Opposable thumb has a separate angled metacarpal and phalanx.
+            // Its base joins the palm, while its tip bends away from the
+            // nearest index finger rather than becoming a fifth straight ray.
+            f.bone(handCenter+side*.073f,.852f,.102f,
+                   handCenter+side*.122f,.768f,.119f,
+                   .032f,.031f,2);
+            f.bone(handCenter+side*.122f,.768f,.119f,
+                   handCenter+side*.183f,.689f,.151f,
+                   .027f,.027f,2);
             // Joined pelvis/thigh/hips to calf, ankle and broad human foot.
             float hx=side*.207f*g[4];
             f.add(hx,1.045f,-.018f,.175f*g[5],.204f,.159f);
@@ -172,11 +185,11 @@ public final class ContinuousHuman {
         float center=side*.554f;
         float[] samples=new float[9];
         for(int finger=0;finger<4;finger++)
-            samples[finger]=f.sample(center+(finger-1.5f)*.061f,.614f,.095f);
+            samples[finger]=f.sample(center+(finger-1.5f)*.067f,.614f,.097f);
         for(int gap=0;gap<3;gap++)
-            samples[4+gap]=f.sample(center+(gap-1f)*.061f,.614f,.095f);
-        samples[7]=f.sample(center+side*.161f,.703f,.142f);
-        samples[8]=f.sample(center+side*.120f,.700f,.140f);
+            samples[4+gap]=f.sample(center+(gap-1f)*.067f,.614f,.097f);
+        samples[7]=f.sample(center+side*.183f,.690f,.151f);
+        samples[8]=f.sample(center+side*.150f,.685f,.150f);
         return samples;
     }
     private static int idx(int x,int y,int z,int nx,int ny){
