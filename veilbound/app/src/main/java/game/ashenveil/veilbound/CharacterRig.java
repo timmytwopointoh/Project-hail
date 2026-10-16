@@ -11,16 +11,16 @@ import java.util.Arrays;
 public final class CharacterRig {
     private CharacterRig() {}
     public static final class Parts {
-        public final ArtKit.Model torso, leftArm, rightArm, leftLeg, rightLeg;
+        public final ArtKit.Model torso, leftArm, rightArm, leftLeg, rightLeg, mantle;
         public final float shoulderX,shoulderY,hipX,hipY;
         Parts(ArtKit.Model[] models,float sx,float sy,float hx,float hy){
             torso=models[0];leftArm=models[1];rightArm=models[2];
-            leftLeg=models[3];rightLeg=models[4];
+            leftLeg=models[3];rightLeg=models[4];mantle=models[5];
             shoulderX=sx;shoulderY=sy;hipX=hx;hipY=hy;
         }
         public int vertices(){
             return (torso.vertices.length+leftArm.vertices.length+rightArm.vertices.length
-                +leftLeg.vertices.length+rightLeg.vertices.length)/9;
+                +leftLeg.vertices.length+rightLeg.vertices.length+mantle.vertices.length)/9;
         }
     }
     private static final class Accumulator {
@@ -45,8 +45,8 @@ public final class CharacterRig {
         final float armTop=boss?3.34f:(revenant?2.06f:2.14f);
         final float legTop=boss?1.16f:(revenant?.82f:.77f);
         final float legEdge=boss?.26f:(revenant?.13f:.15f);
-        Accumulator[] a=new Accumulator[5];
-        for(int i=0;i<5;i++)a[i]=new Accumulator();
+        Accumulator[] a=new Accumulator[6];
+        for(int i=0;i<6;i++)a[i]=new Accumulator();
         float[] src=model.vertices;
         if(src.length%27!=0)throw new IllegalArgumentException("Non-triangular source");
         for(int i=0;i<src.length;i+=27){
@@ -54,15 +54,19 @@ public final class CharacterRig {
             float y=(src[i+1]+src[i+10]+src[i+19])/3f;
             float z=(src[i+2]+src[i+11]+src[i+20])/3f;
             int part=0;float px=0,py=0,pz=0;
-            if(z>-.34f&&y<legTop&&Math.abs(x)>legEdge){
+            if(!boss&&!revenant&&z<-.42f&&y>.12f&&y<2.05f){
+                // Distinct cloth island with shoulder-level hinge, not welded
+                // to the entire rigid torso. Enemy rigs remain unchanged.
+                part=5;py=1.93f;pz=-.51f;
+            }else if(z>-.34f&&y<legTop&&Math.abs(x)>legEdge){
                 part=x<0?3:4;px=x<0?-hipX:hipX;py=hipY;
             }else if(z>-.34f&&y>armBottom&&y<armTop&&Math.abs(x)>armEdge){
                 part=x<0?1:2;px=x<0?-shoulderX:shoulderX;py=shoulderY;
             }
             a[part].add(src,i,px,py,pz);
         }
-        ArtKit.Model[] out=new ArtKit.Model[5];
-        for(int i=0;i<5;i++)out[i]=a[i].finish();
+        ArtKit.Model[] out=new ArtKit.Model[6];
+        for(int i=0;i<6;i++)out[i]=a[i].finish();
         return new Parts(out,shoulderX,shoulderY,hipX,hipY);
     }
 }
