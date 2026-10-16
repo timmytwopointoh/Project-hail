@@ -29,7 +29,7 @@ permissions:
 jobs:
   promote-to-draft-pr:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 75
     steps:
       - name: Verify source workflow and immutable source commit
         id: source
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.source.outputs.sha }}
-          persist-credentials: true
+          persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -92,6 +92,63 @@ jobs:
             --expected-sha "${SOURCE_SHA}" --slot-id "${SLOT_ID}"
           git diff --check
           git diff --stat
+      - name: Set up trusted Android compile and emulator tools
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle for full Android debug build
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build APK from the reviewed candidate Java patch
+        run: |
+          gradle -p veilbound :app:assembleDebug --no-daemon
+          unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
+      - name: Install quantitative screenshot QA
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Enable Android virtualization
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Full Moto G (2025)-viewport Android 15 install, GL and touch acceptance
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash veilbound/scripts/emulator_test.sh
+      - name: Analyze candidate screenshots and classify any defects
+        if: always()
+        run: |
+          python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
+          python3 veilbound/scripts/qa_coordinator.py \
+            --input inspection_output/veilbound \
+            --commit "${{ steps.source.outputs.sha }}"
+      - name: Save candidate phone-focused QA and visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-reviewed-patch-emulator-evidence
+          path: inspection_output/veilbound/
+          if-no-files-found: warn
+      - name: Save emulator-tested reviewed APK for device inspection
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-reviewed-patch-moto-g-profile-TESTED-apk
+          path: veilbound/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
       - name: Push isolated code branch and create DRAFT pull request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -109,8 +166,11 @@ jobs:
           git add veilbound/app/src/main/java/game/ashenveil/veilbound/
           git diff --cached --quiet && { echo 'No source changes to propose'; exit 1; }
           git commit -m "Propose scoped VEILBOUND ${ROLE} worker change"
+          # Authenticate only AFTER generated code was compiled and exercised.
+          # Checkout deliberately did not persist write-capable Git credentials.
+          gh auth setup-git
           git push origin "HEAD:refs/heads/${BRANCH}"
           gh pr create --draft --base "${BASE}" --head "${BRANCH}" \
             --title "VEILBOUND: ${ROLE} / ${SLOT_ID} proposal from run ${SOURCE_RUN}" \
-            --body "Independent AI-suggested code changes, reviewed for promotion. Source commit: \`${SOURCE_SHA}\`. Model-authored Java patch must be reviewed as untrusted code. Pure Java tests passed at proposal time; full native emulator and real device testing still required before merge. Source manager run #${SOURCE_RUN}. No automatic merge."
+            --body "Independent AI-suggested code changes, reviewed for promotion. Source commit: \`${SOURCE_SHA}\`. Model-authored Java patch must be reviewed as untrusted code. Pure Java tests passed at proposal time and Android 15 Moto G-sized emulator smoke passed before this draft PR was created. A real-device test is STILL REQUIRED before merge. Source manager run #${SOURCE_RUN}. No automatic merge."
           echo 'NOTE: GitHub GITHUB_TOKEN pushes may not trigger downstream push workflows; manually run native APK QA on the promoted branch if no checks appear.' >> "${GITHUB_STEP_SUMMARY}"
