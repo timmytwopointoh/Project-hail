@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - 'feature/veilbound-m14-full-character-sculpt'
+      - 'feature/veilbound-m15-fitted-armor-realism'
       - 'feature/veilbound-m14-synchronized-emulator-workers'
     paths:
       - '.github/workflows/veilbound-parallel-emulators.yml'
@@ -32,7 +33,7 @@ permissions:
   contents: read
 # One immutable APK. Each emulator runs on a separate GitHub Ubuntu runner,
 # not competing for KVM, ADB ports, logcat or filesystem resources on one VM.
-# All synchronized machines run Android 15 with one immutable M14 game binary.
+# All synchronized machines run Android 15 with one immutable game binary.
 # The 4-shard default tests workers' latest game commit, NOT OS compatibility.
 # Optional compatibility mode retains Android 13/14/15 checks for release QA.
 # Runners may queue on GitHub account limits; no extra API or secret is required.
