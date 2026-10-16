@@ -133,6 +133,17 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
     candidates,incomplete=_loops(boundary)
     capped=[]
     skipped=[]
+    # M24 correction: hole caps must be constrained by existing edge
+    # incidences. Pure planarity is insufficient: the old repair introduced
+    # seven new nonmanifold edges and four zero-area faces in a human mesh.
+    # Whole cap-loops fail closed without changing the original OBJ.
+    occupied=Counter()
+    face_signatures=set()
+    for tri in cleaned:
+        vertices=[key(verts[c[0]]) for c in tri]
+        face_signatures.add(tuple(sorted(vertices)))
+        for i in range(3):
+            occupied[edge(vertices[i],vertices[(i+1)%3])]+=1
     if mode=="human":
         # Do not invent watertight joints on models with nonmanifold edges.
         if nonmanifold==0:
@@ -155,7 +166,30 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
                         break
                     faces.append((corners[a],corners[b],corners[c]))
                 if faces:
-                    capped.extend(faces)
+                    proposed=Counter()
+                    signatures=set()
+                    valid=True
+                    for face in faces:
+                        keys=[key(verts[c[0]]) for c in face]
+                        signature=tuple(sorted(keys))
+                        if len(set(keys))!=3 or _area2(*keys)<1.e-14 or (
+                                signature in face_signatures or signature in signatures):
+                            valid=False
+                            break
+                        signatures.add(signature)
+                        for k in range(3):
+                            e=edge(keys[k],keys[(k+1)%3])
+                            proposed[e]+=1
+                            if occupied[e]+proposed[e]>2:
+                                valid=False
+                                break
+                        if not valid:break
+                    if valid:
+                        capped.extend(faces)
+                        occupied.update(proposed)
+                        face_signatures.update(signatures)
+                    else:
+                        skipped.append({"edges":len(ring),"reason":"manifold-or-degenerate-protection"})
                 else:
                     skipped.append({"edges":len(ring),"reason":"fan degeneracy"})
     else:
