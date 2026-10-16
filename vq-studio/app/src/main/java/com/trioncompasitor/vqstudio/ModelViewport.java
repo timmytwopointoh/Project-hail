@@ -24,6 +24,12 @@ public final class ModelViewport extends View {
   }
   public ModelViewport(Context context){super(context);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
   public void setMesh(MeshData source){mesh=source;zoom=1f;invalidate();}
+  /** Replace geometry but preserve user yaw, pitch, zoom, rotation and edge mode. */
+  public void setMeshKeepingCamera(MeshData source){
+    if(source==null||source.triangles.length==0)throw new IllegalArgumentException("Empty model revision");
+    mesh=source;
+    invalidate();
+  }
   public String meshName(){return mesh.label;}
   public void toggleWire(){wire=!wire;invalidate();}
   public void toggleOrbit(){spin=!spin;invalidate();}
