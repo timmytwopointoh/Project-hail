@@ -12,11 +12,11 @@ PACKAGE = ROOT / "veilbound/app/src/main/java/game/ashenveil/veilbound"
 TESTS = ROOT / "veilbound/tests/game/ashenveil/veilbound"
 PURE = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
         "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
+        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
 SUITES = {
     "combat": ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay"],
     "assets": ["EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
-               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
+               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
 }
 
 def command(*args):
