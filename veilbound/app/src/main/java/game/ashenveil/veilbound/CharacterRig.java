@@ -39,13 +39,13 @@ public final class CharacterRig {
     }
     public static Parts split(ArtKit.Model model,boolean boss,boolean revenant){
         final float shoulderX=boss?1.05f:(revenant?.55f:.66f);
-        final float shoulderY=boss?2.55f:(revenant?1.51f:1.56f);
-        final float hipX=boss?.47f:(revenant?.22f:.25f);
-        final float hipY=boss?1.08f:(revenant?.70f:.70f);
+        final float shoulderY=boss?2.55f:(revenant?1.51f:1.78f);
+        final float hipX=boss?.47f:(revenant?.22f:.29f);
+        final float hipY=boss?1.08f:(revenant?.70f:1.02f);
         final float armEdge=boss?.78f:(revenant?.40f:.49f);
         final float armBottom=boss?1.16f:(revenant?.89f:.90f);
         final float armTop=boss?3.34f:(revenant?2.06f:2.14f);
-        final float legTop=boss?1.16f:(revenant?.82f:.77f);
+        final float legTop=boss?1.16f:(revenant?.82f:1.20f);
         final float legEdge=boss?.26f:(revenant?.13f:.15f);
         Accumulator[] a=new Accumulator[7];
         for(int i=0;i<7;i++)a[i]=new Accumulator();
