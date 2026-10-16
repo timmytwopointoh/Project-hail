@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-16",
+  "repository": "timmytwopointoh/Project-hail",
+  "source_of_truth": {
+    "branch": "feature/vq-library-snapshot-20261016",
+    "derived_from_sha": "6481720458f99258e19f1ed1fe16071adc508e73",
+    "source_ci": {
+      "run_id": 38918040166,
+      "conclusion": "success",
+      "scope": "full VEILFORGE universal factory and four emulator roles"
+    },
+    "important": "Snapshot contains one commit's tracked files, not independent unmerged branches."
+  },
+  "verified_workstreams": [
+    {
+      "name": "M29 conforming adaptive remeshing",
+      "branch": "feature/vq-m29-adaptive-remesh-quality",
+      "sha": "c244405dd61b6ef60c12adf98262461936ca741d",
+      "status": "technical_ci_pass",
+      "run": 38895465863
+    },
+    {
+      "name": "M30 sculpt-to-normal bake & Android GLES shading",
+      "branch": "feature/vq-m30-sculpt-baking-cleanup",
+      "sha": "f3864434e25a1e6a9c8e6e279c1c868255dc3714",
+      "status": "technical_ci_emulator_pass",
+      "run": 38901241312
+    },
+    {
+      "name": "M31 unique UV charts & compatible high/low transfer",
+      "branch": "feature/vq-m31-uv-atlas-bake",
+      "sha": "e665867b431b787f237e38eb2f450f4e240d7b67",
+      "status": "technical_ci_pass",
+      "run": 38906516500
+    },
+    {
+      "name": "M32 coherent UV continuity analysis",
+      "branch": "feature/vq-m32-coherent-organic-uv-20261016",
+      "sha": "fac032d982ae4df97790b04dae5d15ff3c7e1a1a",
+      "status": "technical_ci_pass",
+      "run": 38910389617
+    },
+    {
+      "name": "M33 connected planar charts",
+      "branch": "feature/vq-m33-connected-planar-charts-20261016",
+      "sha": "dff1b49770b376686090287e04459e2e1055559b",
+      "status": "separate_branch_technical_ci_pass",
+      "run": 38915154352
+    },
+    {
+      "name": "M34 parallel emulator efficiency",
+      "branch": "feature/veilforge-m34-efficient-emulator-qa",
+      "sha": "246a0f1bb4fbe9a71afab321f3ece17b2a6b1f3c",
+      "status": "technical_ci_full_android_pass",
+      "run": 38916145322
+    },
+    {
+      "name": "M34 bounded incremental logcat",
+      "branch": "feature/veilforge-m34-bounded-logcat-stream",
+      "sha": "6481720458f99258e19f1ed1fe16071adc508e73",
+      "status": "technical_ci_full_android_pass",
+      "run": 38918040166
+    }
+  ],
+  "separate_projects": [
+    {
+      "name": "VQ Studio offline Android companion",
+      "branch": "app/vq-studio-offline-repository-20261016",
+      "sha": "cb9d726edfbefcdc48996c0831aff77c958c35c0",
+      "run": 38908955273,
+      "status": "separate_app_branch_verified_android_ci_not_merged_into_engine"
+    },
+    {
+      "name": "Kaiyu game rig M3",
+      "branch": "feature/vq-kaiyu-game-rig-m3-20261016",
+      "sha": "cf359fced93389e15ad645b4d8b8e54df2528061",
+      "status": "separate_model_branch_not_part_of_snapshot"
+    },
+    {
+      "name": "Bellwarden/human model baking",
+      "branch": "feature/veilbound-m33-vq-baked-human-surface",
+      "sha": "c1f6a81738cef4598f0557357f26bc6b50964504",
+      "run": 38905827024,
+      "status": "separate_character_branch_not_part_of_snapshot"
+    }
+  ],
+  "cautions": [
+    "Green technical tests do not equal photorealism.",
+    "Never claim branches merged unless git merge history establishes it.",
+    "Actions artifacts expire; use Library ZIP or git checkout for recovery.",
+    "No private keys/signing secrets are archived.",
+    "Manual artistic and real-device performance gates remain open."
+  ]
+}
