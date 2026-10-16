@@ -1,0 +1,192 @@
+name: VEILBOUND M23 - Bounded Anatomy Refinement Wave
+on:
+  push:
+    branches:
+      - feature/veilbound-m23-extreme-refinement
+    paths:
+      - .github/workflows/veilbound-m23-refinement-wave.yml
+      - veilbound/scripts/human_mutation_worker.py
+      - veilbound/scripts/human_wave_manager.py
+      - veilbound/tools/HumanVariantCLI.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
+      - veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilbound-m23-anatomy-wave-${{ github.ref }}
+  cancel-in-progress: true
+
+# A single bounded run: 10 managers x 5 deterministic candidate slots.
+# No machine-generated suggestions are merged into the Android game.
+jobs:
+  anatomy-preflight:
+    name: Verify both five-digit hands before the wave
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile original mesh and actual hand-separation probes
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m23-human
+          javac -d /tmp/m23-human \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/SurfaceAtlas.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
+            veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java
+          java -cp /tmp/m23-human game.ashenveil.veilbound.HumanHandsTest
+      - name: Prohibit automatic promotion and confirm evidence policy
+        run: |
+          set -euo pipefail
+          grep -q "Never auto-promote" docs/veilbound/M23_EXTREME_REFINEMENT.md
+          test -f veilbound/scripts/human_mutation_worker.py
+          test -f veilbound/scripts/human_wave_manager.py
+          echo "Verified SDF hand probe, not a claim of visible Android digits." >> "$GITHUB_STEP_SUMMARY"
+
+  geometry-managers:
+    needs: anatomy-preflight
+    name: M23 candidate manager / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        team: [front_silhouette, side_silhouette, head_cranium, jaw_profile,
+               shoulders, torso, pelvis, hands_forearms, thighs_calves, feet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile full-resolution candidate mesh exporter
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m23-human
+          javac -d /tmp/m23-human \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/SurfaceAtlas.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
+            veilbound/tools/HumanVariantCLI.java
+      - name: Produce five candidate proposals and all 20 real mesh previews
+        env:
+          TEAM: ${{ matrix.team }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/m23-wave/${TEAM}"
+          mkdir -p "$OUT"
+          for SLOT in 0 1 2 3 4; do
+            python3 veilbound/scripts/human_mutation_worker.py \
+              --team "$TEAM" --slot "$SLOT" --out "$OUT"
+          done
+          PARAMS="$(python3 veilbound/scripts/human_mutation_worker.py \
+            --team "$TEAM" --select --out "$OUT" | tail -n 1)"
+          java -Xmx1800m -Djava.awt.headless=true -cp /tmp/m23-human \
+            game.ashenveil.veilbound.HumanVariantCLI "$PARAMS" "$OUT/selected"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path("inspection_output/m23-wave")/os.environ["TEAM"]
+          review=json.loads((root/"manager_review.json").read_text())
+          mesh=json.loads((root/"selected"/"mesh_evidence.json").read_text())
+          assert review["workers_reviewed"]==5
+          assert review["accepted_for_game"] is False
+          assert review["human_visual_approval_required"] is True
+          assert review["micro_edits_evaluated"]==320
+          assert mesh["offline_preview"] is True
+          assert mesh["reviewed"] is False
+          assert len(mesh["camera_views"])==14
+          assert mesh["hand_closeups_per_side"]==3
+          for view in mesh["camera_views"]:
+              assert (root/"selected"/(view+".png")).stat().st_size>1500, view
+          for side in ("left","right"):
+              for view in ("front","side","three_quarter"):
+                  name=f"{side}_hand_{view}.png"
+                  assert (root/"selected"/name).stat().st_size>1500, name
+          assert (root/"selected"/"human_candidate.obj").stat().st_size>15000
+          print("M23_CANDIDATE_ARTIFACTS_PASS",os.environ["TEAM"],
+                "five_slots=5 orbit_views=14 hand_closeups=6 review_only=true")
+          PY
+      - name: Upload true candidate mesh, previews and worker journaling
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m23-anatomy-${{ matrix.team }}
+          path: inspection_output/m23-wave/${{ matrix.team }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  review-gate:
+    name: Aggregate 50 slots - NEVER auto-promote
+    needs: [anatomy-preflight, geometry-managers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m23-anatomy-*
+          path: inspection_output/m23-collected
+      - name: Audit each independent manager and enforce fail-closed review
+        run: |
+          set -euo pipefail
+          python3 veilbound/scripts/human_wave_manager.py inspection_output/m23-collected
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("inspection_output/m23-collected")
+          reviews=list(root.rglob("manager_review.json"))
+          assert len(reviews)==10, f"Expected 10 managers; got {len(reviews)}"
+          for p in reviews:
+              e=json.loads((p.parent/"selected"/"mesh_evidence.json").read_text())
+              assert len(e["camera_views"])==14
+              assert e["hand_closeups_per_side"]==3
+              assert not e["reviewed"] and not e["photo_realistic"]
+          summary=Path("inspection_output/wave-ranking")
+          journal={
+              "iteration":"M23-01",
+              "candidate_slots_checked":50,
+              "anatomy_manager_reports":len(reviews),
+              "offline_orbit_views_per_manager":14,
+              "offline_hand_closeups_per_manager":6,
+              "android15_four_emulator_result":"separate_verified_run_required",
+              "human_visual_review":"PENDING",
+              "accepted_geometry":False,
+              "auto_promote":False,
+              "hair_refinement":"DISABLED",
+              "next_step":"Inspect real meshes and both hand closeups; record accept/reject and independently verify Android 15."
+          }
+          (summary/"m23_refinement_journal.json").write_text(json.dumps(journal,indent=2)+"\n")
+          print(json.dumps(journal,indent=2))
+          PY
+          cat inspection_output/wave-ranking/manager_human_review.md >> "$GITHUB_STEP_SUMMARY"
+          echo "M23 requires manual multi-angle review before any geometry is accepted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain shortlist and learning journal, without game edits
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m23-human-review-required
+          path: inspection_output/wave-ranking/
+          if-no-files-found: warn
+          retention-days: 14
