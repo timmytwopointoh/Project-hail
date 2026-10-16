@@ -10,6 +10,7 @@ on:
       - 'feature/veilbound-m15b-layered-pauldron-sculpt'
       - 'feature/veilbound-m16-articulated-joints'
       - 'feature/veilbound-m17-human-anatomy-worker-loop'
+      - 'feature/veilbound-m18-skinned-human-rig'
       - 'feature/veilbound-m14-synchronized-emulator-workers'
     paths:
       - '.github/workflows/veilbound-parallel-emulators.yml'
