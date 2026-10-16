@@ -21,7 +21,14 @@ import javax.imageio.ImageIO;
  * Camera labels are truthful; images render generated geometry, not AI art.
  */
 public final class HumanVariantCLI {
-    private static final String[] VIEWS={"front","side","back","three_quarter"};
+    private static final String[] VIEWS={
+        "front","side","back","three_quarter",
+        "orbit_030","orbit_060","orbit_120","orbit_150","orbit_210",
+        "orbit_225","orbit_240","orbit_270","orbit_300","orbit_330"
+    };
+    private static final int[] AZIMUTH={
+        0,90,180,45,30,60,120,150,210,225,240,270,300,330
+    };
     private static final class Face {
         final int[] px=new int[3],py=new int[3];
         final double depth;
@@ -55,12 +62,8 @@ public final class HumanVariantCLI {
         }
     }
     private static float[] camera(int view){
-        switch(view){
-            case 1:return new float[]{1f,0f,0f};
-            case 2:return new float[]{0f,0f,-1f};
-            case 3:return new float[]{.7071068f,0f,.7071068f};
-            default:return new float[]{0f,0f,1f};
-        }
+        double radians=Math.toRadians(AZIMUTH[view]);
+        return new float[]{(float)Math.sin(radians),0f,(float)Math.cos(radians)};
     }
     private static void render(ArtKit.Model mesh,int view,Path file) throws Exception{
         int width=640,height=720;
@@ -102,7 +105,7 @@ public final class HumanVariantCLI {
         }
         g.setColor(new Color(45,50,55));
         g.drawString(VIEWS[view].toUpperCase(Locale.US)+"  |  ACTUAL 3D MESH",14,28);
-        g.drawString("M20 ORIGINAL FUSED HUMAN - OFFLINE PREVIEW",14,height-21);
+        g.drawString("FUSED HUMAN - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
@@ -115,13 +118,18 @@ public final class HumanVariantCLI {
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
         ArtKit.Model mesh=ContinuousHuman.build(true,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
-        for(int view=0;view<4;view++)
+        for(int view=0;view<VIEWS.length;view++)
             render(mesh,view,dir.resolve(VIEWS[view]+".png"));
+        StringBuilder views=new StringBuilder();
+        for(String view:VIEWS){
+            if(views.length()>0)views.append(',');
+            views.append('"').append(view).append('"');
+        }
         String json="{\"model\":\"original_fused_human\",\"triangles\":"+
             mesh.triangleCount+",\"reviewed\":false,\"photo_realistic\":false,"+
-            "\"camera_views\":[\"front\",\"side\",\"back\",\"three_quarter\"]}";
+            "\"offline_preview\":true,\"camera_views\":["+views+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");
         System.out.println("VEILBOUND_HUMAN_VARIANT_PASS triangles="+mesh.triangleCount+
-            " views=front,side,back,three_quarter");
+            " offline_camera_views="+VIEWS.length);
     }
 }
