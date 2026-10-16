@@ -56,6 +56,32 @@ class TopologyTest(unittest.TestCase):
             result=repair_obj(src,root/"clean.obj",max_hole_diameter=2)
             self.assertEqual(result["small_hole_triangles_inserted"],0)
             self.assertEqual(result["after"]["boundary_edges"],4)
+    def test_existing_edge_blocks_unsafe_hole_cap(self):
+        """Do not create a third incident face on a preoccupied diagonal."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            src=root/"conflicting_hole.obj"
+            # An open five-edge cone rim plus a closed tetra that already
+            # occupies the rim's would-be fan diagonal twice. Before fix,
+            # naive hole caps produced nonmanifold edges on real human meshes.
+            src.write_text(
+                "v 0 0 0\nv 1 0 0\nv 1.2 .8 0\nv .5 1.2 0\n"
+                "v -.3 .7 0\nv .5 .5 .5\nv .3 .25 -.5\nv .5 -.2 -.5\n"
+                "f 1 2 6\nf 2 3 6\nf 3 4 6\nf 4 5 6\nf 5 1 6\n"
+                "f 5 3 7\nf 3 5 8\nf 5 8 7\nf 3 7 8\n"
+            )
+            before=inspect_obj(src)
+            self.assertEqual(before["nonmanifold_edges"],0)
+            self.assertEqual(before["boundary_edges"],5)
+            repaired=repair_obj(src,root/"safe.obj",max_hole_diameter=2)
+            self.assertEqual(repaired["after"]["nonmanifold_edges"],0)
+            self.assertEqual(repaired["after"]["degenerate_triangles"],0)
+            self.assertEqual(repaired["after"]["boundary_edges"],5)
+            self.assertEqual(repaired["small_hole_triangles_inserted"],0)
+            self.assertTrue(any(
+                row.get("reason")=="manifold-or-degenerate-protection"
+                for row in repaired["skipped_boundary_loops"]))
+            self.assertEqual(inspect_obj(src)["boundary_edges"],5)
     def test_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             src=Path(tmp)/"a.obj"
