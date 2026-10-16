@@ -1,6 +1,7 @@
 """M34-08: a bounded log cursor must not lose renderer failures or views."""
 from pathlib import Path
-from queue import Queue
+from collections import deque
+from threading import Condition
 from types import SimpleNamespace
 from unittest.mock import patch
 import sys
@@ -68,9 +69,17 @@ class EventCursorTests(unittest.TestCase):
     def test_stream_handshake_and_durable_file_without_android(self):
         class FakePipe:
             def __init__(self):
-                self.events = Queue()
+                self.events = deque()
+                self.cv = Condition()
+            def put(self, line):
+                with self.cv:
+                    self.events.append(line)
+                    self.cv.notify()
             def readline(self):
-                return self.events.get(timeout=2)
+                with self.cv:
+                    if not self.cv.wait_for(lambda: bool(self.events), timeout=2):
+                        raise TimeoutError("fake log stream timed out")
+                    return self.events.popleft()
             def close(self):
                 pass
 
@@ -82,7 +91,7 @@ class EventCursorTests(unittest.TestCase):
                 return None if self.alive else 0
             def terminate(self):
                 self.alive = False
-                self.stdout.events.put(b"")
+                self.stdout.put(b"")
             def wait(self, timeout=None):
                 return 0
             def kill(self):
@@ -90,7 +99,7 @@ class EventCursorTests(unittest.TestCase):
 
         proc = FakeProc()
         def handshake(*args, **kwargs):
-            proc.stdout.events.put(b"I/VEILFORGE_PROBE: VQ_LOGCAT_ATTACHED_FIXED\n")
+            proc.stdout.put(b"I/VEILFORGE_PROBE: VQ_LOGCAT_ATTACHED_FIXED\n")
             return SimpleNamespace(returncode=0)
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "device_logcat.txt"
@@ -100,7 +109,7 @@ class EventCursorTests(unittest.TestCase):
                        return_value=SimpleNamespace(hex="FIXED")):
                 with LogcatStream(output) as stream:
                     cursor = stream.mark()
-                    proc.stdout.events.put(
+                    proc.stdout.put(
                         b"I/VEILFORGE_PROBE: FRAME_OK asset=scene yaw=0 pitch=15\n")
                     line = stream.wait_for(
                         lambda s: "FRAME_OK asset=scene yaw=0 pitch=15" in s,
