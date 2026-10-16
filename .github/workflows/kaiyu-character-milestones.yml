@@ -1,4 +1,4 @@
-name: Kaiyu - Rig, VQ and Android Milestone Evidence
+name: Kaiyu - M3 Rig, Expressions, VQ, Android
 on:
   push:
     branches: ['feature/vq-kaiyu-*']
@@ -33,8 +33,13 @@ jobs:
             --output "$KAIYU_OUT/kaiyu_skinned_m2.glb" \
             --report "$KAIYU_OUT/kaiyu_skin_m2_report.json"
           python3 assets/kaiyu/validate_kaiyu.py
+          python3 assets/kaiyu/expressions_kaiyu.py \
+            --input "$KAIYU_OUT/kaiyu_skinned_m2.glb" \
+            --output "$KAIYU_OUT/kaiyu_game_m3.glb" \
+            --report "$KAIYU_OUT/kaiyu_expression_m3_report.json"
+          python3 assets/kaiyu/validate_m3.py
           python3 assets/kaiyu/android_pack_kaiyu.py \
-            --glb "$KAIYU_OUT/kaiyu_skinned_m2.glb" \
+            --glb "$KAIYU_OUT/kaiyu_game_m3.glb" \
             --out "$KAIYU_OUT/scene"
           python3 - <<'PY'
           import json,os
@@ -44,9 +49,11 @@ jobs:
           a=json.loads((d/'scene/kaiyu_android_pack_report.json').read_text())
           assert all(t['passes'].values())
           assert t['skins']==7 and t['animation_channels']==22
+          m=json.loads((d/'kaiyu_m3_validation.json').read_text())
+          assert m['facial_expression_states']==10 and m['animation_clips']==2 and m['skinned_groups']==7
           assert a['triangles']>=100000 and a['embedded_albedo_images']>=1
           assert not a['skin_playback_on_android'] and not a['quality_approved']
-          print('KAIYU_MILESTONE_RIG_AND_TEXTURE_PASS')
+          print('KAIYU_M3_RIG_SKIN_MORPH_TEXTURE_PASS')
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -75,10 +82,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import trimesh
-          src=Path('inspection_output/kaiyu/kaiyu_skinned_m2.glb')
+          src=Path('inspection_output/kaiyu/kaiyu_game_m3.glb')
           model=trimesh.load(src,force='scene',process=False).to_geometry()
           target=Path('inspection_output/kaiyu/kaiyu_vq_source.obj')
-          model.export(target)
+          model.export(target,include_texture=False)  # Real tail UVs remain in GLB; no fake zero UVs for untextured components
           print('KAIYU_ACTUAL_OBJ_SOURCE',len(model.faces),len(model.vertices))
           assert len(model.faces)>=100000
           PY
@@ -91,6 +98,9 @@ jobs:
           from pathlib import Path
           r=json.loads(Path('inspection_output/kaiyu/vq_real_inspection/vq_model_report.json').read_text())
           assert r['engine']=='VEYLQUORIN' and len(r['visual']['views'])==14
+          assert r['technical_geometry_smoke_passed'] is True
+          assert r['geometry']['degenerate_triangles']==0
+          assert r['geometry']['duplicate_triangles']==0
           assert r['production_approved'] is False
           print('KAIYU_VQ_REAL_FOURTEEN_VIEW_INSPECT',r['blocking_technical_findings'])
           PY
