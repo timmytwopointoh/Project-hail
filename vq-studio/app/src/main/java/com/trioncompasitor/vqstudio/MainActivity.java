@@ -56,6 +56,7 @@ public final class MainActivity extends Activity {
     toggles.addView(button("Rotate / stop",()->viewport.toggleOrbit()),new LinearLayout.LayoutParams(0,dp(48),1));
     toggles.addView(button("Update",this::refresh),new LinearLayout.LayoutParams(0,dp(48),1));
     root.addView(toggles);
+    root.addView(button("Open current model snapshots on GitHub",this::openRunArtifacts));
     small=text("LIVE: GitHub worker steps • 3D: the most recently imported OBJ\nModel geometry will not change until a verified new snapshot is loaded.",12,ink);
     root.addView(small);
     ScrollView scroll=new ScrollView(this);
@@ -87,6 +88,12 @@ public final class MainActivity extends Activity {
   @Override protected void onResume(){super.onResume();active=true;timer.removeCallbacks(updater);timer.post(updater);}
   @Override protected void onPause(){active=false;timer.removeCallbacks(updater);super.onPause();}
   @Override protected void onDestroy(){timer.removeCallbacks(updater);io.shutdownNow();super.onDestroy();}
+  private void openRunArtifacts(){
+    if(!VQProtocol.validRunId(runId)){status.setText("No verified VQ workflow run selected yet.");return;}
+    Intent web=new Intent(Intent.ACTION_VIEW,Uri.parse(
+      "https://github.com/"+VQProtocol.REPO+"/actions/runs/"+runId));
+    try{startActivity(web);}catch(Exception e){status.setText("No browser available to open worker artifacts");}
+  }
   private void openTrion(){
     Intent intent=new Intent();
     intent.setClassName(VQProtocol.TRION_PACKAGE,VQProtocol.TRION_BRIDGE);
