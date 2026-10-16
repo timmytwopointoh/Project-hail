@@ -33,6 +33,10 @@ def mask(region,p):
         return -0.18<x<0.18 and 2.35<y<2.52 and .09<z<.27
     if region=="shoulders":
         return .23<abs(x)<.53 and 1.82<y<2.10 and -.02<z<.22
+    if region=="hands":
+        # Right-hand-only UV baking diagnosis; mirrored left is not silently
+        # treated as interchangeable with anatomical/nail geometry.
+        return .46<x<.82 and .70<y<1.22 and -.09<z<.24
     if region=="feet":
         return .07<abs(x)<.45 and .02<y<.33 and -.14<z<.48
     raise ValueError("Unsupported anatomical region")
@@ -187,7 +191,7 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument("--obj",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
-    p.add_argument("--region",choices=("face","shoulders","feet"),required=True)
+    p.add_argument("--region",choices=("face","shoulders","hands","feet"),required=True)
     a=p.parse_args()
     info=build(a.obj,a.out,a.region)
     print("VQ_M33_ACTUAL_HUMAN_SKIN_REGION",
