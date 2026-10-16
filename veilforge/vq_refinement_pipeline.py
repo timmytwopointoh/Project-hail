@@ -17,8 +17,10 @@ from vq_brushes import apply_brushes
 from vq_adaptive_remesh import refine
 from vq_model_tools import inspect
 from gltf_export import export
+from vq_multimaterial_export import export as material_preserving_export
 
-def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_faces=4200):
+def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_faces=4200,
+             source_gltf=None,source_manifest=None):
     source=Path(source)
     out=Path(out)
     if not source.is_file():
@@ -36,7 +38,12 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
         refined)
     preview_gltf=out/"stage2_single_material_diagnostic.gltf"
     gltf=export(refined,preview_gltf,profile=profile)
-    vision=inspect(refined,out/"inspector",gltf=preview_gltf,
+    material_gltf=None
+    if source_gltf is not None:
+        material_gltf=out/"stage2_material_preserved.gltf"
+        material_preserving_export(refined,material_gltf,
+            source_gltf=source_gltf,source_manifest=source_manifest)
+    vision=inspect(refined,out/"inspector",gltf=material_gltf or preview_gltf,
                    render_faces=render_faces)
     start=inspect_obj(source)
     final=inspect_obj(refined)
@@ -57,12 +64,13 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
         "remeshed_triangles":final["triangles"],
         "adaptive_interior_edges":remesh_report["edges_selected"],
         "material_source_ids":["original OBJ usemtl assignments preserved in OBJ"],
-        "multi_material_finished_gltf":False,
-        "gltf_single_material_diagnostic_only":True,
+        "multi_material_export_verified":material_gltf is not None,
+        "gltf_single_material_diagnostic_only":material_gltf is None,
         "source_topology_metrics":{k:start[k] for k in keys},
         "refined_topology_metrics":{k:final[k] for k in keys},
         "checked_angles":len(vision["visual"]["views"]),
-        "gltf_diagnostic_integrity_passed":vision["gltf"]["structural_smoke_passed"],
+        "gltf_export_integrity_passed":vision["gltf"]["structural_smoke_passed"],
+        "preserved_texture_images_verified":vision["gltf"]["images_verified"],
         "uv_collapsed_faces":vision["uv"]["collapsed_uv_faces"],
         "brush_and_refine_technical_gates_passed":True,
         "android_render_verified":False,
@@ -79,7 +87,8 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
           f"Conforming edges split: {report['adaptive_interior_edges']}",
           f"Real source diagnostic views: {report['checked_angles']}",
           f"Topology regressions: {len(unexpected)}",
-          "Material warning: the preview glTF intentionally collapses materials and is NOT a production package.",
+          f"Original material groups/PBR textures preserved in second glTF: {report['multi_material_export_verified']}",
+          "Even a verified multi-material glTF still requires Android imports, tangent mapping, reference visuals, and release review.",
           "Android validation and aesthetic approval remain open."]
     (out/"refinement_evidence.md").write_text("\n".join(text)+"\n")
     return report
@@ -90,8 +99,11 @@ def main():
     p.add_argument("--brush",type=Path,required=True)
     p.add_argument("--refine",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
+    p.add_argument("--source-gltf",type=Path)
+    p.add_argument("--source-manifest",type=Path)
     a=p.parse_args()
-    r=workflow(a.obj,a.brush,a.refine,a.out)
+    r=workflow(a.obj,a.brush,a.refine,a.out,
+               source_gltf=a.source_gltf,source_manifest=a.source_manifest)
     print("VQ_M29_END_TO_END_REFINEMENT_PASS",
           json.dumps({"stages":len(r["workflow"]),"views":r["checked_angles"],
                       "original_faces":r["source_triangles"],

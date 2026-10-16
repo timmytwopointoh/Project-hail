@@ -7,6 +7,8 @@ on:
       - 'veilforge/vq_model_tools.py'
       - 'veilforge/vq_brushes.py'
       - 'veilforge/vq_adaptive_remesh.py'
+      - 'veilforge/vq_multimaterial_export.py'
+      - 'veilforge/tests/test_vq_multimaterial_export.py'
       - 'veilforge/vq_adaptive_remesh_demo.json'
       - 'veilforge/vq_refinement_pipeline.py'
       - 'veilforge/vq_quality_plan.py'
@@ -165,6 +167,8 @@ jobs:
             --obj inspection_output/vq-smoke/brush-source/rolling_terrain.obj \
             --brush veilforge/vq_brush_demo.json \
             --refine veilforge/vq_adaptive_remesh_demo.json \
+            --source-gltf inspection_output/vq-smoke/brush-source/rolling_terrain.gltf \
+            --source-manifest inspection_output/vq-smoke/brush-source/asset_manifest.json \
             --out inspection_output/vq-smoke/adaptive
           python3 - <<'PY'
           import json
@@ -180,7 +184,13 @@ jobs:
           assert result["checked_angles"]==14
           assert inspected["uv"]["collapsed_uv_faces"]==0
           assert inspected["technical_geometry_smoke_passed"] is True
-          assert result["multi_material_finished_gltf"] is False
+          assert result["multi_material_export_verified"] is True
+          assert result["preserved_texture_images_verified"]>=8
+          real=json.loads((root/"stage2_material_preserved.gltf").read_text())
+          assert len(real["materials"])>=2
+          assert len(real["images"])>=8
+          assert len(real["meshes"][0]["primitives"])==len(real["materials"])
+          assert all((root/img["uri"]).is_file() for img in real["images"])
           assert not result["artist_approval"] and not result["game_ready"]
           print("VQ_M29_ENGINE_GATE_PASS",
                 result["source_triangles"],"->",result["remeshed_triangles"],

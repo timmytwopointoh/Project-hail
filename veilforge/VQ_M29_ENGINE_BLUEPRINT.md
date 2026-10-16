@@ -94,7 +94,18 @@ T-junction.
 - The new `vq_refinement_pipeline.py` runs VQ sculpt, smooth and stamp
   strokes, then adaptive subdivision, a **single-material diagnostic**
   glTF export, plus 14 real source-mesh images and independent OBJ/glTF QA.
-  **The diagnostic glTF is not a correct multi-material finished game export.**
+  The diagnostic glTF is deliberately single-material for isolated renderer checks.
+- New `vq_multimaterial_export.py` adds a second indexed glTF exporter
+  retaining the original material partitions, source per-vertex normals/UVs,
+  colors, and every verified albedo/normal/AO/metallic-roughness PNG. The
+  source glTF and textures can be checked against `asset_manifest.json`
+  SHA256 before copying. Unsafe external/absolute/traversal texture URIs
+  fail closed. This output is a genuine **preserved-material export candidate**
+  but is not necessarily production-ready (no new tangent vectors, baked
+  high-to-low normals, animation, target-engine importer approval).
+- The end-to-end pipeline now optionally checks this second multi-material
+  glTF with all texture images and all source material groups intact. The
+  original source mesh and original PBR material library are never mutated.
 
 This is production *infrastructure*, not completed photoreal artistry.
 Smooth/subdivide alone does not repair bad underlying topology or guarantee
@@ -112,6 +123,8 @@ python3 veilforge/vq_refinement_pipeline.py \
   --obj build/source/rolling_terrain.obj \
   --brush veilforge/vq_brush_demo.json \
   --refine veilforge/vq_adaptive_remesh_demo.json \
+  --source-gltf build/source/rolling_terrain.gltf \
+  --source-manifest build/source/asset_manifest.json \
   --out build/vq-refinement
 ```
 
