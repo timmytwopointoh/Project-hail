@@ -33,3 +33,15 @@ File `M28FaceSculpt.java` now puts brow geometry behind the orbital ridge to avo
 - M28 corrected brow/eyes variant: **pending its latest workflow completion and screenshot inspection**.
 - Synchronized Android 15 M28 game test: **pending**; unchanged M26 test already passed all four devices (run 38879647975).
 - Visual likeness, retopology, polished skin texture and believable facial expressions: **not approved**.
+
+## Verified result of corrected M28 render and mesh repair
+
+GitHub Actions [38882167668](https://github.com/timmytwopointoh/Project-hail/actions/runs/38882167668) completed successfully after the brow and pupil correction. True mesh evidence artifacts: `m28-real-facial-anatomy-14-views-and-reference` and `m28-veilforge-glTF-skin-and-topology-review`.
+
+- M26 raw baseline: **59,951 triangles, 1,941 boundary edges, 0 nonmanifold**.
+- Corrected M28 raw: **59,679 triangles, 2,147 boundary edges, 0 nonmanifold**.
+- Conservative isolated M28 export repair: **60,171 triangles, 1,267 boundary edges, 0 nonmanifold, 0 degenerate**, with 492 added safe cap triangles.
+- **1,267 open edges still remain.** Repair output is an unapproved interchange artifact, not a fixed production mesh.
+- Corrected M28 software front/side/three-quarter images show the previous prominent eyebrow slab largely tucked beneath the skin. Eyes and jaw still look stylized/mannequin-like; human visual approval remains false.
+- Ten provenance-backed manual observations are now in `veilforge/feedback/sculpt_lessons.json`, including two M28-specific defects. These are data lessons, **not a claim of automated reference image interpretation**.
+- Latest native Android 15 farm [38882858869](https://github.com/timmytwopointoh/Project-hail/actions/runs/38882858869) and native game build [38882858816](https://github.com/timmytwopointoh/Project-hail/actions/runs/38882858816) remain separate release gates and must report success before device claims can be made.
