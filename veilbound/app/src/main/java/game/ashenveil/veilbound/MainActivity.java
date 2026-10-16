@@ -19,6 +19,9 @@ public final class MainActivity extends Activity {
     private WorldState game;
     private WardenHud hud;
     private ValeRenderer renderer;
+    private FrameLayout root;
+    private LoadingView splash;
+    private volatile boolean foreground=true;
     private static final int REQUEST_OBJ=7210;
 
     private void immersive(){
@@ -37,34 +40,92 @@ public final class MainActivity extends Activity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         immersive();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        root=new FrameLayout(this);
+        splash=new LoadingView(this);
+        root.addView(splash,new FrameLayout.LayoutParams(-1,-1));
+        setContentView(root);
+        splash.update(1,"Preparing the Bellwarden");
+        Log.i("VEILBOUND_BOOT","SPLASH_VISIBLE source=real_loading_tasks");
+        // Heavy procedural geometry and PBR atlas generation run away from
+        // Android UI and OpenGL threads. The scene is installed only after
+        // the immutable CPU bundle is ready.
+        new Thread(new Runnable(){
+            @Override public void run(){
+                try{
+                    final BootAssets prebuilt=BootAssets.prepare(new BootAssets.Progress(){
+                        @Override public void stage(final int percent,final String description){
+                            Log.i("VEILBOUND_BOOT","STAGE percent="+percent+" label="+description);
+                            runOnUiThread(new Runnable(){
+                                @Override public void run(){
+                                    if(splash!=null)splash.update(percent,description);
+                                }
+                            });
+                        }
+                    });
+                    runOnUiThread(new Runnable(){
+                        @Override public void run(){createGameScene(prebuilt);}
+                    });
+                }catch(final Throwable fault){
+                    Log.e("VEILBOUND_BOOT","Startup preprocessing failed",fault);
+                    runOnUiThread(new Runnable(){
+                        @Override public void run(){
+                            if(splash!=null)splash.failed("Asset preparation failed");
+                        }
+                    });
+                }
+            }
+        },"VeilboundAssetBaker").start();
+    }
+    private void createGameScene(BootAssets prebuilt){
+        if(isFinishing())return;
         game=new WorldState();
         scene=new GLSurfaceView(this);
         scene.setEGLContextClientVersion(2);
         scene.setPreserveEGLContextOnPause(true);
-        renderer=new ValeRenderer(game);
+        renderer=new ValeRenderer(game,prebuilt,new ValeRenderer.StartupListener(){
+            @Override public void stage(final int percent,final String description){
+                Log.i("VEILBOUND_BOOT","GL_STAGE percent="+percent+" label="+description);
+                runOnUiThread(new Runnable(){
+                    @Override public void run(){
+                        if(splash!=null)splash.update(percent,description);
+                    }
+                });
+            }
+            @Override public void ready(){
+                runOnUiThread(new Runnable(){
+                    @Override public void run(){
+                        if(splash!=null){
+                            splash.update(100,"The Bellwarden awakens");
+                            root.removeView(splash);splash=null;
+                        }
+                        Log.i("VEILBOUND_BOOT","FIRST_FRAME_READY");
+                    }
+                });
+            }
+        });
         scene.setRenderer(renderer);
         scene.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         hud=new WardenHud(this,game);
         hud.setImportAction(new Runnable(){
             @Override public void run(){chooseObjFile();}
         });
-        FrameLayout frame=new FrameLayout(this);
-        frame.addView(scene,new FrameLayout.LayoutParams(-1,-1));
-        frame.addView(hud,new FrameLayout.LayoutParams(-1,-1));
-        setContentView(frame);
+        root.addView(scene,0,new FrameLayout.LayoutParams(-1,-1));
+        root.addView(hud,1,new FrameLayout.LayoutParams(-1,-1));
+        if(foreground)scene.onResume();
         Log.i("VEILBOUND_STATE","activity_created native_gl=true mode=title");
     }
     @Override protected void onResume(){
-        super.onResume();immersive();
+        super.onResume();foreground=true;immersive();
         if(scene!=null)scene.onResume();
     }
     @Override protected void onPause(){
+        foreground=false;
         if(scene!=null)scene.onPause();super.onPause();
     }
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
         setIntent(intent);
-        if("game.ashenveil.veilbound.INSPECT".equals(intent.getAction())){
+        if(game!=null&&"game.ashenveil.veilbound.INSPECT".equals(intent.getAction())){
             WorldState.Snapshot s=game.snapshot();
             Log.i("VEILBOUND_STATE","INSPECT mode="+s.mode+" x="+s.x+" z="+s.z+
                   " hp="+s.health+" stamina="+s.stamina+" sigils="+s.fragments);
