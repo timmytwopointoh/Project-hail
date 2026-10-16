@@ -1,0 +1,52 @@
+name: VQ M34 - Non-destructive Source Reachability Audit
+
+on:
+  push:
+    branches: ['feature/vq-m34-source-reachability-*']
+    paths:
+      - 'tools/vq_source_reachability.py'
+      - 'tests/test_vq_source_reachability.py'
+      - '.github/workflows/vq-source-reachability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vq-source-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  static-source-audit:
+    name: Source-only audit (no APK, emulators or model builds)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify source SHA and run adversarial audit tests
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m unittest discover -s tests -p 'test_vq_source_reachability.py' -v
+          python3 -m compileall -q tools/vq_source_reachability.py
+      - name: Produce immutable review-only reachability report
+        run: |
+          set -euo pipefail
+          python3 tools/vq_source_reachability.py \
+            --root . --source-sha "$GITHUB_SHA" \
+            --out inspection_output/vq-source-audit/reachability.json
+          echo "Source commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review candidates are NOT safe to delete; cross-branch and dynamic consumers are unknown.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve report without mutating any sources
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-m34-source-reachability-${{ github.sha }}
+          path: inspection_output/vq-source-audit/
+          if-no-files-found: warn
+          retention-days: 30
