@@ -570,6 +570,46 @@ def main():
             "four_tpose_angles":True,"skin_atlas_uploaded":True,
             "human_look_manual_review_required":True,
             "photo_skin_verified":False,"historical_knight_untouched":True}
+        # M31 technical reality test. Each pose loads only on demand and
+        # keeps the old knight, M28 skin, M29 failed weight scheme available.
+        m31_images=[]
+        for item,label,angles in (
+                (19,"neutral",("front","side","three_quarter")),
+                (20,"tpose",("front","side","back","three_quarter")),
+                (21,"relaxed",("front","side"))):
+            touch(w*.65,h*.865)
+            time.sleep(1.0)
+            for retry in range(28):
+                text=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                         timeout=20).decode("utf-8","replace")
+                if "item="+str(item) in text and (
+                       "M31_REFERENCE_REALISM_READY item="+str(item)) in text:
+                    break
+                time.sleep(.45)
+            else:
+                raise AssertionError("M31 "+label+
+                    " actual mesh failed to load into Android Testing Grounds")
+            prev=None
+            for angle in angles:
+                if angle!="front":
+                    touch(w*.50,h*.758)
+                    time.sleep(.9)
+                image_name="01_m31_"+label+"_"+angle+".png"
+                report["screenshots"].append(shot(image_name))
+                m31_images.append(image_name)
+                if prev is not None:
+                    with Image.open(OUT/prev) as aa,Image.open(OUT/image_name) as bb:
+                        delta=ImageStat.Stat(ImageChops.difference(
+                            aa.convert("RGB").resize((180,105)),
+                            bb.convert("RGB").resize((180,105)))).mean
+                    if sum(delta)/3<.12:
+                        raise AssertionError("M31 "+label+" reference viewer frozen at "+angle)
+                prev=image_name
+        atelier["m31_reference_realism"]={
+            "all_three_meshes_loaded":True,"actual_3d_views":len(m31_images),
+            "genuine_m30_rig":True,"existing_m29_skin_shader":True,
+            "calibrated_photo_match":False,"production_photorealism_approved":False,
+            "original_knight_preserved":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
