@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "description": "One finite-input correctness trial for the self-hosted studio AI. Not an instruction to modify the game branch.",
+  "tasks": [
+    {
+      "id": "VB-PILOT-STUDIO-FINITE",
+      "role": "studio",
+      "priority": "P1",
+      "goal": "In ModelStudio.java, fix the PRIVATE static clamp(float x,float lo,float hi) so Float.NaN inputs safely return lo, but every finite value clamps exactly as before. Make a one-line localized Java logic change by copying the existing clamp declaration exactly. This prevents NaN camera touch deltas from poisoning orbit, pan and dolly state. Never change signatures or other methods, do not merely format code, do not add imports."
+    }
+  ]
+}
