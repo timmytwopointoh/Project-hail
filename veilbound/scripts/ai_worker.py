@@ -24,7 +24,7 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 ROLES = {
     "combat": ["WorldState.java"],
     "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
-    "models": ["M30ReferenceRig.java", "M31SkinSurfaceNormals.java", "M29ReferencePose.java", "M28FaceSculpt.java", "M28SkinContinuity.java", "M26SculptDials.java", "HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "models": ["M32ShoulderRig.java", "M32AnatomySurface.java", "M30ReferenceRig.java", "M31SkinSurfaceNormals.java", "M29ReferencePose.java", "M28FaceSculpt.java", "M28SkinContinuity.java", "M26SculptDials.java", "HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "M25SkinPolish.java", "MaterialTextures.java", "SurfaceAtlas.java", "MaterialMapping.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
@@ -78,7 +78,7 @@ def run_java_checks(replacement):
         classes.mkdir()
         pure = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
                 "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M30ReferenceRig", "M31SkinSurfaceNormals", "M26SculptDials", "M28FaceSculpt", "M28SkinContinuity", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
+                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M32ShoulderRig", "M32AnatomySurface", "M30ReferenceRig", "M31SkinSurfaceNormals", "M26SculptDials", "M28FaceSculpt", "M28SkinContinuity", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
         suites = ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay",
                   "EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
                   "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader",
