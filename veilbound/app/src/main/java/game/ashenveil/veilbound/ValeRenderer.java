@@ -38,6 +38,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh studioM28Face,studioM28FaceLite;
     private Mesh[] studioM29Tpose,studioM29Relaxed;
     private final Mesh[][] studioM31ReviewMeshes=new Mesh[3][2];
+    private final Mesh[][] studioM32ReviewMeshes=new Mesh[3][2];
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -506,6 +507,22 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * M30's corrected arm weights retain M28's skin coordinates and skin
      * normals come from the M31 seam-conscious source smoother.
      */
+    /** M32 opt-in anatomical reference pose; never overwrites historic hero. */
+    private Mesh getM32ReviewMesh(int item,boolean ultra){
+        int pose=item-22,detail=ultra?1:0;
+        if(pose<0||pose>=3)throw new IllegalArgumentException("M32 review slot");
+        if(studioM32ReviewMeshes[pose][detail]==null){
+            ArtKit.Model rest=HumanAnatomy.buildM32Candidate(!ultra);
+            ArtKit.Model candidate=pose==0?rest:M32ShoulderRig.pose(
+                rest,pose==1?M32ShoulderRig.T_POSE:M32ShoulderRig.RELAXED);
+            studioM32ReviewMeshes[pose][detail]=new Mesh(candidate.vertices);
+            Log.i("VEILBOUND_STUDIO","M32_ANATOMY_PERFECTION_READY item="+item+
+                " triangles="+candidate.triangleCount+
+                " pose="+(pose==1?"T":pose==2?"relaxed":"neutral")+
+                " approved=false old_knight_preserved=true");
+        }
+        return studioM32ReviewMeshes[pose][detail];
+    }
     private Mesh getM31ReviewMesh(int item,boolean ultra){
         int pose=item-19,detail=ultra?1:0;
         if(pose<0||pose>=3)throw new IllegalArgumentException("M31 review slot");
@@ -622,6 +639,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 22:
+            case 23:
+            case 24:
+                chosen=getM32ReviewMesh(m.item,m.ultraMesh);
+                break;
             case 19:
             case 20:
             case 21:
@@ -665,7 +687,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=21)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=24)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
