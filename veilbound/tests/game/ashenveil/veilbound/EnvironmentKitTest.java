@@ -55,6 +55,12 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M28 ORBITAL"),
               "M28 connected facial anatomy reviewer was not registered");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M29 REFERENCE T-POSE"),
+              "T-pose reference geometry not inspectable");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M29 REFERENCE 3/4"),
+              "Relaxed reference pose geometry not inspectable");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");
