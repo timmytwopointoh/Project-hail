@@ -93,7 +93,7 @@ class EmulatorFarmTests(unittest.TestCase):
             self.assertTrue(all(row["verified_images_present"] for row in score["instances"]))
             self.assertFalse(farm.summarize(root, 2, expected_sha="b"*40)["success"])
 
-            second = Path(root) / "veilbound-emulator-" + farm.CONFIGS[1]["id"] + "-inspection"
+            second = Path(root) / ("veilbound-emulator-" + farm.CONFIGS[1]["id"] + "-inspection")
             (second / "frame-07.png").unlink()
             incomplete = farm.summarize(root, 2, expected_sha=sha)
             self.assertFalse(incomplete["success"])
