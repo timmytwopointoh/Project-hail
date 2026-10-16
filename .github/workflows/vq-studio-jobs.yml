@@ -66,6 +66,16 @@ jobs:
           python3 veilforge/factory.py \
             --catalog veilforge/catalog.json --id "$ASSET" \
             --out inspection_output/vq-studio/source
+      - name: Publish real OBJ early for VQ black-space inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-live-obj-${{ inputs.request_id }}
+          path: |
+            inspection_output/vq-studio/source/*.obj
+            inspection_output/vq-studio/source/*.gltf
+            inspection_output/vq-studio/source/*.bin
+          if-no-files-found: error
+          retention-days: 3
       - name: Inspect and render fourteen real source-mesh perspectives
         env:
           ASSET: ${{ inputs.catalog_model }}
