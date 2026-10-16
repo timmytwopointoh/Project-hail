@@ -74,10 +74,17 @@ class UVAtlasTests(unittest.TestCase):
             selected=refine(atlas,recipe,root/"high_subdiv.obj")
             self.assertGreater(selected["candidate_triangles"],
                                selected["source_triangles"])
-            strokes={"schema_version":1,"strokes":[{
-                "id":"highpoly-detail","op":"sculpt","center":[1,0,1],
-                "radius":1.4,"strength":.028,"materials":["stone"],
-                "kind":"roughen","seed":18}]}
+            strokes={"schema_version":1,"strokes":[
+                {"id":"detail-left","op":"sculpt","center":[.65,0,.65],
+                 "radius":.9,"strength":.04,"materials":["stone"],
+                 "kind":"raise","seed":18},
+                {"id":"detail-right","op":"sculpt","center":[1.35,0,1.35],
+                 "radius":.9,"strength":.04,"materials":["stone"],
+                 "kind":"roughen","seed":29},
+                {"id":"detail-middle","op":"sculpt","center":[1,0,1],
+                 "radius":.65,"strength":.04,"materials":["stone"],
+                 "kind":"carve","seed":43}
+            ]}
             brush=apply_brushes(root/"high_subdiv.obj",strokes,root/"sculpted.obj")
             self.assertGreater(brush["strokes"][0]["groups_moved"],0)
             baked=bake(atlas,root/"sculpted.obj",root/"baked",size=256)
