@@ -105,7 +105,7 @@ def run_java_checks(replacement):
     return "proposed_change_passed_java_tests", ""
 
 
-def draft_code(role, out):
+def draft_code(role, out, *, extra_verifier=None):
     """Bounded local AI -> scope gate -> real Java gate -> corrective AI loop."""
     allowed = [JAVA / file for file in ROLES[role]]
     listings = []
@@ -163,6 +163,7 @@ def draft_code(role, out):
     status, feedback = "failed", ""
     proposal, replacement = None, None
     attempts = []
+    trusted_postcondition = None
     for attempt in range(2):
         corrective = (
             "" if not feedback else
@@ -175,6 +176,17 @@ def draft_code(role, out):
             candidate = parse_object(answer)
             checked = validate_proposal(candidate, allowed_paths, source_at)
             outcome, diagnostic = run_java_checks(checked)
+            if outcome == "proposed_change_passed_java_tests" and extra_verifier is not None:
+                passed, observed = extra_verifier(checked)
+                if not isinstance(passed, bool) or not isinstance(observed, str):
+                    raise ValueError("Trusted postcondition produced malformed result")
+                if passed:
+                    trusted_postcondition = {"passed": True, "evidence": observed[:1200]}
+                else:
+                    trusted_postcondition = {"passed": False, "evidence": observed[:1200]}
+                    outcome = "proposed_change_failed_postcondition"
+                    diagnostic = ("Trusted task-specific Java behavior test FAILED: " +
+                                  observed[:1400])
             attempts.append({"attempt": attempt + 1, "status": outcome,
                              "diagnostic_excerpt": diagnostic[:1100]})
             proposal, replacement, status = candidate, checked, outcome
@@ -226,6 +238,7 @@ def draft_code(role, out):
         "local_ai": dict(LAST_RESPONSE_META),
         "ai_attempts": len(attempts),
         "attempt_history": attempts,
+        "behavioral_postcondition": trusted_postcondition,
         "proposal_guard": "passed",
         "proposal_requires_human_review": True,
     }
