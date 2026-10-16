@@ -7,6 +7,8 @@ on:
       - 'veilforge/vq_model_tools.py'
       - 'veilforge/tests/test_vq_model_tools.py'
       - 'veilforge/queue.py'
+      - 'veilforge/provenance.py'
+      - 'veilforge/steward.py'
       - '.github/workflows/veilforge-unified-queue.yml'
       - 'veilforge/VQ_MODEL_TOOLS.md'
       - '.github/workflows/vq-model-tools.yml'
