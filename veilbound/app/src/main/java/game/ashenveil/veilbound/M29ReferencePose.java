@@ -36,8 +36,12 @@ public final class M29ReferencePose {
             // shoulder socket. Fade through the deltoid; do not rotate the
             // ribcage, neck or hair.
             float shoulderY=M24BodyRetarget.y(side*.445f,1.82f);
-            float arm=smooth((ax-.375f)/.125f)*
-                      smooth((y-.94f)/.22f)*
+            // All four fingers, the thumb, palm and forearm must rotate
+            // together: weighting individual digits by lateral X used to
+            // produce stretched ribbons even when the welded edge audit
+            // passed. Start the blend INSIDE the chest, complete by x=.35.
+            float arm=smooth((ax-.265f)/.085f)*
+                      smooth((y-.80f)/.12f)*
                       // Stop the high-deltoid movement before the fixed chest/neck
                       // junction; otherwise identical welded seam edges
                       // become four-face nonmanifold pairs in a strict T-pose.
