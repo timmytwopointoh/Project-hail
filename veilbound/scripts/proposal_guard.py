@@ -17,23 +17,44 @@ MAX_RISKS = 8
 # This is intentionally conservative: the guard may reject an unusual
 # meaningful whitespace edit, but it must never accept cosmetic edits as
 # evidence of an improved game behavior.
-JAVA_LEXEMES = re.compile(
-    r'//[^\\r\\n]*|/\\*[\\s\\S]*?\\*/|'
-    r'"(?:\\\\.|[^"\\\\])*"|'
-    r"'(?:\\\\.|[^'\\\\])*'|"
-    r'\\s+|[^/\\s"\\\']+|.',
-    re.DOTALL,
-)
-
-
 def semantic_fingerprint(source):
-    parts = []
-    for match in JAVA_LEXEMES.finditer(source):
-        lexeme = match.group()
-        if not lexeme or lexeme.isspace() or lexeme.startswith("//") or lexeme.startswith("/*"):
+    """Compare Java tokens roughly, ignoring whitespace and comments only.
+
+    String and character literal contents (including escaped quotes and
+    comment markers inside them) are preserved byte-for-byte. Conservative:
+    possible semantic changes can be rejected, never blessed as improvements.
+    """
+    kept = []
+    index = 0
+    length = len(source)
+    while index < length:
+        char = source[index]
+        if char in ("'", '"'):
+            quote = char
+            kept.append(char)
+            index += 1
+            while index < length:
+                char = source[index]
+                kept.append(char)
+                index += 1
+                if ord(char) == 92 and index < length:
+                    kept.append(source[index])
+                    index += 1
+                elif char == quote:
+                    break
             continue
-        parts.append(lexeme)
-    return "".join(parts)
+        if source.startswith("//", index):
+            end_line = source.find(chr(10), index + 2)
+            index = end_line if end_line != -1 else length
+            continue
+        if source.startswith("/*", index):
+            end_comment = source.find("*/", index + 2)
+            index = end_comment + 2 if end_comment != -1 else length
+            continue
+        if not char.isspace():
+            kept.append(char)
+        index += 1
+    return "".join(kept)
 
 # Reject NEW text that grants the model an execution/network/filesystem bridge.
 # Matching only additions avoids punishing legitimate pre-existing code.
