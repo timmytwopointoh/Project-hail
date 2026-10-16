@@ -96,7 +96,11 @@ public final class TeamEngineCLI {
             case "models":
                 ArtKit.Model forged=BellwardenAnatomy.build(false);
                 obj(forged,dir.resolve("bellwarden_full_anatomy.obj"));
-                triangles=forged.triangleCount;
+                // Separate original non-armored body target; leave the battle
+                // hero unchanged while the anatomy specialist loop iterates.
+                ArtKit.Model human=HumanAnatomy.build(false);
+                obj(human,dir.resolve("bellwarden_unarmored_human_base.obj"));
+                triangles=human.triangleCount;
                 break;
             case "world":
                 ArtKit.Model tomb=EnvironmentKit.cenotaph();
