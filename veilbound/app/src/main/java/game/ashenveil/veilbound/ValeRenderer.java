@@ -577,6 +577,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(nextAnimatedFrame!=null)
             drawInterpolated(chosen,nextAnimatedFrame,animationAlpha,model,1,1,1,.06f);
         else draw(chosen,model,1,1,1,.06f);
+        if(m.item==ModelStudio.ITEMS.length-1 && vesperIdle!=null){
+            GLES20.glUniform1f(uSurfaceQuality,0f);
+            drawVesperAura(0f,.82f,0f,qualityClock);
+        }
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
         GLES20.glUniform1f(uStudioMaterial,0f);
@@ -781,6 +785,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             GLES20.glUniform1f(uSkinMode,0f);
             GLES20.glUniform1f(uSurfaceQuality,0f);
             drawInterpolated(frames[index],frames[(index+1)%frames.length],alpha,model,1,1,1,0);
+            drawVesperAura(x,y,z,tm);
             return;
         }
         float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
@@ -997,6 +1002,37 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Matrix.rotateM(model,0,angle,0,1,0);
         Matrix.scaleM(model,0,sx,sy,sz);
         draw(cube,model,r,g,b,glow);
+    }
+    /**
+     * Floating dark-magenta motes reuse the existing octahedron mesh:
+     * no extra triangles added to Vesper GLB. Procedural mobile-budget
+     * animation and breathing glow, only when Vesper is selected.
+     */
+    private void drawVesperAura(float x,float y,float z,float seconds){
+        GLES20.glUniform1f(uSurfaceQuality,0f);
+        GLES20.glUniform1f(uHeroShading,0f);
+        GLES20.glUniform1f(uSkinMode,0f);
+        GLES20.glUniform1f(uSurface,0f);
+        for(int i=0;i<9;i++){
+            float phase=seconds*(.31f+.027f*(i%4))+i*2.399963f;
+            float orbit=.60f+.095f*(float)Math.sin(seconds*.41f+i);
+            float px=x+orbit*(float)Math.cos(phase);
+            float pz=z+orbit*.63f*(float)Math.sin(phase);
+            float py=y+.61f+.13f*i+.10f*(float)Math.sin(seconds*(1.12f+.09f*i)+i);
+            float pulse=.72f+.28f*(float)Math.sin(seconds*2.4f+i*1.71f);
+            float radius=(.032f+.008f*(i%3))*pulse;
+            drawOcta(px,py,pz,radius,radius*1.45f,radius,
+                     .34f,.065f,.46f,.64f+pulse*.20f,seconds*41f+i*38f);
+        }
+        for(int i=0;i<3;i++){
+            float phase=seconds*.49f+i*2.094395f+.31f;
+            float px=x+.41f*(float)Math.cos(phase);
+            float pz=z+.33f*(float)Math.sin(phase);
+            float py=y+1.17f+.34f*(float)Math.sin(seconds*.82f+i*1.9f);
+            drawOcta(px,py,pz,.022f,.029f,.022f,
+                     .63f,.13f,.45f,.82f,seconds*26f+i*47f);
+        }
+        GLES20.glUniform1f(uSurface,1f);
     }
     private void drawOcta(float x,float y,float z,float sx,float sy,float sz,
                           float r,float g,float b,float glow,float angle){
