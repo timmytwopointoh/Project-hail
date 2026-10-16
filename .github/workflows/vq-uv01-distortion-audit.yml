@@ -1,0 +1,60 @@
+name: VQ UV-01 - Source Distortion and Density Audit
+on:
+  push:
+    branches: ['feature/vq-uv01-distortion-gates-*']
+    paths:
+      - 'veilforge/vq_uv_distortion.py'
+      - 'veilforge/tests/test_vq_uv_distortion.py'
+      - 'veilforge/vq_uv_seams.py'
+      - 'veilforge/vq_uv_atlas.py'
+      - '.github/workflows/vq-uv01-distortion-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vq-uv01-source
+  cancel-in-progress: false
+
+jobs:
+  uv-source-audit:
+    name: Source-only UV Jacobian and atlas compatibility tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test real meshes, adversarial UVs and M31/M32 compatibility
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_distortion.py' -v
+          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_seams.py' -v
+          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_atlas.py' -v
+          python3 -m compileall -q veilforge/vq_uv_distortion.py
+      - name: Produce hashed report from real generated source geometry
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_sculpt_detail_patch.py --out "$RUNNER_TEMP/vq-source"
+          python3 veilforge/vq_uv_distortion.py --obj "$RUNNER_TEMP/vq-source/source_low.obj" --out inspection_output/uv01/source_uv_audit.json --strict
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('inspection_output/uv01/source_uv_audit.json').read_text())
+          assert result['triangle_count']==32
+          assert result['strict_threshold_pass'] is True
+          assert result['uv_seams']['continuous_edges']==40
+          assert result['production_approved'] is False
+          assert result['black_seam_pixels_checked'] is False
+          print('VQ_UV01_AUDIT_PASS',result['source_sha256'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vq-uv01-source-distortion-evidence
+          path: inspection_output/uv01/source_uv_audit.json
+          if-no-files-found: error
+          retention-days: 30
