@@ -1,9 +1,9 @@
-# VEILFORGE / VEILBOUND rights and provenance policy
+# VEYLQUORIN (VQ; formerly VEILFORGE) / VEILBOUND rights and provenance policy
 
 **Named project steward and rights claimant:** Timothy Harris.
 **Associated account:** [timmytwopointoh](https://github.com/timmytwopointoh).
 **Repository:** [timmytwopointoh/Project-hail](https://github.com/timmytwopointoh/Project-hail).
-**Scope:** Original VEILFORGE asset engine, VEILBOUND worker hierarchy and emulator CI,
+**Scope:** Original VEYLQUORIN (VQ, formerly VEILFORGE) asset engine, VEILBOUND worker hierarchy and emulator CI,
 the shared ten-slot pipeline, original human-authored source files, project-specific
 assets, tests, scene recipes, and recorded modifications **only to the extent the
 claimant owns or controls the relevant rights**.
@@ -52,7 +52,7 @@ rules for works involving generative AI.
    personal identifying details to this public repository.
 2. Verify all third-party dependencies, downloaded language models, textures,
    creative assets, tools and licenses using THIRD_PARTY_REGISTER.md.
-3. Decide whether VEILFORGE should move to a private repository; public
+3. Decide whether VQ should move to a private repository; public
    publication cannot undo past access or the GitHub Terms' viewing/forking
    provisions. Keep offline encrypted backups of Git history, manifests and
    signed records.
