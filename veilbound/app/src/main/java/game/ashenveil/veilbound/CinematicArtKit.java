@@ -194,12 +194,12 @@ public final class CinematicArtKit {
         f.ellipsoid(0,1.50f,.25f,.45f,.38f,.29f,32,15,.63f,.75f,.80f);
         // Laminated asymmetric shoulder armor, with gold ridge filigree.
         for(int side=-1;side<=1;side+=2){
-            float x=side*.73f;
-            f.ellipsoid(x,1.80f,-.025f,.55f,.31f,.49f,30,14,
+            float x=side*.64f;
+            f.ellipsoid(x,1.80f,-.025f,.40f,.29f,.43f,30,14,
                         .45f,.57f,.66f);
-            f.ellipsoid(x,1.89f,-.005f,.47f,.20f,.48f,30,11,
+            f.ellipsoid(x,1.89f,-.005f,.36f,.18f,.40f,30,11,
                         .57f,.66f,.70f);
-            f.ellipsoid(x,1.99f,.00f,.37f,.14f,.38f,28,9,
+            f.ellipsoid(x,1.99f,.00f,.29f,.13f,.32f,28,9,
                         .62f,.70f,.71f);
             f.rod(x-side*.41f,1.83f,.28f,x,2.08f,.22f,
                   .043f,9,.85f,.68f,.39f);
@@ -278,13 +278,13 @@ public final class CinematicArtKit {
             f.rod(side*.12f,.75f,.49f,side*.41f,.75f,.48f,
                   .018f,8,.83f,.71f,.47f);
             // Raised pauldron ridge and amber plated rivet heads.
-            float shoulder=side*.76f;
+            float shoulder=side*.65f;
             for(int plate=0;plate<4;plate++){
-                f.ellipsoid(shoulder+side*.14f,1.92f-plate*.105f,
-                            -.045f+plate*.05f,.47f-plate*.025f,.085f,.40f,
+                f.ellipsoid(shoulder+side*.07f,1.92f-plate*.105f,
+                            -.045f+plate*.05f,.35f-plate*.015f,.075f,.35f,
                             24,10,.35f+plate*.055f,.45f+plate*.05f,
                             .52f+plate*.04f);
-                f.ellipsoid(shoulder+side*.37f,1.91f-plate*.103f,.23f,
+                f.ellipsoid(shoulder+side*.27f,1.91f-plate*.103f,.23f,
                             .027f,.027f,.030f,11,7,.82f,.69f,.46f);
             }
         }
@@ -410,7 +410,13 @@ public final class CinematicArtKit {
         }
     }
     public static ArtKit.Model bellwarden(){
-        Form f=new Form(DetailArtKit.bellwarden().vertices);
+        // The original faceted block mannequin is deliberately NOT carried
+        // into the high-detail playable sculpt. Retain individually modeled
+        // plated hands and thousands of gauntlet triangles, then author an
+        // entirely new ergonomic silhouette on top, with no buried cubes.
+        float[] handmade=DetailArtKit.bellwarden().vertices;
+        int primitiveFloats=ArtKit.bellwarden().vertices.length;
+        Form f=new Form(Arrays.copyOfRange(handmade,primitiveFloats,handmade.length));
         bellwardenSculpt(f);return f.result();
     }
     public static ArtKit.Model hushed(){
