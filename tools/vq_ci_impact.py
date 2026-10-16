@@ -46,7 +46,7 @@ def decide(root: Path, base: str | None, head: str | None, event: str = "push") 
     result = {
         "schema_version": 1, "milestone": "M34-06",
         "source_sha": head, "base_sha": base, "event": event,
-        "changed_paths": [], "changed_paths_sha256": None,
+        "changed_paths": [], "change_statuses": [], "changed_paths_sha256": None,
         "run_full_factory": True, "source_tests_always_required": True,
         "skip_android_approved": False, "artistic_approval": False,
         "hardware_approval": False, "reason": "fail_closed_unclassified",
@@ -67,19 +67,45 @@ def decide(root: Path, base: str | None, head: str | None, event: str = "push") 
             return result
         _git(root, "merge-base", "--is-ancestor", base, head)
         # --no-renames makes a source->docs rename show BOTH old and new paths.
-        # NUL delimiters preserve unusual filenames and prohibit line parsing bugs.
-        raw = _git(root, "diff", "--name-only", "--no-renames", "-z", base, head, "--")
-        paths = [p.decode("utf-8", errors="strict") for p in raw.split(b"\0") if p]
+        # NUL status/path pairs prevent newline, tab and whitespace confusion.
+        raw = _git(root, "diff", "--name-status", "--no-renames", "-z", base, head, "--")
+        fields = [p.decode("utf-8", errors="strict") for p in raw.split(b"\0") if p]
+        if len(fields) % 2:
+            result["reason"] = "malformed_diff_statuses"
+            return result
+        changes = list(zip(fields[::2], fields[1::2]))
+        paths = [path for _, path in changes]
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired, UnicodeError):
         result["reason"] = "unverifiable_git_diff"
         return result
     if not paths or len(paths) != len(set(paths)):
         result["reason"] = "empty_or_duplicate_diff"
         return result
-    paths.sort()
-    result["changed_paths"] = paths
-    result["changed_paths_sha256"] = hashlib.sha256("\0".join(paths).encode()).hexdigest()
-    if all(documentation_only(p) for p in paths):
+    changes.sort(key=lambda row: row[1])
+    result["changed_paths"] = [path for _, path in changes]
+    result["change_statuses"] = [status for status, _ in changes]
+    result["changed_paths_sha256"] = hashlib.sha256(
+        "\0".join(status + "\0" + path for status, path in changes).encode()
+    ).hexdigest()
+    # Only modifications of existing regular, non-executable markdown blobs
+    # may skip Android. Adds/deletes, chmod, symlinks and type changes run full.
+    safe_docs = all(status == "M" and documentation_only(path)
+                    for status, path in changes)
+    if safe_docs:
+        try:
+            for _, path in changes:
+                for commit in (base, head):
+                    row = _git(root, "ls-tree", "-z", commit, "--", path)
+                    match = re.fullmatch(rb"100644 blob [0-9a-f]{40}\t" +
+                                         re.escape(path.encode()) + rb"\x00", row)
+                    if match is None:
+                        safe_docs = False
+                        break
+                if not safe_docs:
+                    break
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            safe_docs = False
+    if safe_docs:
         result["run_full_factory"] = False
         result["skip_android_approved"] = True
         result["reason"] = "strict_documentation_only_with_source_tests"

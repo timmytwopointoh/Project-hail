@@ -25,6 +25,7 @@ class ImpactRouterTests(unittest.TestCase):
         git(self.root, "config", "user.name", "VQ QA")
         self.write("veilforge/VQ_EXAMPLE.md", "old docs\n")
         self.write("veilforge/factory.py", "print('original')\n")
+        self.write("docs/vq-library/guide.md", "old guide\n")
         self.base = self.commit()
 
     def write(self, name, content):
@@ -52,6 +53,24 @@ class ImpactRouterTests(unittest.TestCase):
         self.assertTrue(r["source_tests_always_required"])
         self.assertEqual(len(r["changed_paths"]), 2)
         self.assertEqual(r, self.check())
+
+    def test_new_document_and_symlink_replacement_require_full_factory(self):
+        self.write("veilforge/VQ_NEW.md", "added doc\n")
+        self.commit()
+        self.assertTrue(self.check()["run_full_factory"])
+        old = git(self.root, "rev-parse", "HEAD")
+        doc = self.root / "veilforge/VQ_EXAMPLE.md"
+        doc.unlink()
+        doc.symlink_to("factory.py")
+        self.commit()
+        result = impact.decide(self.root, old, git(self.root, "rev-parse", "HEAD"))
+        self.assertTrue(result["run_full_factory"])
+
+    def test_chmod_only_doc_requires_full_factory(self):
+        doc = self.root / "veilforge/VQ_EXAMPLE.md"
+        doc.chmod(0o755)
+        self.commit()
+        self.assertTrue(self.check()["run_full_factory"])
 
     def test_mixed_docs_and_python_requires_full_factory(self):
         self.write("veilforge/VQ_EXAMPLE.md", "new docs\n")
