@@ -64,6 +64,33 @@ jobs:
           test "$(find inspection_output/vq-pipeline/inspection/views -name 'orbit_*.png' | wc -l)" -eq 0
           test -s inspection_output/vq-pipeline/retained/contact_sheet.png
           test -s inspection_output/vq-pipeline/retained/checkpoint.json
+      - name: Publish two independently verified VQ Studio live-mesh revision stages
+        run: |
+          set -euo pipefail
+          python3 vq-studio/live_snapshot.py \
+            --obj inspection_output/vq-pipeline/adjusted/ancient_tree.obj \
+            --out inspection_output/vq-pipeline/snapshot-r001 \
+            --request-id 0123456789abcdef --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 1
+          python3 vq-studio/live_snapshot.py \
+            --obj inspection_output/vq-pipeline/adjusted/ancient_tree.obj \
+            --report inspection_output/vq-pipeline/inspection/vq_model_report.json \
+            --out inspection_output/vq-pipeline/snapshot-r002 \
+            --request-id 0123456789abcdef --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 2
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-pipeline")
+          for number,stage in ((1,"geometry_integrity"),(2,"technical_review")):
+              folder=root/f"snapshot-r{number:03d}"
+              manifest=json.loads((folder/"vq_snapshot.json").read_text())
+              assert manifest["quality_stage"]==stage
+              assert manifest["sequence"]==number
+              assert manifest["artist_approved"] is False
+              assert (folder/"model.obj").stat().st_size==manifest["bytes"]
+          print("VQ_TWO_VERIFIED_LIVE_REVISIONS_PASS")
+          PY
       - name: Sign exact model inspection result
         uses: actions/attest@v4
         with:
@@ -76,5 +103,7 @@ jobs:
           path: |
             inspection_output/vq-pipeline/adjusted/
             inspection_output/vq-pipeline/retained/
+            inspection_output/vq-pipeline/snapshot-r001/
+            inspection_output/vq-pipeline/snapshot-r002/
           if-no-files-found: warn
           retention-days: 7
