@@ -61,6 +61,15 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M29 REFERENCE 3/4"),
               "Relaxed reference pose geometry not inspectable");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M31 REALISM NEUTRAL"),
+              "M31 realistic skin study missing from testing grounds");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M31 RIGGED T-POSE"),
+              "M31 corrected T-pose not selectable");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M31 RIGGED RELAXED"),
+              "M31 corrected relaxed pose not selectable");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");

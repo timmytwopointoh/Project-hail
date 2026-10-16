@@ -233,7 +233,7 @@ public final class HumanVariantCLI {
     public static void main(String[] args) throws Exception{
         if(args.length<2||args.length>4)
             throw new IllegalArgumentException(
-                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed] [--mesh-only]");
+                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed | --m31-neutral | --m31-tpose | --m31-relaxed] [--mesh-only]");
         boolean meshOnly="--mesh-only".equals(args[args.length-1]);
         boolean m28=args.length>=3&&"--m28".equals(args[2]);
         boolean tPose=args.length>=3&&"--m29-tpose".equals(args[2]);
@@ -242,22 +242,31 @@ public final class HumanVariantCLI {
         boolean m30T=args.length>=3&&"--m30-tpose".equals(args[2]);
         boolean m30Relaxed=args.length>=3&&"--m30-relaxed".equals(args[2]);
         boolean newPose=m30T||m30Relaxed;
-        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!"--mesh-only".equals(args[2]);
-        if(args.length==4&&(!(hasDials||m28||referencePose||newPose)||!meshOnly))
+        boolean m31Neutral=args.length>=3&&"--m31-neutral".equals(args[2]);
+        boolean m31T=args.length>=3&&"--m31-tpose".equals(args[2]);
+        boolean m31Relaxed=args.length>=3&&"--m31-relaxed".equals(args[2]);
+        boolean m31=m31Neutral||m31T||m31Relaxed;
+        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!m31&&!"--mesh-only".equals(args[2]);
+        if(args.length==4&&(!(hasDials||m28||referencePose||newPose||m31)||!meshOnly))
             throw new IllegalArgumentException("Unexpected M26 CLI options");
         float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
-        studyLabel=newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
+        studyLabel=m31?"M31":newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model source=m28||referencePose||newPose?
+        ArtKit.Model source=m31?
+            M31SkinSurfaceNormals.smooth(HumanAnatomy.buildM28Candidate(false,p,
+              new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f})):
+            m28||referencePose||newPose?
             HumanAnatomy.buildM28Candidate(false,p,
               new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f}):
             hasDials?HumanAnatomy.buildM26Candidate(false,p,dials):
             HumanAnatomy.buildM25Candidate(false,p);
-        ArtKit.Model mesh=newPose?M30ReferenceRig.pose(source,
+        ArtKit.Model mesh=(m31T||m31Relaxed)?M30ReferenceRig.pose(
+            source,m31T?M30ReferenceRig.T_POSE:M30ReferenceRig.RELAXED):
+            newPose?M30ReferenceRig.pose(source,
             m30T?M30ReferenceRig.T_POSE:M30ReferenceRig.RELAXED):
             referencePose?M29ReferencePose.build(source,
              tPose?M29ReferencePose.T_POSE:
@@ -280,7 +289,9 @@ public final class HumanVariantCLI {
             views.append('"').append(view).append('"');
         }
         String json="{\"model\":\""+
-            (newPose?(m30T?"m30_tpose_skinweighted_candidate":"m30_relaxed_skinweighted_candidate"):
+            (m31?(m31Neutral?"m31_smooth_neutral_source":
+               m31T?"m31_reference_tpose":"m31_reference_relaxed"):
+             newPose?(m30T?"m30_tpose_skinweighted_candidate":"m30_relaxed_skinweighted_candidate"):
              referencePose?(tPose?"m29_tpose_reference_mesh":"m29_relaxed_reference_mesh"):
              m28?"m28_connected_orbital_anatomy_candidate":
              hasDials?"m26_review_conditioned_sculpt_candidate":
@@ -288,7 +299,7 @@ public final class HumanVariantCLI {
             "\",\"triangles\":"+mesh.triangleCount+
             ",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":"+(!meshOnly)+
-            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose?8:0)+
+            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose||m31?8:0)+
             ",\"hand_closeups_per_side\":"+(meshOnly?0:3)+
             ",\"camera_views\":["+(meshOnly?"":views.toString())+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");

@@ -70,6 +70,15 @@ public final class HumanAnatomy {
         ArtKit.Model retarget=M24BodyRetarget.transform(composite);
         return M26SculptDials.apply(M25SkinPolish.apply(retarget),learned);
     }
+    /**
+     * M31: reference-driven full-body appearance candidate.
+     * The geometry and colors remain exactly M28; only source skin normals
+     * gain seam-conscious smoothing. More demanding M30 shoulder weighting
+     * applies to its T-pose and relaxed inspection meshes separately.
+     */
+    public static ArtKit.Model buildM31Candidate(boolean lite){
+        return M31SkinSurfaceNormals.smooth(buildM28Candidate(lite));
+    }
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }

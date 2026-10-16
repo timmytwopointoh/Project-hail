@@ -248,20 +248,23 @@ def main():
         atelier["closeup"]=True
         touch(w*.921,h*.946)  # reset the camera, not the game state
         time.sleep(.5)
+        def latest_studio_log():
+            current=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                        timeout=20).decode("utf-8","replace")
+            states=[row for row in current.splitlines()
+                    if "item=" in row and "yaw=" in row]
+            return states[-1] if states else ""
         def verify_studio_input(label,tap_x,tap_y):
-            # On slow Pixel 4 software emulators, an Android injection can
-            # arrive while the GL thread is compiling a dense mesh. Demand
-            # real log state instead of treating a single tap as success.
-            for attempt in range(4):
-                current=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
-                            timeout=20).decode("utf-8","replace")
-                if label in current:return
+            # True latest HUD state (not any stale past log). Slow GPU frames
+            # can take several seconds before the model studio draws again.
+            for attempt in range(8):
+                if label in latest_studio_log():return
                 touch(tap_x,tap_y)
-                time.sleep(.75+attempt*.35)
-                current=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
-                            timeout=20).decode("utf-8","replace")
-                if label in current:return
-            raise AssertionError("Native Atelier control did not register "+label)
+                for poll in range(8):
+                    time.sleep(.38)
+                    if label in latest_studio_log():return
+            raise AssertionError("Native Atelier control did not register "+label+
+                                 " latest="+latest_studio_log())
         verify_studio_input("item=1",w*.65,h*.865)
         verify_studio_input("light=1",w*.20,h*.944)
         verify_studio_input("material=1",w*.52,h*.944)
@@ -570,6 +573,71 @@ def main():
             "four_tpose_angles":True,"skin_atlas_uploaded":True,
             "human_look_manual_review_required":True,
             "photo_skin_verified":False,"historical_knight_untouched":True}
+        # M31 technical reality test. Each pose loads only on demand and
+        # keeps the old knight, M28 skin, M29 failed weight scheme available.
+        m31_images=[]
+        model_crop=(int(w*.34),int(h*.21),int(w*.66),int(h*.78))
+        def studio_center_delta(before,after):
+            with Image.open(before) as aa,Image.open(after) as bb:
+                a=aa.convert("RGB").crop(model_crop).resize((160,200))
+                b=bb.convert("RGB").crop(model_crop).resize((160,200))
+                diff=ImageStat.Stat(ImageChops.difference(a,b)).mean
+            return sum(diff)/3
+        def expected_camera(item,angle):
+            yaw={"front":0.0,"side":1.5707963,"back":3.14159265,
+                 "three_quarter":5.497787}[angle]
+            for retry in range(22):
+                line=latest_studio_log()
+                match=re.search(r"item=(\d+).*?yaw=([-0-9.]+)",line)
+                if match and int(match.group(1))==item and (
+                        abs(float(match.group(2))-yaw)<.12):
+                    return
+                time.sleep(.36)
+            raise AssertionError("M31 camera target failed: item="+str(item)+
+                                 " angle="+angle+" latest="+latest_studio_log())
+        previous_frame=OUT/"01_m29_relaxed_side.png"
+        for item,label,angles in (
+                (19,"neutral",("front","side","three_quarter")),
+                (20,"tpose",("front","side","back","three_quarter")),
+                (21,"relaxed",("front","side"))):
+            touch(w*.65,h*.865)
+            for retry in range(42):
+                text=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                         timeout=20).decode("utf-8","replace")
+                if "M31_REFERENCE_REALISM_READY item="+str(item) in text:
+                    break
+                time.sleep(.5)
+            else:
+                raise AssertionError("M31 "+label+
+                    " actual mesh failed to load into Android Testing Grounds")
+            prev=previous_frame
+            for angle in angles:
+                if angle!="front":
+                    touch(w*.50,h*.758)
+                expected_camera(item,angle)
+                image_name="01_m31_"+label+"_"+angle+".png"
+                frame=OUT/image_name
+                # The Canvas HUD may update before the OpenGL thread finishes
+                # uploading a 59k-triangle source. Require the BODY pixels to
+                # actually change, not simply the FRONT/SIDE label or zoom.
+                for render_wait in range(14):
+                    time.sleep(.55)
+                    shot(image_name)
+                    if studio_center_delta(prev,frame)>.28:
+                        break
+                else:
+                    raise AssertionError("M31 "+label+
+                      " geometry frame did not update at "+angle+
+                      " despite target yaw "+latest_studio_log())
+                report["screenshots"].append(image_name)
+                m31_images.append(image_name)
+                prev=frame
+            previous_frame=prev
+        atelier["m31_reference_realism"]={
+            "all_three_meshes_loaded":True,"actual_3d_views":len(m31_images),
+            "genuine_m30_rig":True,"existing_m29_skin_shader":True,
+            "calibrated_photo_match":False,"production_photorealism_approved":False,
+            "original_knight_preserved":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
