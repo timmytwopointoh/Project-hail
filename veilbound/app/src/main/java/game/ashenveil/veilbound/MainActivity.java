@@ -80,6 +80,7 @@ public final class MainActivity extends Activity {
     private void createGameScene(BootAssets prebuilt){
         if(isFinishing())return;
         game=new WorldState();
+        verifyVesperGlbFixture();
         scene=new GLSurfaceView(this);
         scene.setEGLContextClientVersion(2);
         scene.setPreserveEGLContextOnPause(true);
@@ -141,6 +142,33 @@ public final class MainActivity extends Activity {
             WorldState.Snapshot s=game.snapshot();
             Log.i("VEILBOUND_STATE","INSPECT mode="+s.mode+" x="+s.x+" z="+s.z+
                   " hp="+s.health+" stamina="+s.stamina+" sigils="+s.fragments);
+        }
+    }
+    /**
+     * Independently exercised on the Android 15 emulator on debug builds.
+     * A synthetic two-joint test only: NEVER imply the real Vesper model
+     * has been imported, rendered, or visually approved by this result.
+     */
+    private void verifyVesperGlbFixture(){
+        if((getApplicationInfo().flags &
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0)return;
+        try(InputStream in=getAssets().open("vesper_import_smoke.glb")){
+            VesperGlb.Result sample=VesperGlb.load(in);
+            if(sample.joints!=2 || sample.triangles!=1 ||
+                    sample.idle.length!=8 || sample.walk.length!=8)
+                throw new java.io.IOException("Smoke rig dimensions invalid");
+            float[] a=sample.idle[0].vertices,b=sample.idle[2].vertices;
+            float movement=0f;
+            for(int v=0;v<a.length;v+=9)
+                for(int k=0;k<3;k++)
+                    movement=Math.max(movement,Math.abs(a[v+k]-b[v+k]));
+            if(movement<.015f)
+                throw new java.io.IOException("Animated skin pose did not deform");
+            Log.i("VESPER_GLTF","GLB_IMPORT_SMOKE_PASS synthetic_fixture=true"+
+                  " joints="+sample.joints+" triangles="+sample.triangles+
+                  " max_movement="+movement);
+        }catch(Exception error){
+            Log.e("VESPER_GLTF","GLB_IMPORT_SMOKE_FAIL",error);
         }
     }
     private void chooseObjFile(){
