@@ -16,7 +16,7 @@ public final class HumanHandSculpt {
     private static final ShapeEngine.Palette SKIN=
         new ShapeEngine.Palette(.68f,.425f,.315f);
     private static final ShapeEngine.Palette NAIL=
-        new ShapeEngine.Palette(.745f,.475f,.360f);
+        new ShapeEngine.Palette(.716f,.447f,.337f);
     // Anatomical order from little through index.
     public static final float[] TIPS={.576f,.517f,.493f,.538f};
     public static final int FINGERS_PER_HAND=4, THUMBS_PER_HAND=1;
@@ -39,10 +39,11 @@ public final class HumanHandSculpt {
         for(int i=0;i<rings;i++){
             float t=(float)i/(rings-1);
             float y=tip+(base-tip)*t;
-            float pad=smooth(t/.105f);
+            // Round the fleshy fingertip over roughly 8% of finger length.
+            float pad=(float)Math.sin(Math.PI*.5f*Math.min(1f,t/.085f));
             // TIP -> DIP -> PIP -> MCP: taper and shallow knuckle swelling.
             float width=(.018f+.007f*t)
-                *(.22f+.78f*pad)
+                *(.06f+.94f*pad)
                 *(1f+.065f*bump(t,.34f,.085f)+.095f*bump(t,.67f,.11f));
             float sideLean=side*.004f*(1f-t);
             float x=fx+sideLean+(f-1.5f)*.0018f*(1f-t);
@@ -57,7 +58,8 @@ public final class HumanHandSculpt {
         for(int i=0;i<rings;i++){
             float t=(float)i/(rings-1);
             float y=.689f+(.862f-.689f)*t;
-            float width=(.026f+.009f*t)*(.18f+.82f*smooth(t/.13f));
+            float tipRound=(float)Math.sin(Math.PI*.5f*Math.min(1f,t/.125f));
+            float width=(.026f+.009f*t)*(.055f+.945f*tipRound);
             width*=1f+.08f*bump(t,.43f,.12f);
             // CMC opposition and IP bend visible in 3/4; never a fifth ray.
             float x=center+side*(.183f-.104f*t-.012f*smooth(t));
@@ -68,8 +70,8 @@ public final class HumanHandSculpt {
     }
     private static ArtKit.Model nail(float cx,float tip,float z,float width,
                                      boolean thumb,int side){
-        float y0=tip+(thumb?.020f:.014f),y1=tip+(thumb?.054f:.050f);
-        float w=width*(thumb?1.0f:.89f);
+        float y0=tip+(thumb?.022f:.018f),y1=tip+(thumb?.053f:.047f);
+        float w=width*(thumb?.76f:.72f);
         // Deliberately narrow, rounded-looking low-relief nail bed.
         float[] polygon={
             cx-w*.72f,y0, cx+w*.72f,y0,
@@ -100,7 +102,7 @@ public final class HumanHandSculpt {
                 new ShapeEngine.Ring(x,.956f,.052f,.090f,.071f,0,0),
                 new ShapeEngine.Ring(x,1.025f,.047f,.098f,.079f,0,0)
             };
-            pair[side<0?1:2]=ShapeEngine.loft(palm,lite?16:32,SKIN);
+            pair[side<0?1:2]=ShapeEngine.loftSmoothCapped(palm,lite?16:32,SKIN);
         }
         return ShapeEngine.combine(pair);
     }
@@ -117,15 +119,15 @@ public final class HumanHandSculpt {
         for(int side:new int[]{-1,1}){
             for(int f=0;f<4;f++){
                 ShapeEngine.Ring[] rows=finger(side,f,rings,shoulderSpan);
-                models.add(ShapeEngine.loft(rows,sides,SKIN));
+                models.add(ShapeEngine.loftSmoothCapped(rows,sides,SKIN));
                 int anatomical=side>0?f:3-f;
                 float cx=side*.554f*shoulderSpan+(f-1.5f)*.067f+side*.003f+
                          (f-1.5f)*.00135f;
                 // Dorsal nail rests on modeled soft tissue, no floating ivory.
-                models.add(nail(cx,TIPS[anatomical],.137f,.016f,false,side));
+                models.add(nail(cx,TIPS[anatomical],.136f,.016f,false,side));
             }
             ShapeEngine.Ring[] rows=thumb(side,rings,shoulderSpan);
-            models.add(ShapeEngine.loft(rows,sides,SKIN));
+            models.add(ShapeEngine.loftSmoothCapped(rows,sides,SKIN));
             models.add(nail(side*(.554f*shoulderSpan+.177f),.689f,.203f,.020f,true,side));
         }
         return ShapeEngine.combine(models.toArray(new ArtKit.Model[0]));
