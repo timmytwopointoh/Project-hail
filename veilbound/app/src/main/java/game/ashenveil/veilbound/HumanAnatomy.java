@@ -19,6 +19,22 @@ public final class HumanAnatomy {
      * Explicit opt-in until real front/side/3/4 device views and topology
      * inspection approve the replacement. The armored game is untouched.
      */
+    /**
+     * M25: gently smoothed whole-body study with independently inspectable
+     * facial features and restrained palette work. The previous M24 mesh
+     * remains separately constructible for before/after comparison.
+     */
+    public static ArtKit.Model buildM25Candidate(boolean lite){
+        return buildM25Candidate(lite,ContinuousHuman.BASE);
+    }
+    public static ArtKit.Model buildM25Candidate(boolean lite,float[] controls){
+        ContinuousHuman.validate(controls);
+        ArtKit.Model composite=ShapeEngine.combine(
+            ContinuousHuman.buildM25WithoutDigits(lite,controls),
+            HumanHandSculpt.build(lite,controls[0]),
+            M25FaceSculpt.build(lite));
+        return M25SkinPolish.apply(M24BodyRetarget.transform(composite));
+    }
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
