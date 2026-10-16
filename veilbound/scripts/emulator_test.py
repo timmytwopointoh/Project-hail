@@ -248,11 +248,24 @@ def main():
         atelier["closeup"]=True
         touch(w*.921,h*.946)  # reset the camera, not the game state
         time.sleep(.5)
-        touch(w*.65,h*.865)
-        time.sleep(.8)
-        touch(w*.20,h*.944)
-        touch(w*.52,h*.944)
-        time.sleep(.9)
+        def verify_studio_input(label,tap_x,tap_y):
+            # On slow Pixel 4 software emulators, an Android injection can
+            # arrive while the GL thread is compiling a dense mesh. Demand
+            # real log state instead of treating a single tap as success.
+            for attempt in range(4):
+                current=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                            timeout=20).decode("utf-8","replace")
+                if label in current:return
+                touch(tap_x,tap_y)
+                time.sleep(.75+attempt*.35)
+                current=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                            timeout=20).decode("utf-8","replace")
+                if label in current:return
+            raise AssertionError("Native Atelier control did not register "+label)
+        verify_studio_input("item=1",w*.65,h*.865)
+        verify_studio_input("light=1",w*.20,h*.944)
+        verify_studio_input("material=1",w*.52,h*.944)
+        time.sleep(.65)
         detail=shot("01_atelier_material.png")
         report["screenshots"].append(detail)
         logs=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",timeout=20).decode("utf-8","replace")
@@ -433,9 +446,13 @@ def main():
         # playable-game inspection viewer without replacing the old knight.
         touch(w*.65,h*.865)   # M25 facial reviewer -> M26 sculpting lab
         time.sleep(1.3)
-        learned_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
-                        timeout=20).decode("utf-8","replace")
-        if "item=15" not in learned_log or "M26_SCULPT_REVIEW_READY" not in learned_log:
+        for load_attempt in range(16):
+            learned_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                            timeout=20).decode("utf-8","replace")
+            if "item=15" in learned_log and "M26_SCULPT_REVIEW_READY" in learned_log:
+                break
+            time.sleep(.45)
+        else:
             raise AssertionError("VEILFORGE M26 candidate not loaded in Testing Grounds")
         m26_front=OUT/"01_m26_sculpt_front.png"
         report["screenshots"].append(shot(m26_front.name))
