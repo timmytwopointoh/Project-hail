@@ -16,6 +16,14 @@ public final class HeroPoseTest {
             rig.rightArm.triangleCount>0,"Hero armor joints are missing");
         check(sculpt.triangleCount>DetailArtKit.bellwarden().triangleCount+2000,
             "Gameplay hero must show the premium sculpt jump");
+        ArtKit.Model lite=CinematicArtKit.bellwardenLite();
+        CharacterRig.Parts liteRig=CharacterRig.split(lite,false,false);
+        check(liteRig.vertices()==lite.vertices.length/9,"Sculpted fallback lost triangles");
+        check(liteRig.mantle!=null && liteRig.mantle.triangleCount>90,
+            "Fallback cloak must be independently animatable");
+        check(lite.triangleCount<sculpt.triangleCount*.60f,
+            "Mobile LOD must significantly lower GPU triangle demand");
+        check(lite.triangleCount>3000,"Fallback sculpt lost human anatomy");
         HeroPose.Frame f=new HeroPose.Frame();
         float previousYaw=0,maxDelta=0;
         for(int i=0;i<=320;i++){
