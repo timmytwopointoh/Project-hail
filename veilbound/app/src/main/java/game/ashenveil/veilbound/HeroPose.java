@@ -33,31 +33,32 @@ public final class HeroPose {
         float anticipation=attack<0?0f:smooth(attack/.29f);
         float contact=attack<0?0f:smooth((attack-.29f)/.46f);
         float follow=attack<0?0f:smooth((attack-.73f)/.27f);
+        float ending=attack<0?0f:1f-follow;
         float hit=clamp(stagger*2.7f,0f,1f);
         float evade=dodgeRemaining>0?
                 (float)Math.sin(Math.PI*clamp(1f-dodgeRemaining/.48f,0f,1f)):0f;
-        float shoulderWindup=-27f*anticipation*(1f-contact);
-        float shoulderStrike=78f*contact-24f*follow;
+        float shoulderWindup=-27f*anticipation*(1f-contact)*ending;
+        float shoulderStrike=78f*contact*ending;
         p.guardLean=anticipation*(1f-contact);
         p.bob=.035f*move*(1f-impact)+p.breath*.36f-evade*.13f;
         // Anticipatory counter-rotation and physical follow through across
         // shoulders, pelvis and arms rather than just rotating the weapon.
-        p.rootYaw=8f*stance/7f+28f*anticipation-74f*contact+34f*follow;
+        p.rootYaw=8f*stance/7f+(28f*anticipation-62f*contact)*ending;
         p.rootPitch=3.0f*move+17f*contact*(1f-follow)+
                     tired*p.breath*40f+12f*hit+22f*evade;
         p.rootRoll=stance+3.8f*stride*move+7f*evade+9f*hit;
         p.leftArmPitch=-13f-24f*stride*move+12f*p.guardLean+
-                       19f*contact-18f*evade;
+                       19f*contact*ending-18f*evade;
         p.rightArmPitch=15f+23f*stride*move+
                         shoulderWindup-shoulderStrike+20f*evade;
-        p.leftArmRoll=-8f+8f*stance*.3f+21f*contact;
-        p.rightArmRoll=-23f-26f*anticipation+42f*contact-14f*follow;
+        p.leftArmRoll=-8f+8f*stance*.3f+21f*contact*ending;
+        p.rightArmRoll=-23f+(-26f*anticipation+42f*contact)*ending;
         p.leftLegPitch=30f*stride*move-32f*evade;
         p.rightLegPitch=-30f*stride*move+25f*evade;
         // The cape lags the upper body and catches movement, with controlled
         // counter-sway; this is not simulated cloth/skin weight painting.
         p.mantlePitch=-4f-8f*move*(.5f+.5f*impact)+
-                      6f*contact-12f*evade-35f*p.breath;
+                      6f*contact*ending-12f*evade-35f*p.breath;
         p.mantleYaw=-.28f*p.rootYaw+4.5f*(float)Math.sin(tm*1.2f)*move;
     }
 }
