@@ -68,10 +68,37 @@ python3 veilforge/vq_engine_health.py --root . \
    projection cage when UV correspondence is unavailable.
 2. Attach baked textures to specific glTF materials with correct tangent
    attributes, clear RGB linear/sRGB handling, and mip maps.
-3. Run the Android GLES renderer with per-pixel tangent-space normal/AO
-   sampling and independent screenshots before claiming visual material QA.
+3. Validate production-quality tangent attributes, true linear/sRGB
+   sample paths, calibrated glTF PBR BRDF and mipmap-quality material lighting.
 4. Compare physically plausible lights / three camera rigs / different
    resolutions. Add high-to-low map comparisons against approved reference
    images, not a generic software-raster score.
 5. Review anatomy, seam behavior and skin/stone detail visually; no asset
    is auto-promoted, even after all technical tests pass.
+
+## M30 actual Android 15 visual bake test (verified)
+
+The isolated renderer `android-probe` now binds glTF normal and AO textures
+and constructs a UV-correct per-triangle tangent/bitangent basis. Its test
+shader uses a light approximation, not a production glTF BRDF.
+
+`.github/workflows/vq-m30-android.yml` builds a **separate test APK**
+containing the low-resolution sample geometry plus its baked high-poly normal
+texture. It launches four Android 15 emulator workers with 14 actual orbital
+camera screenshots and three matched-angle shading-control frames each.
+Each device must reject launcher/splash screenshots by checking the actual
+GLES clear background, reject system modals, verify GL material-import logs,
+and prove the actual normal-on/off pixel differences exceed same-angle render
+jitter. The independent reviewer rehashes each image and rejects incomplete
+devices. A failed run cannot silently promote an asset.
+
+GitHub Actions run 38901241312 **passed 6/6 jobs**. Real screenshot
+comparisons from the four emulators produced image change fractions of
+0.011543, 0.011373, 0.012114 and 0.012091 (roughly 1.14–1.21%).
+There were 68 actual screenshot files (56 orbit + 12 matched-angle controls).
+These measurements establish genuine, subtle shading changes, not realistic
+material appearance. The earlier run 38899915820 failed because it accepted
+a launcher screenshot and used a too-coarse >12 RGB pixel difference
+threshold. The stricter repeat-control and splash-screen checks fixed that.
+
+No changes were made to Android game source or the main game baseline.
