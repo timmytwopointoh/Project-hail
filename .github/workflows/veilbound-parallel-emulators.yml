@@ -12,6 +12,7 @@ on:
       - 'feature/veilbound-m17-human-anatomy-worker-loop'
       - 'feature/veilbound-m18-skinned-human-rig'
       - 'feature/veilbound-m19-reference-realism-loop'
+      - 'feature/veilbound-m20-50-worker-anatomy-forge'
       - 'feature/veilbound-m14-synchronized-emulator-workers'
     paths:
       - '.github/workflows/veilbound-parallel-emulators.yml'
