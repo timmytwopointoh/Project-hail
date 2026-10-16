@@ -23,7 +23,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
-    private Rigged playerRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
+    private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
+    private Mesh playerPremiumSword;
+    private final HeroPose.Frame heroFrame=new HeroPose.Frame();
     private Mesh verdigrisPool;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
     private boolean lastMeshUltra=true;
@@ -202,7 +204,14 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         greatswordModel=new Mesh(ArtKit.greatsword().vertices);
         lanternModel=new Mesh(ArtKit.lantern().vertices);
         // Premium sculpt details from the atelier, with GPU-friendly rigid bones.
-        playerRig=new Rigged(CharacterRig.split(DetailArtKit.bellwarden(),false,false));
+        // Gameplay now uses the same ultra-sculpt as the workshop, with a
+        // retained medium LOD for weak GPU frames. Enemies are untouched.
+        ArtKit.Model heroSculpt=CinematicArtKit.bellwarden();
+        playerRig=new Rigged(CharacterRig.split(heroSculpt,false,false));
+        playerLiteRig=new Rigged(CharacterRig.split(DetailArtKit.bellwarden(),false,false));
+        playerPremiumSword=new Mesh(CinematicArtKit.sword().vertices);
+        Log.i(TAG,"PLAYER_PREMIUM_READY triangles="+heroSculpt.triangleCount+
+            " medium_triangles="+DetailArtKit.bellwarden().triangleCount);
         revenantRig=new Rigged(CharacterRig.split(DetailArtKit.hushed(),false,true));
         knightRig=new Rigged(CharacterRig.split(DetailArtKit.ashKnight(),true,false));
         revenantFarRig=new Rigged(CharacterRig.split(ArtKit.hushed(),false,true));
@@ -640,7 +649,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         // Distant meshes retain fast ES2 per-vertex material lighting.
         boolean materialQuality=dist2<80f && fps>6.0f;
         GLES20.glUniform1f(uSurfaceQuality,materialQuality?1f:0f);
-        Rigged rig=boss?knightRig:(foe?revenantRig:playerRig);
+        Rigged rig=boss?knightRig:(foe?revenantRig:
+            (fps>=8.5f?playerRig:playerLiteRig));
         if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
             rig=boss?knightFarRig:revenantFarRig;
         }
@@ -653,32 +663,51 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float flinch=stagger>0?Math.min(1f,stagger*2.65f):0f;
         float phase=swing>0?CombatMotion.progress(swing):0f;
         float attackTwist=swing>0?(float)Math.sin(phase*Math.PI)*-14f:0f;
+        if(!foe)HeroPose.sample(heroFrame,tm,walk,moving,fatigue,swing,dodge,stagger);
         // Idle guard, active locomotion, heavy breathing, dodge and damage.
         Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y+bob,z);
+        Matrix.translateM(model,0,x,y+(foe?bob:heroFrame.bob),z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
         Matrix.scaleM(model,0,scale,scale,scale);
-        Matrix.rotateM(model,0,moving*3.2f+fatigue*inhale*47f+
-                flinch*9f+roll*24f,1,0,0);
-        Matrix.rotateM(model,0,attackTwist,0,1,0);
+        Matrix.rotateM(model,0,foe?(moving*3.2f+fatigue*inhale*47f+
+                flinch*9f+roll*24f):heroFrame.rootPitch,1,0,0);
+        Matrix.rotateM(model,0,foe?attackTwist:heroFrame.rootYaw,0,1,0);
+        if(!foe)Matrix.rotateM(model,0,heroFrame.rootRoll,0,0,1);
         draw(rig.torso,model,1,1,1,foe?.04f:0);
+        if(!foe&&rig.mantle.count>0){
+            // Counter-sway the mantle about a fixed collar hinge.
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,y+heroFrame.bob,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+            Matrix.scaleM(model,0,scale,scale,scale);
+            Matrix.translateM(model,0,0,1.93f,-.51f);
+            Matrix.rotateM(model,0,heroFrame.mantlePitch,1,0,0);
+            Matrix.rotateM(model,0,heroFrame.mantleYaw,0,1,0);
+            draw(rig.mantle,model,.91f,.97f,1f,0);
+        }
         float brace=windup>0?22f*(1f-windup/(boss?.92f:.72f)):0f;
         float armDrive=swing>0?25f+26f*CombatMotion.smooth(phase/.32f):0f;
         drawRigLimb(rig.leftArm,rig.parts.shoulderX,rig.parts.shoulderY,
-                    x,y+bob,z,yaw,scale,-step*18f-12f-flinch*13f+roll*20f,
-                    -8f-fatigue*inhale*44f,false);
+                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
+                    foe?(-step*18f-12f-flinch*13f+roll*20f):heroFrame.leftArmPitch,
+                    foe?(-8f-fatigue*inhale*44f):heroFrame.leftArmRoll,false);
         drawRigLimb(rig.rightArm,rig.parts.shoulderX,rig.parts.shoulderY,
-                    x,y+bob,z,yaw,scale,step*16f+13f-armDrive-brace,
-                    -22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f),true);
+                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
+                    foe?(step*16f+13f-armDrive-brace):heroFrame.rightArmPitch,
+                    foe?(-22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f)):
+                        heroFrame.rightArmRoll,true);
         drawRigLimb(rig.leftLeg,rig.parts.hipX,rig.parts.hipY,
-                    x,y+bob,z,yaw,scale,step*22f-roll*35f,2f,false);
+                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
+                    foe?(step*22f-roll*35f):heroFrame.leftLegPitch,2f,false);
         drawRigLimb(rig.rightLeg,rig.parts.hipX,rig.parts.hipY,
-                    x,y+bob,z,yaw,scale,-step*22f+roll*24f,-2f,true);
+                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
+                    foe?(-step*22f+roll*24f):heroFrame.rightLegPitch,-2f,true);
 
         Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y+bob,z);
+        Matrix.translateM(model,0,x,y+(foe?bob:heroFrame.bob),z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
         Matrix.scaleM(model,0,scale,scale,scale);
+        if(!foe)Matrix.rotateM(model,0,heroFrame.rootYaw*.43f,0,1,0);
         Matrix.translateM(model,0,boss?1.36f:.78f,boss?1.45f:1.12f,.39f);
         if(swing>0){
             Matrix.rotateM(model,0,(float)Math.toDegrees(
@@ -691,7 +720,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             Matrix.rotateM(model,0,-23f,0,0,1);
         }
         Matrix.scaleM(model,0,boss?1f:.82f,boss?1f:.92f,boss?1f:.82f);
-        draw(boss?greatswordModel:swordModel,model,
+        draw(boss?greatswordModel:(foe?swordModel:
+            (fps>=8.5f?playerPremiumSword:swordModel)),model,
              foe?.72f:1f,foe?.68f:1f,foe?.72f:1f,foe?.04f:.10f);
         // Glint on the moving blade during the same contact window as physics.
         if(swing>0&&phase>=CombatMotion.ACTIVE_START&&
@@ -832,11 +862,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private static final class Rigged {
         final CharacterRig.Parts parts;
-        final Mesh torso,leftArm,rightArm,leftLeg,rightLeg;
+        final Mesh torso,leftArm,rightArm,leftLeg,rightLeg,mantle;
         Rigged(CharacterRig.Parts p){
             parts=p;torso=new Mesh(p.torso.vertices);
             leftArm=new Mesh(p.leftArm.vertices);rightArm=new Mesh(p.rightArm.vertices);
             leftLeg=new Mesh(p.leftLeg.vertices);rightLeg=new Mesh(p.rightLeg.vertices);
+            mantle=new Mesh(p.mantle.vertices);
         }
     }
     private static final class Mesh {
