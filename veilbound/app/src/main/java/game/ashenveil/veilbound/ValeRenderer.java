@@ -1025,17 +1025,17 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             float pz=z+orbit*.63f*(float)Math.sin(phase);
             float py=y+.61f+.13f*i+.10f*(float)Math.sin(seconds*(1.12f+.09f*i)+i);
             float pulse=.72f+.28f*(float)Math.sin(seconds*2.4f+i*1.71f);
-            float radius=(.032f+.008f*(i%3))*pulse;
+            float radius=(.063f+.011f*(i%3))*pulse;
             drawOcta(px,py,pz,radius,radius*1.45f,radius,
-                     .34f,.065f,.46f,.64f+pulse*.20f,seconds*41f+i*38f);
+                     .47f,.085f,.54f,.76f+pulse*.22f,seconds*41f+i*38f);
         }
         for(int i=0;i<3;i++){
             float phase=seconds*.49f+i*2.094395f+.31f;
             float px=x+.41f*(float)Math.cos(phase);
             float pz=z+.33f*(float)Math.sin(phase);
             float py=y+1.17f+.34f*(float)Math.sin(seconds*.82f+i*1.9f);
-            drawOcta(px,py,pz,.022f,.029f,.022f,
-                     .63f,.13f,.45f,.82f,seconds*26f+i*47f);
+            drawOcta(px,py,pz,.035f,.044f,.035f,
+                     .78f,.17f,.49f,.92f,seconds*26f+i*47f);
         }
         GLES20.glUniform1f(uSurface,1f);
     }
