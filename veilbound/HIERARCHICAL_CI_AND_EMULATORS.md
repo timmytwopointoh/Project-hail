@@ -1,8 +1,10 @@
+> **Current priority:** one Moto G (2025) Android 15 emulator only. The multi-version farm below is retained for later and is manual-only. Coding uses our own localhost Qwen2.5-Coder inference, with **no local AI key**. See [OWN_LOCAL_AI.md](OWN_LOCAL_AI.md).
+
 # VEILBOUND: Director of Divisions and Parallel Emulator Farm
 
 This infrastructure is proposed in draft PR #2. It changes the development
 pipeline, not the game APK or gameplay code. The shared native build remains
-offline-capable and does not depend on Gemini at runtime.
+offline-capable and does not depend on local AI at runtime.
 
 ## Four organizational levels
 
@@ -35,10 +37,10 @@ working game branch. Multiple proposals against a single Java file are
 be automatically combined.
 
 The manager hierarchy supports up to 50 coding task slots per cycle.
-Model calls remain optional, require `GEMINI_API_KEY`, and can incur usage
-charges. Manual worker matrix parallelism can be set to 2/4/8/12. The
+Model execution is manual-only, requires no API key, and consumes CI runner
+minutes for model downloads and CPU inference. Manual worker matrix parallelism can be set to 2/4/8/12. The
 automatic non-manual budget remains six slots and four concurrent model
-workers if model auto-mode is explicitly enabled. Without opt-in Gemini,
+workers when coding proposals are manually requested. Without manual opt-in to local AI,
 only director/division/specialist validations run.
 
 ## Parallel Android emulator farm
@@ -46,7 +48,7 @@ only director/division/specialist validations run.
 Workflow: `.github/workflows/veilbound-parallel-emulators.yml`
 (under GitHub Actions: **VEILBOUND - Parallel Android Emulator Farm**).
 
-The emulator director selects **1, 2, 4 or 8 independent Android VMs**.
+**Only when manually dispatched**, the emulator director selects **1, 2, 4 or 8 independent Android VMs**.
 A separate build job constructs the real VEILBOUND APK **only once**.
 GitHub Actions then distributes that exact, immutable APK to different
 GitHub-hosted Ubuntu VMs. Each VM separately starts an Android SDK emulator
@@ -71,7 +73,7 @@ FPS or thermal behavior on a physical Motorola phone.
 
 Use small parallel batches for regular CI, a larger matrix before a release.
 This farm is separate from the existing single-emulator native Android
-workflow, which remains intact. No emulator runs need paid Gemini access,
+workflow, which remains intact. No emulator runs require a local AI model,
 and none has permission to merge source automatically.
 
 ## Where to see results
