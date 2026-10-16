@@ -436,6 +436,9 @@ def main():
         report["vesper_synthetic_aura_stage_requested"]="AURA_STAGE_SMOKE_REQUEST" in aura_log
         if not report["vesper_synthetic_aura_stage_requested"]:
             raise AssertionError("Synthetic Vesper aura-stage launch not acknowledged")
+        report["vesper_synthetic_aura_draw_seen"]="AURA_DRAW_ACTIVE" in aura_log
+        if not report["vesper_synthetic_aura_draw_seen"]:
+            raise AssertionError("Synthetic Vesper aura was not rendered by GLES")
         report["screenshots"].append(shot("05_vesper_synthetic_aura_stage.png"))
         report["full_vesper_glb_verified"]=False
         report["status"]="passed"
