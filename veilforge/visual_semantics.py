@@ -50,7 +50,6 @@ def iou(a,b):
     return sum(x and y for x,y in zip(a,b))/union if union else 0.
 
 def diagnose(root,out,*,strict_provenance=True):
-    from PIL import Image
     root=Path(root);out=Path(out);out.mkdir(parents=True,exist_ok=True)
     reports=list(root.rglob("emulator_visual_qa.json"))
     roles={}
@@ -77,6 +76,7 @@ def diagnose(root,out,*,strict_provenance=True):
                     problems.append(name+": missing frame "+str(index));break
                 if strict_provenance and hashlib.sha256(file.read_bytes()).hexdigest()!=meta.get("sha256"):
                     problems.append(name+": altered real emulator frame");break
+                from PIL import Image
                 with Image.open(file) as frame:
                     mask,w,h=silhouette(frame)
                 masks.append(mask)
