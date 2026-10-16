@@ -64,8 +64,9 @@
       "id": "M34-06",
       "priority": "P1",
       "name": "Impact-aware changed-asset scheduling",
-      "status": "planned",
-      "acceptance": "Only skip costly Android test for provably unrelated docs/source, full Android on scene/renderer/material/mesh changes; maintain a separate source QA job."
+      "status": "partial",
+      "acceptance": "Only skip costly Android test for provably unrelated docs/source, full Android on scene/renderer/material/mesh changes; maintain a separate source QA job.",
+      "implementation_note": "Six-team high-detail production now triggers only on its actual geometry/manager/export source, not every unrelated veilforge file. Full impact-based factory/emulator routing remains planned."
     },
     {
       "id": "M34-07",
@@ -118,5 +119,6 @@
     }
   ],
   "claims_limit": "Parallelism reduces a three-plus-one emulator wave to one wave when runners are available. Do not claim a specific wall-time or cost improvement until comparable real Actions jobs prove it.",
-  "definition_of_done": "All P0/P1 gates have independent green CI evidence, compatible Android captures remain genuine and the changes have not removed model/visual/hardware release gates. Exact photorealism and physical-device acceptance remain outside this optimization track."
+  "definition_of_done": "All P0/P1 gates have independent green CI evidence, compatible Android captures remain genuine and the changes have not removed model/visual/hardware release gates. Exact photorealism and physical-device acceptance remain outside this optimization track.",
+  "base_run_status": "Initial CI found missing Pillow dependencies in both manager jobs and an older mock missing new captured-frame field; corrected in this milestone before rerun."
 }

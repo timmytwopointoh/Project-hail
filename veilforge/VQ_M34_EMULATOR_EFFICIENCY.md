@@ -75,3 +75,22 @@ python3 veilforge/vq_emulator_efficiency.py \
   --root . --out inspection_output/m34-efficiency-audit.json
 python3 -m unittest discover -s veilforge/tests -v
 ```
+
+## Follow-up audit: redundant high-detail production trigger
+
+The first M34 CI attempt revealed that **two entirely separate production
+workflows** ran on any `veilforge/**` edit, even QA-only changes. M34
+narrows the six-team `veilforge-asset-engine.yml` automatic trigger to the
+five modules its manager/production workers actually execute. This preserves
+`workflow_dispatch` and all six specialist jobs but stops unrelated docs,
+M34 QA or UV experiments from launching another heavy production pipeline.
+
+Both factory and high-detail manager jobs now install their pinned Pillow
+test dependency **before** running the shared entire test suite. Prior to the
+fix, visual tests failed because their dependency was missing; removing the
+visual tests to force a passing result was explicitly rejected. Older
+system-modal synthetic screenshots now carry the shared renderer-background
+test flag, without bypassing the real pixel-level Android gate.
+
+This change is a *partial implementation* of impact-aware workflow routing,
+not comprehensive incremental CI scheduling. Gameplay remains untouched.

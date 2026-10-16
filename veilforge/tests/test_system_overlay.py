@@ -49,7 +49,8 @@ class SystemOverlayTest(unittest.TestCase):
                 return SyntheticFrame(calls[0]==1)
             def measure(image):
                 return {"modal_overlay_fraction":.92 if image.overlay else 0,
-                        "foreground_fraction":.30,"channel_stddev":65}
+                        "foreground_fraction":.30,"channel_stddev":65,
+                        "renderer_background_confirmed":not image.overlay}
             with patch.object(qa,"screenshot",side_effect=shot), \
                  patch.object(qa,"metrics",side_effect=measure),\
                  patch.object(qa,"adb",return_value=""),\

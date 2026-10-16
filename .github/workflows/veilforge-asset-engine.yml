@@ -2,8 +2,15 @@ name: VEILFORGE - High Detail Asset Production
 on:
   push:
     branches: ['feature/veilforge-*']
+    # Heavy six-team high-detail runs only for the modules they execute.
+    # Emulator QA, roadmaps, UV docs and worker coordination must not
+    # independently start a second, unrelated asset-production pipeline.
     paths:
-      - 'veilforge/**'
+      - 'veilforge/ForgeHumanCLI.java'
+      - 'veilforge/manager.py'
+      - 'veilforge/topology.py'
+      - 'veilforge/gltf_export.py'
+      - 'veilforge/engine.py'
       - '.github/workflows/veilforge-asset-engine.yml'
   workflow_dispatch:
 permissions:
@@ -27,6 +34,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install the same pinned visual-test dependency used by VQ
+        run: python3 -m pip install --quiet pillow==11.3.0
       - name: Test offline core and bounded manager
         run: |
           set -euo pipefail

@@ -67,6 +67,24 @@ def audit(root,out=None):
         issues.append("M30 screenshot gate does not reuse strict common validation")
     if "VIEWS=[" not in capture or "ROLES={" not in capture:
         issues.append("Existing source camera and asset roles missing")
+    # The high-detail six-team producer is independent of screenshot QA
+    # and must not be launched for unrelated source changes.
+    heavy=root/".github/workflows/veilforge-asset-engine.yml"
+    if heavy.is_file():
+        producer=heavy.read_text(encoding="utf-8")
+        if "'veilforge/**'" in producer:
+            issues.append("Unrelated source edits spuriously trigger six production teams")
+        for required in ("veilforge/ForgeHumanCLI.java","veilforge/manager.py",
+                         "veilforge/topology.py","veilforge/gltf_export.py",
+                         "veilforge/engine.py"):
+            if required not in producer:
+                issues.append("High-detail workflow lost required source dependency: "+required)
+        if "pip install --quiet pillow==11.3.0" not in producer:
+            issues.append("High-detail unit tests missing their visual dependency")
+    else:
+        issues.append("Missing independent high-detail production workflow")
+    if "pip install --quiet pillow==11.3.0" not in text:
+        issues.append("Factory full regression tests missing Pillow")
     result={
         "schema_version":1,"milestone":"M34",
         "scope":"static source/workflow configuration, not runtime evidence",

@@ -29,6 +29,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install pinned image library before the full regression suite
+        run: python3 -m pip install --quiet pillow==11.3.0
       - name: Unit and factory geometry tests
         run: |
           set -euo pipefail
