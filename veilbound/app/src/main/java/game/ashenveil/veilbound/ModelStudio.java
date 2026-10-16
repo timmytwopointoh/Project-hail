@@ -9,7 +9,7 @@ public final class ModelStudio {
     public static final String[] ITEMS={
         "BELLWARDEN - ORIGINAL EASTER EGG","HUSHED REVENANT","ASH KNIGHT",
         "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK",
-        "FRACTURED FLAGSTONE","FUNERARY CENOTAPH","IRON RELIQUARY","ANCIENT ROOT CLUSTER","HUMAN BASE (SKIN TEST)","M23 HAND SCULPT","M24 DEFORMATION TEST","M25 FACE DETAIL","M26 SCULPT LEARNING LAB","M28 ORBITAL ANATOMY","M29 REFERENCE T-POSE","M29 REFERENCE 3/4 POSE","IMPORTED OBJ"};
+        "FRACTURED FLAGSTONE","FUNERARY CENOTAPH","IRON RELIQUARY","ANCIENT ROOT CLUSTER","HUMAN BASE (SKIN TEST)","M23 HAND SCULPT","M24 DEFORMATION TEST","M25 FACE DETAIL","M26 SCULPT LEARNING LAB","M28 ORBITAL ANATOMY","M29 REFERENCE T-POSE","M29 REFERENCE 3/4 POSE","M31 REALISM NEUTRAL","M31 RIGGED T-POSE","M31 RIGGED RELAXED","IMPORTED OBJ"};
     public static final String[] LIGHTS={"STUDIO","MOONLIT","EMBER","RIM LIGHT"};
     public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
@@ -31,10 +31,10 @@ public final class ModelStudio {
     private static final String[] REVIEW_NAMES={"FRONT","SIDE","BACK","3/4"};
     /** Repeatable camera angles for actual geometry review and emulator QA. */
     public synchronized void nextReviewView(){
-        if(item<11||item>18)return;
+        if(item<11||item>21)return;
         reviewView=(reviewView+1)%4;
         yaw=REVIEW_YAWS[reviewView];pitch=.055f;
-        zoom=item==14||item==16?1.45f:item==17?5.10f:4.15f;panX=0;panY=0;autoTurn=false;
+        zoom=item==14||item==16?1.45f:(item==17||item==20)?5.10f:4.15f;panX=0;panY=0;autoTurn=false;
     }
     public synchronized String reviewViewName(){return REVIEW_NAMES[reviewView];}
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
@@ -42,7 +42,7 @@ public final class ModelStudio {
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
         panX=panY=0;
-        if(item>=11&&item<=18){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
+        if(item>=11&&item<=21){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:
             item==12?2.20f:(item==14||item==16)?1.45f:item==17?5.10f:4.50f;
@@ -55,7 +55,7 @@ public final class ModelStudio {
     /** Focus fine geometry—especially hands, knuckles and gauntlets. */
     public synchronized void focusDetail(){
         autoTurn=false;
-        if(item==14||item==15||item==16){
+        if(item==14||item==15||item==16||item==19){
             yaw=.12f;pitch=.025f;panX=0;panY=0;zoom=1.22f;return;
         }
         if(item==11||item==12){
