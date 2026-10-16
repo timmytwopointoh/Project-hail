@@ -177,3 +177,27 @@ the shared implementation instead of relaxing the screenshot policy.
 ## M34-10 factory verification
 
 Factory Actions run 38971117494 passed 164 tests, eight producers, four Android 15 roles, 154 real captures, independent PNG pixel recomputation, and LOD/semantic reviews. Source commit 5aec7a0d681896996be9c58e88d6a493c6af4a5a. M30 Android shader comparison and physical device/artistic approval remain pending.
+
+## GEO-02: Read-only connected-region topology audit (2026-10-16)
+
+`vq_topology_regions.py` analyzes geometric welded-edge connected components
+without editing OBJ data. Per-region evidence includes source SHA256, boundary,
+nonmanifold, degenerate, exact-duplicate, material/UV semantic overlay and
+inconsistent-winding counts. Do not delete material/UV overlays merely because
+their geometric triangles coincide. Open cloth rims may be intentional.
+This is diagnosis, not automatic hole repair or artist approval.
+
+Five adversarial tests cover split UV seams, semantic overlays, same-direction
+shared edges, disconnected/degenerate components and malformed source.
+Commit `1aa75e88d53eb8bcd024c3faa92abc2290526e06`, factory run
+`38979589571`: 176 tests, eight producers, four Android 15 roles,
+154 real screenshots, independent LOD and semantic reviews. Five semantic
+warnings remain. Factory CI verifies compatibility; the regional audit
+is not yet integrated into every generated asset's workflow.
+
+Keep failed experiment `feature/veilforge-geo02-safe-cap-20261016`
+commit `debd682f4c568aec6757b4f4d6401e80216e8753`
+(run `38979439195`, invalid Python syntax) separate and unmerged.
+The verified audit lives on `feature/veilforge-geo02-regional-audit-20261016`.
+GEO-02 remains partial pending material/UV-safe conservative repair,
+real source-region audit integration and visual/hardware approval.

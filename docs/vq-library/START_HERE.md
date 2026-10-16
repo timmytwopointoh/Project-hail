@@ -130,3 +130,16 @@ source branch is feature/veilforge-m34-shared-android-qa-20261016;
 the refreshed archive branch is feature/vq-library-snapshot-m34-10-20261016.
 The older pinned recovery base remains valid. Separate M30 Android normal-map
 comparison, physical-device performance and artist signoff remain open.
+
+## GEO-02 verified regional topology inspection
+
+Latest tested source branch: `feature/veilforge-geo02-regional-audit-20261016`
+at commit `1aa75e88d53eb8bcd024c3faa92abc2290526e06`.
+Full factory Actions run 38979589571 passed 176 tests, eight producers,
+four Android 15 roles and 154 genuine images. Five semantic warnings remain.
+
+Run `python3 veilforge/vq_topology_regions.py --obj input.obj --out audit.json`
+to obtain read-only, per-connected-region mesh defect evidence, including
+source SHA256 and material/UV overlay differentiation. The tool does not
+fill holes or authorize model/game release. Recovery snapshot branch:
+`feature/vq-library-snapshot-geo02-20261016`. Keep all older source ZIPs.

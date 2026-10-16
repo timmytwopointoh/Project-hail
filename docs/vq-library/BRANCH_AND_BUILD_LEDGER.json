@@ -82,6 +82,25 @@
       "run": 38971117494,
       "tests": 164,
       "screenshots": 154
+    },
+    {
+      "name": "GEO-02 read-only connected-region topology audit",
+      "branch": "feature/veilforge-geo02-regional-audit-20261016",
+      "sha": "1aa75e88d53eb8bcd024c3faa92abc2290526e06",
+      "status": "partial_geo02_factory_android_pass",
+      "run": 38979589571,
+      "tests": 176,
+      "accepted_screenshots": 154,
+      "semantic_warnings": 5,
+      "note": "Five adversarial tests. Existing repair not modified; factory tested compatibility, not regional audit on every asset."
+    },
+    {
+      "name": "GEO-02 unsuccessful syntax candidate",
+      "branch": "feature/veilforge-geo02-safe-cap-20261016",
+      "sha": "debd682f4c568aec6757b4f4d6401e80216e8753",
+      "status": "failed_unmerged",
+      "run": 38979439195,
+      "note": "Python syntax error caught by factory source QA; separate clean branch verified."
     }
   ],
   "separate_projects": [
@@ -112,7 +131,8 @@
     "Actions artifacts expire; use Library ZIP or git checkout for recovery.",
     "No private keys/signing secrets are archived.",
     "Manual artistic and real-device performance gates remain open.",
-    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release."
+    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release.",
+    "GEO-02 regional audit is read-only; no automatic hole filling, appearance or physical-device approval."
   ],
   "in_progress_workstreams": [
     {
@@ -122,5 +142,12 @@
       "status": "pending_full_factory_android_ci",
       "note": "One shared framebuffer acceptance contract; both independent reviewers recompute actual PNG pixels and reject forged metrics, unsafe paths and SHA mismatches. M30 logcat streaming remains legacy; no physical-device or aesthetic claim."
     }
-  ]
+  ],
+  "latest_recovery_snapshot": {
+    "branch": "feature/vq-library-snapshot-geo02-20261016",
+    "source_commit": "1aa75e88d53eb8bcd024c3faa92abc2290526e06",
+    "factory_run": 38979589571,
+    "full_android_tested": true,
+    "game_release_approved": false
+  }
 }
