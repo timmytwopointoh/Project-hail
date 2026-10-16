@@ -147,7 +147,7 @@ public final class MainActivity extends Activity {
             try(InputStream in=getAssets().open("vesper_import_smoke.glb")){
                 renderer.stageVesper(VesperGlb.load(in));
                 game.enterStudio();
-                game.studio.selectImported();
+                game.studio.selectVesper();
                 Log.i("VESPER_GLTF","AURA_STAGE_SMOKE_REQUEST synthetic_fixture=true");
             }catch(Exception e){
                 Log.e("VESPER_GLTF","AURA_STAGE_SMOKE_FAIL",e);
@@ -214,7 +214,7 @@ public final class MainActivity extends Activity {
                         renderer.stageVesper(imported);
                         runOnUiThread(new Runnable(){
                             @Override public void run(){
-                                game.studio.selectImported();
+                                game.studio.selectVesper();
                                 Toast.makeText(MainActivity.this,"Vesper GLB loaded: "+
                                     imported.joints+" joints, "+imported.triangles+
                                     " triangles. Tap PLAY AS VESPER.",Toast.LENGTH_LONG).show();
