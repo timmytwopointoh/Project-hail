@@ -104,6 +104,23 @@ class ProposalGuardTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "prohibited"):
                     self.validate(obj)
 
+    def test_float_nan_comparisons_are_invalid_even_when_java_compiles(self):
+        for expression in (
+            "x == Float.NaN", "x != Float.NaN",
+            "Float.NaN == x", "Float.NaN != x",
+            "x == Double.NaN", "Double.NaN != x",
+        ):
+            with self.subTest(expression=expression):
+                updated = "public final class CharacterRig { boolean f(float x){return " + expression + ";} }"
+                with self.assertRaisesRegex(ValueError, "never detect NaN"):
+                    self.validate(proposal(new=updated))
+
+    def test_correct_float_nan_api_is_allowed_as_real_java_change(self):
+        changed = ("public final class CharacterRig { "
+                   "boolean f(float x){return Float.isNaN(x);} }")
+        result = self.validate(proposal(new=changed))
+        self.assertIn("Float.isNaN(x)", result[PATH_OK])
+
     def test_malformed_shape_and_budget(self):
         for obj in (
             {**proposal(), "commands": ["curl x"]},
