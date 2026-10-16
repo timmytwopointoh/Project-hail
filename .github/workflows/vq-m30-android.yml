@@ -1,0 +1,185 @@
+name: VQ M30 - Sculpted Normal Bake Android Farm
+on:
+  push:
+    branches: ['feature/vq-m30-*']
+    paths:
+      - 'veilforge/vq_mesh_baker.py'
+      - 'veilforge/vq_sculpt_detail_patch.py'
+      - 'veilforge/vq_m30_android_pack.py'
+      - 'veilforge/vq_m30_android_qa.py'
+      - 'veilforge/vq_m30_android_review.py'
+      - 'veilforge/android-probe/**'
+      - '.github/workflows/vq-m30-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vq-m30-android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-gles-test-apk:
+    name: Build real low-poly / high-poly-baked Android scene
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      sha256: ${{ steps.sha.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Bake actual high-poly geometry into low-poly GPU normal texture
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_sculpt_detail_patch.py --out inspection_output/m30/source
+          python3 veilforge/vq_m30_android_pack.py \
+            --low inspection_output/m30/source/source_low.obj \
+            --high inspection_output/m30/source/source_high.obj \
+            --scene veilforge/android-probe/app/src/main/assets/scene
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("veilforge/android-probe/app/src/main/assets/scene")
+          scene=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
+          provenance=json.loads((root/"vq_m30_probe_manifest.json").read_text())
+          assert len(scene["meshes"])==1 and len(scene["nodes"])==1
+          assert len(scene["images"])==4
+          assert scene["materials"][0]["normalTexture"]["index"]==2
+          assert scene["nodes"][0]["extras"]["asset_id"]=="vq_m30_patch"
+          assert provenance["bake_normal_variation_texels"]>1000
+          assert all((root/img["uri"]).is_file() for img in scene["images"])
+          assert all((root/b["uri"]).stat().st_size==b["byteLength"] for b in scene["buffers"])
+          assert not (root/"_build_review").exists()
+          assert scene["extras"]["production_approved"] is False
+          print("VQ_M30_BAKED_ANDROID_SCENE_PASS",provenance["bake_normal_variation_texels"])
+          PY
+      - name: Build independent Android 15 GLES test APK
+        run: gradle -p veilforge/android-probe :app:assembleDebug --no-daemon
+      - id: sha
+        name: Verify APK binary
+        run: |
+          set -euo pipefail
+          APK=veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'classes[.]dex'
+          echo "value=$(sha256sum "$APK" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vq-m30-baked-normal-test-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vq-m30-bake-source-provenance
+          path: |
+            inspection_output/m30/source/
+            veilforge/android-probe/app/src/main/assets/scene/vq_m30_probe_manifest.json
+          retention-days: 14
+
+  emulator-workers:
+    name: M30 Android 15 / ${{ matrix.role }}
+    needs: build-gles-test-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        role: [pixel_4, pixel_5, pixel_6, pixel_7]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: vq-m30-baked-normal-test-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/
+      - name: Verify shared APK hash
+        run: |
+          echo "${{ needs.build-gles-test-apk.outputs.sha256 }}  veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk" | sha256sum -c -
+      - name: Install screenshot test dependencies
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Enable native KVM emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Capture real GLES normal-map shading and flat comparison
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ROLE: ${{ matrix.role }}
+          APK_SHA: ${{ needs.build-gles-test-apk.outputs.sha256 }}
+          SOURCE_SHA: ${{ github.sha }}
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: ${{ matrix.role }}
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 veilforge/vq_m30_android_qa.py --role "$ROLE" --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --out "inspection_output/m30-android/$ROLE" --apk-sha "$APK_SHA" --source-sha "$SOURCE_SHA"
+      - name: Preserve actual screenshots and shader evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vq-m30-android-${{ matrix.role }}
+          path: inspection_output/m30-android/${{ matrix.role }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  independent-visual-review:
+    name: Require four real emulator normal-map screenshot comparisons
+    needs: [build-gles-test-apk,emulator-workers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: vq-m30-android-*
+          path: inspection_output/m30-android-collected
+      - name: Independently audit image SHA, 4 device roles and normal-vs-flat deltas
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_m30_android_review.py \
+            --root inspection_output/m30-android-collected \
+            --out inspection_output/m30-final-review \
+            --source-sha "${{ github.sha }}" \
+            --apk-sha "${{ needs.build-gles-test-apk.outputs.sha256 }}"
+          cat inspection_output/m30-final-review/m30_android_review.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vq-m30-final-android-review
+          path: inspection_output/m30-final-review/
+          if-no-files-found: warn
+          retention-days: 14

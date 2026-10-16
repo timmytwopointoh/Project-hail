@@ -46,6 +46,7 @@ public final class ViewerActivity extends Activity {
             if(renderer.asset==null) renderer.asset="scene";
             renderer.yaw=intent.getIntExtra("yaw",0);
             renderer.pitch=intent.getIntExtra("pitch",20);
+            renderer.disableNormal=intent.getBooleanExtra("flat",false);
             if(surface!=null) surface.requestRender();
             Log.i(TAG,"VIEW asset="+renderer.asset+" yaw="+renderer.yaw+" pitch="+renderer.pitch);
         }
@@ -59,13 +60,17 @@ public final class ViewerActivity extends Activity {
     @Override protected void onResume(){super.onResume();if(surface!=null){surface.onResume();surface.requestRender();}}
 
     static final class Geometry {
-        FloatBuffer vertices,normals,colors,texcoords;
-        int count,albedo,metalRough;
+        FloatBuffer vertices,normals,colors,texcoords,tangents,bitangents;
+        int count,albedo,metalRough,normalMap,aoMap;
         float metalFactor,roughFactor;
-        Geometry(float[] p,float[] n,float[] c,float[] uv,int tex,int mr,float metallic,float roughness) {
+        Geometry(float[] p,float[] n,float[] c,float[] uv,
+                 float[] tangent,float[] bitangent,
+                 int tex,int mr,int normal,int ao,float metallic,float roughness) {
             count=p.length/3;
             vertices=buffer(p);normals=buffer(n);colors=buffer(c);texcoords=buffer(uv);
-            albedo=tex;metalRough=mr;metalFactor=metallic;roughFactor=roughness;
+            tangents=buffer(tangent);bitangents=buffer(bitangent);
+            albedo=tex;metalRough=mr;normalMap=normal;aoMap=ao;
+            metalFactor=metallic;roughFactor=roughness;
         }
         static FloatBuffer buffer(float[] a) {
             FloatBuffer out=ByteBuffer.allocateDirect(a.length*4).order(ByteOrder.nativeOrder()).asFloatBuffer();
@@ -91,10 +96,13 @@ public final class ViewerActivity extends Activity {
         final ArrayList<Instance> instances=new ArrayList<>();
         volatile String asset="scene";
         volatile int yaw=0,pitch=20;
+        volatile boolean disableNormal=false;
         volatile boolean loaded=false;
-        int program,aPos,aNormal,aColor,aUv,uMvp,uModel,uBaseTexture,uMrTexture,uUseAlbedo,uUseMr,uMetallic,uRoughness;
+        int program,aPos,aNormal,aColor,aUv,aTangent,aBitangent,uMvp,uModel;
+        int uBaseTexture,uMrTexture,uNormalTexture,uAOTexture;
+        int uUseAlbedo,uUseMr,uUseNormal,uUseAO,uMetallic,uRoughness;
         final HashMap<Integer,Integer> imageTextures=new HashMap<>();
-        int texAlbedoCount=0,texMrCount=0;
+        int texAlbedoCount=0,texMrCount=0,texNormalCount=0,texAOCount=0;
         int width=1,height=1;
         final float[] projection=new float[16],view=new float[16],model=new float[16];
         final float[] pv=new float[16],mvp=new float[16];
@@ -123,18 +131,27 @@ public final class ViewerActivity extends Activity {
         }
         static final String VERT=
             "attribute vec3 aPos; attribute vec3 aNormal; attribute vec4 aColor; attribute vec2 aUv;\n"+
+            "attribute vec3 aTangent; attribute vec3 aBitangent;\n"+
             "uniform mat4 uMvp; uniform mat4 uModel;\n"+
             "varying vec4 vColor; varying vec3 vNormal; varying vec2 vUv;\n"+
+            "varying vec3 vTangent; varying vec3 vBitangent;\n"+
             "void main(){ gl_Position=uMvp*vec4(aPos,1.0); "+
-            "vNormal=mat3(uModel)*aNormal; vColor=aColor; vUv=aUv; }\n";
-        // Texture-backed material visualization for real emulator inspection.
-        // Simple Blinn-Phong approximation, NOT a validated glTF PBR BRDF.
-        // Tangent-space normal and AO maps are packaged but not sampled yet.
+            "vNormal=mat3(uModel)*aNormal; vTangent=mat3(uModel)*aTangent; "+
+            "vBitangent=mat3(uModel)*aBitangent; vColor=aColor; vUv=aUv; }\n";
+        // Android test shader samples real baked tangent-space normals + AO.
+        // Direct lighting is still an approximation, NOT a calibrated PBR BRDF.
         static final String FRAG=
             "precision mediump float; varying vec4 vColor; varying vec3 vNormal; varying vec2 vUv;\n"+
+            "varying vec3 vTangent; varying vec3 vBitangent;\n"+
             "uniform sampler2D uBaseTexture; uniform sampler2D uMrTexture;\n"+
-            "uniform float uUseAlbedo; uniform float uUseMr; uniform float uMetallic; uniform float uRoughness;\n"+
-            "void main(){vec3 n=normalize(vNormal);"+
+            "uniform sampler2D uNormalTexture; uniform sampler2D uAOTexture;\n"+
+            "uniform float uUseAlbedo; uniform float uUseMr; uniform float uUseNormal; uniform float uUseAO;\n"+
+            "uniform float uMetallic; uniform float uRoughness;\n"+
+            "void main(){vec3 original=normalize(vNormal);"+
+            "vec3 sampled=texture2D(uNormalTexture,vUv).rgb*2.0-1.0;"+
+            "vec3 mapped=normalize(sampled.x*normalize(vTangent)+sampled.y*normalize(vBitangent)+sampled.z*original);"+
+            "vec3 n=normalize(mix(original,mapped,uUseNormal));"+
+            "float ao=mix(1.0,texture2D(uAOTexture,vUv).r,uUseAO);"+
             "vec3 light=normalize(vec3(0.4,0.8,0.5));"+
             "float diffuse=max(dot(n,light),0.0);"+
             "vec3 albedo=vColor.rgb*mix(vec3(1.0),texture2D(uBaseTexture,vUv).rgb,uUseAlbedo);"+
@@ -143,7 +160,7 @@ public final class ViewerActivity extends Activity {
             "float metal=clamp(mix(uMetallic,rm.b*uMetallic,uUseMr),0.0,1.0);"+
             "vec3 halfdir=normalize(light+vec3(0.0,0.0,1.0));"+
             "float spec=pow(max(dot(n,halfdir),0.0),mix(70.0,7.0,rough));"+
-            "vec3 lit=albedo*(0.22+0.78*diffuse)*(1.0-0.15*metal);"+
+            "vec3 lit=albedo*(0.22+0.78*diffuse)*(1.0-0.15*metal)*ao;"+
             "vec3 reflectance=mix(vec3(0.045),albedo,metal);"+
             "gl_FragColor=vec4(lit+reflectance*spec*0.8,1.0);}\n";
         void setup(){
@@ -158,10 +175,16 @@ public final class ViewerActivity extends Activity {
             aNormal=GLES20.glGetAttribLocation(program,"aNormal");
             aColor=GLES20.glGetAttribLocation(program,"aColor");
             aUv=GLES20.glGetAttribLocation(program,"aUv");
+            aTangent=GLES20.glGetAttribLocation(program,"aTangent");
+            aBitangent=GLES20.glGetAttribLocation(program,"aBitangent");
             uMvp=GLES20.glGetUniformLocation(program,"uMvp");
             uModel=GLES20.glGetUniformLocation(program,"uModel");
             uBaseTexture=GLES20.glGetUniformLocation(program,"uBaseTexture");
             uMrTexture=GLES20.glGetUniformLocation(program,"uMrTexture");
+            uNormalTexture=GLES20.glGetUniformLocation(program,"uNormalTexture");
+            uAOTexture=GLES20.glGetUniformLocation(program,"uAOTexture");
+            uUseNormal=GLES20.glGetUniformLocation(program,"uUseNormal");
+            uUseAO=GLES20.glGetUniformLocation(program,"uUseAO");
             uUseAlbedo=GLES20.glGetUniformLocation(program,"uUseAlbedo");
             uUseMr=GLES20.glGetUniformLocation(program,"uUseMr");
             uMetallic=GLES20.glGetUniformLocation(program,"uMetallic");
@@ -254,7 +277,7 @@ public final class ViewerActivity extends Activity {
             models.clear();
             instances.clear();
             imageTextures.clear();
-            texAlbedoCount=0;texMrCount=0;
+            texAlbedoCount=0;texMrCount=0;texNormalCount=0;texAOCount=0;
             JSONObject doc=new JSONObject(new String(read("scene/ruin_courtyard_demo.gltf"),"UTF-8"));
             if(!"2.0".equals(doc.getJSONObject("asset").getString("version")))throw new Exception("Not glTF 2.0");
             JSONArray sources=doc.getJSONArray("buffers");
@@ -301,6 +324,18 @@ public final class ViewerActivity extends Activity {
                         mr=texture(pbr.getJSONObject("metallicRoughnessTexture").getInt("index"),doc);
                         texMrCount++;
                     }
+                    JSONObject mat=gltfMaterials.getJSONObject(prim.getInt("material"));
+                    int normalMap=0,aoMap=0;
+                    if(mat.has("normalTexture")){
+                        if(uvs==null)throw new Exception("Normal-mapped mesh must have UVs");
+                        normalMap=texture(mat.getJSONObject("normalTexture").getInt("index"),doc);
+                        texNormalCount++;
+                    }
+                    if(mat.has("occlusionTexture")){
+                        if(uvs==null)throw new Exception("AO-mapped mesh must have UVs");
+                        aoMap=texture(mat.getJSONObject("occlusionTexture").getInt("index"),doc);
+                        texAOCount++;
+                    }
                     float[] xyz=new float[idx.length*3],normal=new float[idx.length*3],
                             color=new float[idx.length*4],texcoord=new float[idx.length*2];
                     for(int k=0;k<idx.length;k++){
@@ -325,7 +360,42 @@ public final class ViewerActivity extends Activity {
                             color[k*4+t]=tint*(c==null||t>=colorStride?1f:c[v*colorStride+t]);
                         }
                     }
-                    mesh.shapes.add(new Geometry(xyz,normal,color,texcoord,albedo,mr,
+                    // Expanded triangles: derive a correctly signed tangent/
+                    // bitangent basis from the same UV edges used by the baker.
+                    float[] tangent=new float[xyz.length],bitangent=new float[xyz.length];
+                    for(int k=0;k<idx.length;k+=3){
+                        int a=k*3,b=(k+1)*3,d=(k+2)*3;
+                        float px=xyz[b]-xyz[a],py=xyz[b+1]-xyz[a+1],pz=xyz[b+2]-xyz[a+2];
+                        float qx=xyz[d]-xyz[a],qy=xyz[d+1]-xyz[a+1],qz=xyz[d+2]-xyz[a+2];
+                        int ta=k*2,tb=(k+1)*2,td=(k+2)*2;
+                        float du1=texcoord[tb]-texcoord[ta],dv1=texcoord[tb+1]-texcoord[ta+1];
+                        float du2=texcoord[td]-texcoord[ta],dv2=texcoord[td+1]-texcoord[ta+1];
+                        float det=du1*dv2-du2*dv1;
+                        for(int corner=0;corner<3;corner++){
+                            int o=(k+corner)*3;
+                            float nx=normal[o],ny=normal[o+1],nz=normal[o+2];
+                            float tx,ty,tz;
+                            if(Math.abs(det)>1e-9f){
+                                tx=(px*dv2-qx*dv1)/det;
+                                ty=(py*dv2-qy*dv1)/det;
+                                tz=(pz*dv2-qz*dv1)/det;
+                            }else{
+                                tx=Math.abs(nx)<.85f?1f:0f;ty=Math.abs(nx)<.85f?0f:1f;tz=0;
+                            }
+                            float projected=tx*nx+ty*ny+tz*nz;
+                            tx-=nx*projected;ty-=ny*projected;tz-=nz*projected;
+                            float mag=(float)Math.sqrt(tx*tx+ty*ty+tz*tz);
+                            if(mag<1e-7f)throw new Exception("Degenerate tangent basis");
+                            tx/=mag;ty/=mag;tz/=mag;
+                            float sign=det>=0?1f:-1f;
+                            tangent[o]=tx;tangent[o+1]=ty;tangent[o+2]=tz;
+                            bitangent[o]=(ny*tz-nz*ty)*sign;
+                            bitangent[o+1]=(nz*tx-nx*tz)*sign;
+                            bitangent[o+2]=(nx*ty-ny*tx)*sign;
+                        }
+                    }
+                    mesh.shapes.add(new Geometry(xyz,normal,color,texcoord,tangent,bitangent,
+                        albedo,mr,normalMap,aoMap,
                         (float)pbr.optDouble("metallicFactor",1.0),
                         (float)pbr.optDouble("roughnessFactor",1.0)));
                 }
@@ -349,6 +419,8 @@ public final class ViewerActivity extends Activity {
                     " nodes="+instances.size()+" source_triangles="+triangles);
             Log.i(TAG,"MATERIAL_MAPS_LOADED basecolor="+texAlbedoCount+
                     " metallic_roughness="+texMrCount+" unique_gpu_textures="+imageTextures.size());
+            Log.i(TAG,"M30_NORMAL_MAPS_LOADED normal="+texNormalCount+
+                    " ao="+texAOCount+" tangent_basis=derived");
         }
         @Override public void onSurfaceCreated(javax.microedition.khronos.opengles.GL10 unused,
                                                 javax.microedition.khronos.egl.EGLConfig config){
@@ -426,6 +498,7 @@ public final class ViewerActivity extends Activity {
                 for(Geometry geom:models.get(item.mesh).shapes){
                     geom.vertices.position(0);geom.normals.position(0);
                     geom.colors.position(0);geom.texcoords.position(0);
+                    geom.tangents.position(0);geom.bitangents.position(0);
                     GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
                     GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,geom.albedo);
                     GLES20.glUniform1i(uBaseTexture,0);
@@ -436,7 +509,19 @@ public final class ViewerActivity extends Activity {
                     GLES20.glUniform1f(uUseMr,geom.metalRough==0?0f:1f);
                     GLES20.glUniform1f(uMetallic,geom.metalFactor);
                     GLES20.glUniform1f(uRoughness,geom.roughFactor);
+                    GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+                    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,geom.normalMap);
+                    GLES20.glUniform1i(uNormalTexture,2);
+                    GLES20.glUniform1f(uUseNormal,geom.normalMap==0||disableNormal?0f:1f);
+                    GLES20.glActiveTexture(GLES20.GL_TEXTURE3);
+                    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,geom.aoMap);
+                    GLES20.glUniform1i(uAOTexture,3);
+                    GLES20.glUniform1f(uUseAO,geom.aoMap==0?0f:1f);
                     GLES20.glEnableVertexAttribArray(aUv);
+                    GLES20.glEnableVertexAttribArray(aTangent);
+                    GLES20.glEnableVertexAttribArray(aBitangent);
+                    GLES20.glVertexAttribPointer(aTangent,3,GLES20.GL_FLOAT,false,0,geom.tangents);
+                    GLES20.glVertexAttribPointer(aBitangent,3,GLES20.GL_FLOAT,false,0,geom.bitangents);
                     GLES20.glVertexAttribPointer(aUv,2,GLES20.GL_FLOAT,false,0,geom.texcoords);
                     GLES20.glEnableVertexAttribArray(aPos);
                     GLES20.glEnableVertexAttribArray(aNormal);
@@ -451,6 +536,9 @@ public final class ViewerActivity extends Activity {
             }
             GLES20.glFinish();int err=GLES20.glGetError();
             if(err!=GLES20.GL_NO_ERROR){Log.e(TAG,"GL_ERROR "+err);return;}
+            if("vq_m30_patch".equals(filter))
+                Log.i(TAG,"M30_NORMAL_MAP_DRAW asset="+filter+" active_normal="+
+                    (texNormalCount>0&&!disableNormal)+" triangles="+drawn);
             Log.i(TAG,"FRAME_OK asset="+filter+" instances="+visible+" triangles="+drawn+
                     " yaw="+yaw+" pitch="+pitch+" size="+width+"x"+height);
         }

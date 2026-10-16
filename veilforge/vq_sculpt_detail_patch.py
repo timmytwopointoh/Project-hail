@@ -31,12 +31,12 @@ def mesh(path,subdivisions,*,high,amplitude=.016):
     for z in range(subdivisions+1):
         for x in range(subdivisions+1):
             lines.append(f"vt {x/subdivisions:.9f} {z/subdivisions:.9f}")
-    lines.append("vn 0 -1 0")
+    lines.append("vn 0 1 0")
     span=subdivisions+1
     for z in range(subdivisions):
         for x in range(subdivisions):
             a=z*span+x+1;b=a+1;c=a+span;d=c+1
-            for i,j,k in ((a,b,d),(a,d,c)):
+            for i,j,k in ((a,d,b),(a,c,d)):
                 lines.append(f"f {i}/{i}/1 {j}/{j}/1 {k}/{k}/1")
     path.write_text("\n".join(lines)+"\n",encoding="utf-8")
     return inspect_obj(path)
