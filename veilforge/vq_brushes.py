@@ -273,7 +273,9 @@ def apply_brushes(src:Path,recipe:dict,dest:Path,*,require_change=True):
             # Taubin lambda/mu smoothing reduces roughness while mitigating
             # Laplacian shrink. All hard/material/boundary groups stay pinned.
             for _ in range(stroke["iterations"]):
-                for coefficient in (.44*strength,-.46*strength):
+                # Stronger relaxation than correction: avoid exaggerating
+                # high-frequency spikes on irregular triangulated surfaces.
+                for coefficient in (.50*strength,-.15*strength):
                     previous=list(active)
                     deltas=[]
                     for i,p in enumerate(previous):
