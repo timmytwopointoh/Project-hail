@@ -1,0 +1,183 @@
+name: VQ Studio - On-Demand Model Worker
+run-name: VQ Studio - ${{ inputs.catalog_model }} - ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      catalog_model:
+        description: 'Public allowlisted source model preset, not private free-text prompt'
+        required: true
+        type: choice
+        default: ancient_tree
+        options: ['ancient_tree', 'ceremonial_sword', 'cargo_cart', 'treasure_chest', 'ancient_gate_standard', 'ancient_gate_mobile', 'forest_tree_mobile', 'rolling_terrain']
+      request_id:
+        description: 'Sixteen-character locally generated correlation code'
+        required: true
+        type: string
+      scale_adjust:
+        description: 'Reviewed geometric correction for the next source revision'
+        required: true
+        type: choice
+        default: original
+        options: ['original', 'smaller', 'larger']
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: vq-studio-worker-${{ github.event.inputs.request_id }}
+  cancel-in-progress: false
+
+jobs:
+  vq-model-job:
+    name: Generate real source / inspect / preserve next step
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate public recipe and request identity
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          REQUEST: ${{ inputs.request_id }}
+          VQ_SCALE: ${{ inputs.scale_adjust }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,re,json
+          from pathlib import Path
+          request=os.environ["REQUEST"]
+          asset=os.environ["ASSET"]
+          assert re.fullmatch(r"[a-f0-9]{16}",request), "Invalid request ID"
+          catalog=json.loads(Path("veilforge/catalog.json").read_text())
+          assert asset in {x["id"] for x in catalog["assets"]}
+          assert os.environ["VQ_SCALE"] in {"original","smaller","larger"}
+          print("VQ_ACCEPTED",asset,request,"adjustment",os.environ["VQ_SCALE"])
+          PY
+      - name: Validate modeling and screenshot retention engines
+        run: |
+          python3 -m pip install --quiet pillow==11.3.0
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m unittest discover -s vq-studio/tests -v
+      - name: Generate non-destructive bounded correction catalog
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          VQ_SCALE: ${{ inputs.scale_adjust }}
+        run: |
+          set -euo pipefail
+          python3 vq-studio/corrections.py \
+            --catalog veilforge/catalog.json --id "$ASSET" \
+            --adjustment "$VQ_SCALE" \
+            --out inspection_output/vq-studio/corrected_catalog.json
+      - name: Render adjusted real OBJ and glTF source
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/vq-studio/source
+          python3 veilforge/factory.py \
+            --catalog inspection_output/vq-studio/corrected_catalog.json --id "$ASSET" \
+            --out inspection_output/vq-studio/source
+      - name: Check source OBJ and freeze first real geometry revision
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          REQUEST: ${{ inputs.request_id }}
+        run: |
+          set -euo pipefail
+          python3 vq-studio/live_snapshot.py \
+            --obj "inspection_output/vq-studio/source/$ASSET.obj" \
+            --out inspection_output/vq-studio/snapshot-r001 \
+            --request-id "$REQUEST" --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 1
+      - name: Upload hash-verified early OBJ snapshot for automatic mobile loading
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-snapshot-r001-${{ inputs.request_id }}
+          path: inspection_output/vq-studio/snapshot-r001/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Inspect and render fourteen real source-mesh perspectives
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_model_tools.py \
+            --obj "inspection_output/vq-studio/source/$ASSET.obj" \
+            --gltf "inspection_output/vq-studio/source/$ASSET.gltf" \
+            --out inspection_output/vq-studio/inspection
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          a=Path("inspection_output/vq-studio/inspection/vq_model_report.json")
+          x=json.loads(a.read_text())
+          assert x["technical_geometry_smoke_passed"] and len(x["visual"]["views"])==14
+          assert x["gltf"]["structural_smoke_passed"]
+          assert x["production_approved"] is False
+          print("VQ_JOB_EVIDENCE_PASS 14 REAL OBJ FRAMES")
+          PY
+      - name: Check independent model QA and freeze inspected revision
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          REQUEST: ${{ inputs.request_id }}
+        run: |
+          set -euo pipefail
+          python3 vq-studio/live_snapshot.py \
+            --obj "inspection_output/vq-studio/source/$ASSET.obj" \
+            --report inspection_output/vq-studio/inspection/vq_model_report.json \
+            --out inspection_output/vq-studio/snapshot-r002 \
+            --request-id "$REQUEST" --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 2
+      - name: Upload technical-QA-verified model for hands-free viewport refresh
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-snapshot-r002-${{ inputs.request_id }}
+          path: inspection_output/vq-studio/snapshot-r002/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload first verified live milestone snapshot before worker finishes
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-live-preview-${{ inputs.request_id }}
+          path: inspection_output/vq-studio/inspection/views/contact_sheet.png
+          if-no-files-found: error
+          retention-days: 3
+      - name: Decide next step and release bulky transient screenshot frames
+        run: |
+          set -euo pipefail
+          python3 vq-studio/screenshot_gc.py \
+            --inspection inspection_output/vq-studio/inspection \
+            --evidence inspection_output/vq-studio/checkpoint \
+            --next-action needs_artist_review
+          test -s inspection_output/vq-studio/checkpoint/latest_orbit.png
+          test -s inspection_output/vq-studio/checkpoint/contact_sheet.png
+          test -s inspection_output/vq-studio/checkpoint/checkpoint.json
+          test "$(find inspection_output/vq-studio/inspection/views -name 'orbit_*.png' | wc -l)" -eq 0
+          cat inspection_output/vq-studio/inspection/vq_model_report.md >> "$GITHUB_STEP_SUMMARY"
+          echo "Stage snapshots deleted only after next action and SHA256 evidence checkpoint verified." >> "$GITHUB_STEP_SUMMARY"
+      - name: Create signed SHA256 provenance record
+        run: |
+          python3 veilforge/provenance.py snapshot --root . \
+            --out inspection_output/vq-studio/source_manifest.json
+          python3 veilforge/provenance.py verify --root . \
+            --snapshot inspection_output/vq-studio/source_manifest.json
+      - name: Attest final model-quality evidence
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/vq-studio/checkpoint/vq_model_report.json
+      - name: Upload durable checkpoint, source mesh and retained image
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-reviewed-checkpoint-${{ inputs.request_id }}
+          path: |
+            inspection_output/vq-studio/source/
+            inspection_output/vq-studio/checkpoint/
+            inspection_output/vq-studio/source_manifest.json
+          retention-days: 7
+          if-no-files-found: warn
