@@ -32,6 +32,15 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==18,"M29 relaxed reference pose not registered");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M29 relaxed pose side view missing");
+        s.nextItem(-1);
+        ok(s.snapshot().item==17,"M29 T-pose not registered");
+        ok(s.snapshot().zoom>4.8f,"T-pose arms need wider framing");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"T-pose angle inspection missing");
+        s.nextItem(-1);
         ok(s.snapshot().item==16,"M28 integrated face must be a separate inspectable model");
         ok(Math.abs(s.snapshot().zoom-1.45f)<.02f,"M28 head must start in closeup");
         s.nextReviewView();
