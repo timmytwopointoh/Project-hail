@@ -154,6 +154,9 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: bash veilbound/scripts/emulator_test.sh
+      - name: Install screenshot analyzer dependency
+        if: always()
+        run: python3 -m pip install --disable-pip-version-check --quiet Pillow
       - name: Analyze screenshots, renderer logs and resource budget
         if: always()
         run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
