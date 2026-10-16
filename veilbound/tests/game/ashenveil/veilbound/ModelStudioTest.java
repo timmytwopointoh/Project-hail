@@ -18,7 +18,13 @@ public final class ModelStudioTest {
         ok(s.snapshot().material==0,"Materials must cycle all supported inspection modes");
         s.selectImported();
         ok(s.snapshot().item==ModelStudio.ITEMS.length-1,"File import must select last studio slot");
-        ok(s.snapshot().pose==0,"Newly imported Vesper resets to idle");
+        ok(!s.snapshot().vesperAsset,"OBJ import must not activate Vesper-only controls");
+        s.selectVesperPose(2);
+        ok(s.snapshot().pose==0,"OBJ import must reject Vesper-only poses");
+        s.selectVesper();
+        ok(s.snapshot().vesperAsset,"GLB import must activate Vesper-only controls");
+        ok(Math.abs(s.snapshot().zoom-3.80f)<.01f,"Vesper camera must frame character closer");
+        ok(s.snapshot().pose==0,"New Vesper GLB import resets to idle");
         s.selectVesperPose(1);ok(s.snapshot().pose==1,"T-pose button selects T-pose");
         s.selectVesperPose(2);ok(s.snapshot().pose==2,"Leg-up button selects leg-up");
         s.selectVesperPose(3);ok(s.snapshot().pose==3,"Dance button selects dance");
