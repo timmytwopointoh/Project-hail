@@ -361,7 +361,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
         studioHuman=new Mesh(HumanAnatomy.buildWithSculptedHands(false).vertices);
         studioHumanLite=new Mesh(HumanAnatomy.buildWithSculptedHands(true).vertices);
-        studioHandSculpt=new Mesh(HumanHandSculpt.build(false).vertices);
+        studioHandSculpt=new Mesh(HumanHandSculpt.buildStandalone(false).vertices);
         Log.i("VEILBOUND_STUDIO","M23_HAND_ASSET_ATTACHED triangles="+studioHandSculpt.count/3);
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
         studioBoss=new Mesh(CinematicArtKit.ashKnight().vertices);
