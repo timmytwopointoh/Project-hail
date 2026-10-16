@@ -13,6 +13,14 @@ MAX_REPLACEMENT_CHARS = 5000
 MAX_TOTAL_INSERTED = 10000
 MAX_RISKS = 8
 
+# Java IEEE-754: NaN == anything and NaN != comparison to NaN do NOT
+# provide a reliable finite-value test. Reject erroneous model additions
+# early and give a precise, actionable correction to the next AI attempt.
+BAD_NAN_COMPARISON = re.compile(
+    r"(?:\\b(?:Float|Double)\\s*\\.\\s*NaN\\s*(?:==|!=)|"
+    r"(?:==|!=)\\s*(?:Float|Double)\\s*\\.\\s*NaN\\b)"
+)
+
 # Remove Java whitespace and comments while preserving string/char literals.
 # This is intentionally conservative: the guard may reject an unusual
 # meaningful whitespace edit, but it must never accept cosmetic edits as
@@ -114,6 +122,10 @@ def validate_proposal(proposal, allowed, read_source):
         # New content can contain old content; remove the old occurrence once
         # to inspect genuinely added fragments for dangerous new capabilities.
         additions = new.replace(old, "", 1)
+        if BAD_NAN_COMPARISON.search(additions):
+            raise ValueError(
+                "Invalid Java NaN comparison: == or != Float.NaN never "
+                "detects NaN. Use Float.isNaN(x) instead.")
         if FORBIDDEN_JAVA_ADDITIONS.search(additions):
             raise ValueError("AI proposal introduces prohibited Java capabilities")
         total_inserted += len(new)
