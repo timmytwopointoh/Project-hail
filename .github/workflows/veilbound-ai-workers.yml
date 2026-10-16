@@ -248,3 +248,53 @@ jobs:
           path: inspection_output/agent-${{ matrix.slot_id }}/
           if-no-files-found: warn
           retention-days: 14
+
+  worker-auditor:
+    needs: [manager, parallel-code-workers]
+    if: >-
+      always() && github.event_name == 'workflow_dispatch' &&
+      inputs.run_mode == 'coding_proposals' && needs.manager.result == 'success'
+    name: Independent manager audit / all local AI patches
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Load original director assignments
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Collect all independent coding workers including failed ones
+        uses: actions/download-artifact@v4
+        with:
+          pattern: veilbound-coder-*-${{ github.run_attempt }}
+          path: inspection_output/all-agents
+        continue-on-error: true
+      - name: Reject missing, duplicate, untested, out-of-scope or fabricated worker approvals
+        run: |
+          python3 veilbound/scripts/worker_scorecard.py \
+            --plan inspection_output/manager/assignment_plan.json \
+            --results inspection_output/all-agents \
+            --out inspection_output/auditor
+      - name: Publish honest manager scorecard
+        if: always()
+        run: |
+          if [ -f inspection_output/auditor/worker_scorecard.md ]; then
+            cat inspection_output/auditor/worker_scorecard.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - name: Archive independent acceptance/rejection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-worker-audit-${{ github.run_attempt }}
+          path: inspection_output/auditor/
+          if-no-files-found: warn
+          retention-days: 14
