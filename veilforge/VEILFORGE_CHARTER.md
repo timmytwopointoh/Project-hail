@@ -1,8 +1,8 @@
-# VEILFORGE — unified engine charter
+# VEYLQUORIN (VQ) — unified engine charter
 
 ## Identity and project stewardship
 
-Project identity: **VEILFORGE**.
+Project identity: **VEYLQUORIN**. Short form: **VQ**. Historical name: **VEILFORGE**.
 Named project steward and rights claimant: **Timothy Harris**.
 Connected repository account: **timmytwopointoh**.
 Original conception, direction, priority setting and acceptance feedback came from
@@ -12,7 +12,7 @@ collaboration and does **not** name an AI system as a legal co-author or rights
 holder. Rights claims remain qualified by authorship, contracts and
 third-party licenses, as described in docs/ownership/RIGHTS_AND_PROVENANCE.md.
 
-VEILFORGE is the umbrella name for the complete development engine:
+VQ is the umbrella name for the complete development engine and workforce:
 - Asset and model generation (characters, creatures, environments, props)
 - Human topology and sculpting learning curriculum
 - Material/texture preparation, mesh optimization and glTF export
@@ -24,11 +24,11 @@ VEILFORGE is the umbrella name for the complete development engine:
 **VEILBOUND** remains the name of the game/testing grounds, not the workforce
 or asset engine. Existing legacy filenames and workflow display names prefixed
 "VEILBOUND" are compatibility identifiers until a verified migration changes
-their workflow_run dependencies; their management function belongs to VEILFORGE.
+their workflow_run dependencies; their management function belongs to VQ.
 
 ## Persistent operation without copying ChatGPT
 
-A ChatGPT conversation is not an exportable runnable language model. The
+The stable source-code identifier remains VEILFORGE until a separately tested code-and-workflow migration. All new public-facing references should use VEYLQUORIN (VQ).\n\nA ChatGPT conversation is not an exportable runnable language model. The
 private weights, hosted runtime, hidden system instructions, retained memory,
 and unrestricted persistent assistant execution cannot be packed into GitHub.
 Instead store *explicitly project-owned instructions and state* so a separate
