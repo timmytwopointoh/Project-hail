@@ -12,6 +12,7 @@ public final class HeroPose {
         public float bob,rootPitch,rootYaw,rootRoll,leftArmPitch,rightArmPitch;
         public float leftArmRoll,rightArmRoll,leftLegPitch,rightLegPitch;
         public float mantlePitch,mantleYaw,guardLean,breath;
+        public float helmetYaw,helmetPitch,leftFootLift,rightFootLift,hipShift;
     }
     private static float clamp(float v,float min,float max){
         return Math.max(min,Math.min(max,v));
@@ -25,6 +26,8 @@ public final class HeroPose {
         float tired=clamp(fatigue,0f,1f);
         float stride=(float)Math.sin(phase*1.4f);
         float impact=(float)Math.cos(phase*2.8f);
+        float leftStance=Math.max(0f,stride);
+        float rightStance=Math.max(0f,-stride);
         float breathFrequency=1.9f+2.8f*tired;
         p.breath=(float)Math.sin(tm*breathFrequency)*(.026f+.048f*tired);
         float stance=(float)Math.sin(tm*.54f)*.72f*(1f-move);
@@ -40,7 +43,11 @@ public final class HeroPose {
         float shoulderWindup=-27f*anticipation*(1f-contact)*ending;
         float shoulderStrike=78f*contact*ending;
         p.guardLean=anticipation*(1f-contact);
-        p.bob=.035f*move*(1f-impact)+p.breath*.36f-evade*.13f;
+        p.bob=.045f*move*(1f-impact)+p.breath*.36f-evade*.13f;
+        // Supported leg keeps its planted foot while the free leg raises its toe.
+        p.leftFootLift=.125f*move*leftStance*(1f-evade);
+        p.rightFootLift=.125f*move*rightStance*(1f-evade);
+        p.hipShift=.034f*move*stride;
         // Anticipatory counter-rotation and physical follow through across
         // shoulders, pelvis and arms rather than just rotating the weapon.
         p.rootYaw=8f*stance/7f+(28f*anticipation-62f*contact)*ending;
@@ -53,8 +60,12 @@ public final class HeroPose {
                         shoulderWindup-shoulderStrike+20f*evade;
         p.leftArmRoll=-8f+8f*stance*.3f+21f*contact*ending;
         p.rightArmRoll=-23f+(-26f*anticipation+42f*contact)*ending;
-        p.leftLegPitch=30f*stride*move-32f*evade;
-        p.rightLegPitch=-30f*stride*move+25f*evade;
+        p.leftLegPitch=29f*stride*move-32f*evade;
+        p.rightLegPitch=-29f*stride*move+25f*evade;
+        // Neck-level head stabilization stops the helmet moving like a rigid
+        // welded part of the torso. Attack focus and fatigue alter gaze.
+        p.helmetYaw=-.39f*p.rootYaw+1.4f*(float)Math.sin(tm*.67f)*(1f-move);
+        p.helmetPitch=-.37f*p.rootPitch+3.0f*tired+2.4f*p.guardLean;
         // The cape lags the upper body and catches movement, with controlled
         // counter-sway; this is not simulated cloth/skin weight painting.
         p.mantlePitch=-4f-8f*move*(.5f+.5f*impact)+
