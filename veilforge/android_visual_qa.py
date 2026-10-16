@@ -82,7 +82,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
     for attempt in range(1, attempts + 1):
         pic = screenshot(path)
         last = metrics(pic)
-        if last["modal_overlay_fraction"] >= .70:
+        if last.get("modal_overlay_fraction",0) >= .70:
             # Save visual proof of a false-positive foreground (e.g. Android
             # Quickstep launcher ANR overlay), then tap its "Wait" row.
             # Neither the overlay nor its pixels may count towards an approved
