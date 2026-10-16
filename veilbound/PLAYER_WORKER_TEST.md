@@ -10,3 +10,6 @@ This trial uses the newly installed **local Qwen2.5-Coder 1.5B**, not a paid API
 
 ## Iteration 2 — bounded automated repair
 The actual first 1.5B local inference jobs generated source proposals but failed exact-match and Java signature/compilation gates. We now retry at most 3 times with trusted compiler/validation feedback and unchanged safe-file allowlists; all outputs remain review only. This commit is an explicit follow-up trigger for the scoped three-worker test.
+
+## M12 physical-phone realism trial
+Three manager-approved local Qwen specialist jobs (models, animation, materials) use the upgraded exact-edit proposal guard and real Java suite. This is a strictly bounded user-requested experimental run; generated code remains in review-only artifacts and does not silently change the release APK. Device release uses separately tested v0.12 Android emulator build and visual screenshots. Focus on helmet articulation, planted-feet gait, fitted plate proportions and stable LOD.
