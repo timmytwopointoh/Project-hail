@@ -113,7 +113,7 @@ def review(collected: Path, out: Path):
         "recommendation":"Inspect source geometry, topology, all 14 previews, skin/steel/stone materials, and phone screenshots before approving."
     }
     (out/"forge_review.json").write_text(json.dumps(result,indent=2)+"\n")
-    md=["# VEILFORGE M2 — Asset production and topology review","",
+    md=(["# VEILFORGE M2 — Asset production and topology review","",
         f"Production evidence: {len(evidence)}/6 roles, {len(audits)} canonical mesh audits, {len(topology)} topology comparisons.",
         "",
         f"CI structural evidence: {'PASS' if not issues else 'FAIL'}",
@@ -127,7 +127,7 @@ def review(collected: Path, out: Path):
         ([f"- {x['asset']}: {', '.join(x['defects'])} (boundaries {x['after_boundary']}, nonmanifold {x['after_nonmanifold']})" for x in unresolved]
          if unresolved else ["- None detected by these discrete edge counters. Visual approval still pending."]) +
         ["","CI evidence failures:"] +
-        (["- "+msg for msg in issues] if issues else ["- None"])
+        (["- "+msg for msg in issues] if issues else ["- None"]))
     (out/"forge_review.md").write_text("\n".join(md)+"\n")
     return result
 
