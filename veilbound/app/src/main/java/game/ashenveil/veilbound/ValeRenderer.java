@@ -35,6 +35,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Mesh studioHuman,studioHumanLite,studioHandSculpt;
     private Mesh studioM26Sculpt,studioM26SculptLite;
+    private Mesh studioM28Face,studioM28FaceLite;
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -460,6 +461,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Log.i("VEILBOUND_STUDIO","M26_SCULPT_REVIEW_READY triangles="+
               (studioM26Sculpt.count/3)+" approved=false lazy_loaded=true");
     }
+    /**
+     * Load only when the user selects M28: avoid slowing down historic hero
+     * startup and older emulator devices. Manual review remains mandatory.
+     */
+    private void initM28ReviewMeshes(){
+        studioM28Face=new Mesh(HumanAnatomy.buildM28Candidate(false).vertices);
+        studioM28FaceLite=new Mesh(HumanAnatomy.buildM28Candidate(true).vertices);
+        Log.i("VEILBOUND_STUDIO","M28_INTEGRATED_ORBITS_READY triangles="+
+              (studioM28Face.count/3)+" approved=false lazy_loaded=true");
+    }
     private void renderStudio(){
         initStudioHighDetail();
         ArtKit.Model pending=importQueue.getAndSet(null);
@@ -477,7 +488,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float horizontal=m.zoom*(float)Math.cos(pitch);
         float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
             m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
-            m.item==10?1.07f:m.item==12?1.52f:m.item==14?3.42f:2.12f))+m.panY;
+            m.item==10?1.07f:m.item==12?1.52f:(m.item==14||m.item==16)?3.42f:2.12f))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -538,6 +549,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 16:
+                if(studioM28Face==null||studioM28FaceLite==null)
+                    initM28ReviewMeshes();
+                chosen=m.ultraMesh?studioM28Face:studioM28FaceLite;
+                break;
             case 15:
                 if(studioM26Sculpt==null||studioM26SculptLite==null)
                     initM26ReviewMeshes();
@@ -564,7 +580,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15||m.item==16)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
