@@ -1,0 +1,153 @@
+name: Kaiyu - Rig, VQ and Android Milestone Evidence
+on:
+  push:
+    branches: ['feature/vq-kaiyu-*']
+    paths: ['assets/kaiyu/**', '.github/workflows/kaiyu-character-milestones.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kaiyu-rig-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  model-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      KAIYU_OUT: ${{ github.workspace }}/inspection_output/kaiyu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real geometry and offline preview dependencies
+        run: python -m pip install 'numpy<3' scipy 'trimesh>=4,<5' pillow vtk
+      - name: Rebuild actual GLB with 7 skinned groups and verify measured vertex deformation
+        run: |
+          set -euo pipefail
+          mkdir -p "$KAIYU_OUT"
+          python3 -m compileall -q assets/kaiyu
+          python3 assets/kaiyu/build_kaiyu.py
+          python3 assets/kaiyu/skin_kaiyu.py \
+            --input assets/kaiyu/kaiyu_axolotl_prototype.glb \
+            --output "$KAIYU_OUT/kaiyu_skinned_m2.glb" \
+            --report "$KAIYU_OUT/kaiyu_skin_m2_report.json"
+          python3 assets/kaiyu/validate_kaiyu.py
+          python3 assets/kaiyu/android_pack_kaiyu.py \
+            --glb "$KAIYU_OUT/kaiyu_skinned_m2.glb" \
+            --out "$KAIYU_OUT/scene"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          d=Path(os.environ['KAIYU_OUT'])
+          t=json.loads((d/'kaiyu_m2_validation.json').read_text())
+          a=json.loads((d/'scene/kaiyu_android_pack_report.json').read_text())
+          assert all(t['passes'].values())
+          assert t['skins']==7 and t['animation_channels']==22
+          assert a['triangles']>=100000 and a['embedded_albedo_images']>=1
+          assert not a['skin_playback_on_android'] and not a['quality_approved']
+          print('KAIYU_MILESTONE_RIG_AND_TEXTURE_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaiyu-rigged-model-and-android-scene
+          path: inspection_output/kaiyu/
+          retention-days: 21
+          if-no-files-found: warn
+  vq-model-14-angle:
+    needs: model-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install 'numpy<3' scipy 'trimesh>=4,<5' pillow
+      - uses: actions/download-artifact@v4
+        with:
+          name: kaiyu-rigged-model-and-android-scene
+          path: inspection_output/kaiyu
+      - name: Run VQ real geometry inspector and its fourteen real angles
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import trimesh
+          src=Path('inspection_output/kaiyu/kaiyu_skinned_m2.glb')
+          model=trimesh.load(src,force='scene',process=False).to_geometry()
+          target=Path('inspection_output/kaiyu/kaiyu_vq_source.obj')
+          model.export(target)
+          print('KAIYU_ACTUAL_OBJ_SOURCE',len(model.faces),len(model.vertices))
+          assert len(model.faces)>=100000
+          PY
+          python3 veilforge/vq_model_tools.py \
+            --obj inspection_output/kaiyu/kaiyu_vq_source.obj \
+            --out inspection_output/kaiyu/vq_real_inspection \
+            --render-faces 7500
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('inspection_output/kaiyu/vq_real_inspection/vq_model_report.json').read_text())
+          assert r['engine']=='VEYLQUORIN' and len(r['visual']['views'])==14
+          assert r['production_approved'] is False
+          print('KAIYU_VQ_REAL_FOURTEEN_VIEW_INSPECT',r['blocking_technical_findings'])
+          PY
+          cat inspection_output/kaiyu/vq_real_inspection/vq_model_report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaiyu-vq-14-angle-evidence
+          path: inspection_output/kaiyu/vq_real_inspection/
+          retention-days: 21
+          if-no-files-found: warn
+  android-kaiyu-14-angle:
+    needs: model-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: python -m pip install pillow
+      - uses: actions/download-artifact@v4
+        with:
+          name: kaiyu-rigged-model-and-android-scene
+          path: inspection_output/kaiyu
+      - name: Package real Kaiyu geometry into existing GLES2 viewer without changing the game
+        run: |
+          set -euo pipefail
+          mkdir -p veilforge/android-probe/app/src/main/assets/scene
+          cp -r inspection_output/kaiyu/scene/. veilforge/android-probe/app/src/main/assets/scene/
+          sed -i 's@scene/ruin_courtyard_demo.gltf@scene/kaiyu_scene.gltf@g' \
+            veilforge/android-probe/app/src/main/java/game/veilforge/probe/ViewerActivity.java
+          test -s veilforge/android-probe/app/src/main/assets/scene/kaiyu_scene.gltf
+          test -s veilforge/android-probe/app/src/main/assets/scene/textures/kaiyu_00.png
+          gradle -p veilforge/android-probe :app:assembleDebug --no-daemon
+      - name: Run actual Android 15 GPU and capture 14 genuine device screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 assets/kaiyu/android_qa_kaiyu.py --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --out inspection_output/kaiyu/android-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kaiyu-android-15-14-angle-evidence
+          path: inspection_output/kaiyu/android-evidence/
+          retention-days: 21
+          if-no-files-found: warn
