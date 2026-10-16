@@ -843,7 +843,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                                  float pitch,float spread,float bend,
                                  boolean right,float footLift){
         Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y+footLift,z);
+        // Keep pelvis/shoulder anchored; lifting the *whole leg* by foot
+        // height creates a visibly detached hip. Apply swing to the child
+        // knee instead, preserving anatomical connection throughout gait.
+        Matrix.translateM(model,0,x,y,z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
         Matrix.scaleM(model,0,size,size,size);
         Matrix.translateM(model,0,right?upperX:-upperX,upperY,0);
@@ -852,7 +855,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         draw(upper,model,1,1,1,0);
         if(lower.count>0){
             Matrix.translateM(model,0,0,lowerY-upperY,lowerZ);
-            Matrix.rotateM(model,0,bend,1,0,0);
+            Matrix.rotateM(model,0,bend+footLift*40f,1,0,0);
             draw(lower,model,1,1,1,0);
         }
     }
