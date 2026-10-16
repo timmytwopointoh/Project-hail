@@ -1,0 +1,29 @@
+# Default-branch registration of the separate VQ Studio workflow.
+# To execute the real generator, dispatch using ref app/vq-studio-companion-v1.
+# The main-branch stub must NEVER generate or publish a model.
+name: VQ Studio - On-Demand Model Worker
+run-name: VQ Studio - ${{ inputs.catalog_model }} - ${{ inputs.request_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      catalog_model:
+        description: 'Public catalog model (no private text)'
+        required: true
+        type: choice
+        default: ancient_tree
+        options: ['ancient_tree', 'ceremonial_sword', 'cargo_cart', 'treasure_chest', 'ancient_gate_standard', 'ancient_gate_mobile', 'forest_tree_mobile', 'rolling_terrain']
+      request_id:
+        description: '16-character run correlation ID'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  select-vq-studio-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: |
+          echo '## VQ Studio safe registration' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Run the workflow with branch/ref **app/vq-studio-companion-v1** to build an actual model.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The default main branch does not start an asset worker.' >> "$GITHUB_STEP_SUMMARY"
