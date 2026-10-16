@@ -54,6 +54,12 @@ public final class ModelStudio {
     /** Focus fine geometry—especially hands, knuckles and gauntlets. */
     public synchronized void focusDetail(){
         autoTurn=false;
+        if(item==11){
+            // M21 human hand review: move the camera target down to fingertips,
+            // then zoom close enough to distinguish FOUR fingers and thumb.
+            yaw=.12f;pitch=-.06f;panX=.59f;panY=-1.38f;zoom=1.35f;
+            return;
+        }
         yaw=.18f;pitch=.08f;
         panX=item==2?1.1f:.65f;
         panY=item==2?-.40f:-.34f;
