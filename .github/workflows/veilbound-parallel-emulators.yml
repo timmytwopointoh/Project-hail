@@ -18,6 +18,7 @@ on:
       - 'feature/veilbound-m24-veilforge-full-body'
       - 'feature/veilbound-m25-facial-surface-material-alignment'
       - 'feature/veilbound-m28-integrated-facial-sculpt'
+      - 'feature/veilbound-m29-reference-skin-tpose'
       - 'feature/veilforge-m26-sculpt-learning-curriculum'
       - 'feature/veilbound-m14-synchronized-emulator-workers'
     paths:
