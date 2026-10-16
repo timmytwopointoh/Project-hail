@@ -272,6 +272,23 @@ def main():
         time.sleep(.6)
         second=shot("02_exploration.png");report["screenshots"].append(second)
         report["gpu_scene_visible"]=True
+        # M11: independently prove in-motion player render, not just a static
+        # studio asset. Screen is captured DURING held joystick gesture.
+        idle=shot("02_player_idle.png");report["screenshots"].append(idle)
+        live_walk=subprocess.Popen(["adb","shell","input","swipe",
+            str(int(w*.12)),str(int(h*.81)),
+            str(int(w*.15)),str(int(h*.57)),"2450"],
+            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        time.sleep(.75)
+        report["screenshots"].append(shot("02_player_moving.png"))
+        live_walk.wait(timeout=12)
+        with Image.open(OUT/"02_player_idle.png") as still,Image.open(OUT/"02_player_moving.png") as motion:
+            before=still.convert("RGB").resize((220,125))
+            after=motion.convert("RGB").resize((220,125))
+            report["hero_motion_visual_delta"]=round(sum(
+                ImageStat.Stat(ImageChops.difference(before,after)).mean)/3,2)
+        if report["hero_motion_visual_delta"]<1.5:
+            raise AssertionError("M11 held joystick caused no visible player/scene motion")
         # Real ADB swipe on left control + attack + dodge buttons.
         adb("shell","input","swipe",int(w*.12),int(h*.81),
             int(w*.15),int(h*.57),1100,timeout=35)
