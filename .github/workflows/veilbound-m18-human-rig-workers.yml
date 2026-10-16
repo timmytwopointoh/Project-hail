@@ -4,7 +4,8 @@ on:
     branches: ['feature/veilbound-m18-skinned-human-rig']
     paths:
       - 'veilbound/human_rig_worker_backlog.json'
-      - '.github/workflows/veilbound-human-anatomy-workers.yml'
+      - '.github/workflows/veilbound-m18-human-rig-workers.yml'
+      - 'veilbound/human_rig_worker_backlog.json'
   workflow_dispatch:
 permissions:
   contents: read
