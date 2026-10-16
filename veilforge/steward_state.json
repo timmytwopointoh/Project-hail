@@ -21,13 +21,16 @@
   ],
   "next_priority": "Establish signed source provenance and audit 10-slot worker+emulator queue before activating any expensive recurring inference",
   "handoff": {
-    "last_verified_provenance_run": null,
+    "last_verified_provenance_run": "https://github.com/timmytwopointoh/Project-hail/actions/runs/38883856153",
     "last_verified_mixed_queue_run": null,
     "known_limitations": [
       "GitHub Actions schedule requires default-branch workflow",
       "No independent proof of copyright ownership or authorship",
       "No continuous background ChatGPT session",
       "Third-party model licenses are under review"
-    ]
+    ],
+    "last_verified_provenance_commit": "7b4ec7eb1f9889b3b9757c3aaa3c8c548e63040f",
+    "last_verified_provenance_status": "signed_github_attestation_step_succeeded",
+    "provenance_evidence_timestamp_note": "2026-10-16 UTC; precise time is in run manifest"
   }
 }
