@@ -233,24 +233,30 @@ public final class HumanVariantCLI {
     public static void main(String[] args) throws Exception{
         if(args.length<2||args.length>4)
             throw new IllegalArgumentException(
-                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28] [--mesh-only]");
+                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed] [--mesh-only]");
         boolean meshOnly="--mesh-only".equals(args[args.length-1]);
         boolean m28=args.length>=3&&"--m28".equals(args[2]);
-        boolean hasDials=args.length>=3&&!m28&&!"--mesh-only".equals(args[2]);
-        if(args.length==4&&(!(hasDials||m28)||!meshOnly))
+        boolean tPose=args.length>=3&&"--m29-tpose".equals(args[2]);
+        boolean relaxed=args.length>=3&&"--m29-relaxed".equals(args[2]);
+        boolean referencePose=tPose||relaxed;
+        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!"--mesh-only".equals(args[2]);
+        if(args.length==4&&(!(hasDials||m28||referencePose)||!meshOnly))
             throw new IllegalArgumentException("Unexpected M26 CLI options");
         float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
-        studyLabel=m28?"M28":hasDials?"M26":"M25";
+        studyLabel=referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model mesh=m28?
+        ArtKit.Model source=m28||referencePose?
             HumanAnatomy.buildM28Candidate(false,p,
               new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f}):
             hasDials?HumanAnatomy.buildM26Candidate(false,p,dials):
             HumanAnatomy.buildM25Candidate(false,p);
+        ArtKit.Model mesh=referencePose?M29ReferencePose.build(source,
+             tPose?M29ReferencePose.T_POSE:
+                   M29ReferencePose.THREE_QUARTER_RELAXED):source;
         obj(mesh,dir.resolve("human_candidate.obj"));
         obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
         if(!meshOnly){
@@ -269,13 +275,14 @@ public final class HumanVariantCLI {
             views.append('"').append(view).append('"');
         }
         String json="{\"model\":\""+
-            (m28?"m28_connected_orbital_anatomy_candidate":
+            (referencePose?(tPose?"m29_tpose_reference_mesh":"m29_relaxed_reference_mesh"):
+             m28?"m28_connected_orbital_anatomy_candidate":
              hasDials?"m26_review_conditioned_sculpt_candidate":
                       "m25_refined_face_skin_candidate")+
             "\",\"triangles\":"+mesh.triangleCount+
             ",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":"+(!meshOnly)+
-            ",\"sculpt_dials\":"+(hasDials||m28?8:0)+
+            ",\"sculpt_dials\":"+(hasDials||m28||referencePose?8:0)+
             ",\"hand_closeups_per_side\":"+(meshOnly?0:3)+
             ",\"camera_views\":["+(meshOnly?"":views.toString())+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");

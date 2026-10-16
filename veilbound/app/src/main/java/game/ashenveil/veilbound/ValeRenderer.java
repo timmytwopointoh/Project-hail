@@ -27,15 +27,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode,uSkinAtlas;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
-    private int albedoTexture=0,surfaceTexture=0;
+    private int albedoTexture=0,surfaceTexture=0,skinTexture=0;
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Mesh studioHuman,studioHumanLite,studioHandSculpt;
     private Mesh studioM26Sculpt,studioM26SculptLite;
     private Mesh studioM28Face,studioM28FaceLite;
+    private Mesh[] studioM29Tpose,studioM29Relaxed;
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -78,7 +79,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
         "uniform sampler2D uDetail; uniform float uStudioMode; "+
         "uniform float uStudioMaterial; uniform vec3 uStudioLight; uniform vec3 uStudioKeyColor; "+
-        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform float uSurfaceQuality; uniform float uHeroShading; uniform float uSkinMode; "+
+        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform sampler2D uSkinAtlas; uniform float uSurfaceQuality; uniform float uHeroShading; uniform float uSkinMode; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "vec2 atlasUV(vec2 uv,float id){"+
         "vec2 offset=vec2(mod(id,2.),floor(id*.5))*.5;"+
@@ -156,9 +157,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "float iris=face*step(.185,vLocal.z)*(1.-step(.345,vColor.r));"+
         "float sclera=face*step(.185,vLocal.z)*step(.735,vColor.r);"+
         "metallic=0.;ao=1.;rough=mix(.79,.70,face*flesh);"+
+        "vec3 skinAxis=abs(vNormal);"+
+        "vec2 skinUV=skinAxis.z>.57?vLocal.xy:vLocal.zy;"+
+        "vec4 epidermis=texture2D(uSkinAtlas,fract(skinUV*11.));"+
+        "float skinMask=flesh;"+
+        "float relief=skinMask*(1.-face*.30);"+
+        "n=normalize(vNormal+vec3((epidermis.rg*2.-1.)*.038*relief,0.));"+
+        "rough=mix(rough,clamp(epidermis.b*.37+.48,.68,.87),skinMask);"+
         "rough=mix(rough,.46,iris);rough=mix(rough,.56,sclera);"+
         "base=vColor*uTint*vec3(1.025,.989,.971)*tone;"+
-        "n=normalize(vNormal);"+
+        "base*=1.+skinMask*(epidermis.a-.5)*.055;"+
         "}"+
         "}"+
         "float ndl=max(dot(n,light),0.);"+
@@ -238,6 +246,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uSurfaceQuality=GLES20.glGetUniformLocation(program,"uSurfaceQuality");
         uHeroShading=GLES20.glGetUniformLocation(program,"uHeroShading");
         uSkinMode=GLES20.glGetUniformLocation(program,"uSkinMode");
+        uSkinAtlas=GLES20.glGetUniformLocation(program,"uSkinAtlas");
+        skinTexture=0;
         uAlbedoAtlas=GLES20.glGetUniformLocation(program,"uAlbedoAtlas");
         uSurfaceAtlas=GLES20.glGetUniformLocation(program,"uSurfaceAtlas");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
@@ -432,6 +442,29 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Log.i("VEILBOUND_STUDIO","SURFACE_MAPS_READY resolution="+SurfaceAtlas.SIZE+
               " tiles=4 gpu_bytes="+(baked.albedo.length+baked.normalRoughness.length));
     }
+    /** Lazy texture for real human preview; archived knight stays unchanged. */
+    private void ensureM29SkinAtlas(){
+        if(skinTexture!=0)return;
+        byte[] tile=M29SkinAtlas.bake();
+        int[] h=new int[1];
+        GLES20.glGenTextures(1,h,0);
+        skinTexture=h[0];
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE3);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,skinTexture);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_S,GLES20.GL_REPEAT);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_REPEAT);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MIN_FILTER,GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,GLES20.GL_TEXTURE_MAG_FILTER,GLES20.GL_LINEAR);
+        ByteBuffer texture=ByteBuffer.allocateDirect(tile.length)
+            .order(ByteOrder.nativeOrder());
+        texture.put(tile).position(0);
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D,0,GLES20.GL_RGBA,
+            M29SkinAtlas.SIZE,M29SkinAtlas.SIZE,0,GLES20.GL_RGBA,
+            GLES20.GL_UNSIGNED_BYTE,texture);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        Log.i("VEILBOUND_STUDIO","M29_SKIN_MICRO_ATLAS_READY bytes="+tile.length+
+              " original_procedural_texture=true");
+    }
     private int uploadAtlas(byte[] pixelBytes){
         int[] handles=new int[1];
         GLES20.glGenTextures(1,handles,0);
@@ -465,6 +498,20 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * Load only when the user selects M28: avoid slowing down historic hero
      * startup and older emulator devices. Manual review remains mandatory.
      */
+    /** Reference poses are actual deformed vertices and loaded on demand. */
+    private void initM29ReferenceMeshes(){
+        studioM29Tpose=new Mesh[2];
+        studioM29Relaxed=new Mesh[2];
+        ArtKit.Model high=HumanAnatomy.buildM28Candidate(false);
+        ArtKit.Model mobile=HumanAnatomy.buildM28Candidate(true);
+        studioM29Tpose[0]=new Mesh(M29ReferencePose.build(mobile,M29ReferencePose.T_POSE).vertices);
+        studioM29Tpose[1]=new Mesh(M29ReferencePose.build(high,M29ReferencePose.T_POSE).vertices);
+        studioM29Relaxed[0]=new Mesh(M29ReferencePose.build(mobile,M29ReferencePose.THREE_QUARTER_RELAXED).vertices);
+        studioM29Relaxed[1]=new Mesh(M29ReferencePose.build(high,M29ReferencePose.THREE_QUARTER_RELAXED).vertices);
+        Log.i("VEILBOUND_STUDIO","M29_TPOSE_AND_RELAXED_READY high_triangles="+
+              (studioM29Tpose[1].count/3)+" skin_atlas="+M29SkinAtlas.SIZE+
+              " visual_approval=false");
+    }
     private void initM28ReviewMeshes(){
         studioM28Face=new Mesh(HumanAnatomy.buildM28Candidate(false).vertices);
         studioM28FaceLite=new Mesh(HumanAnatomy.buildM28Candidate(true).vertices);
@@ -510,6 +557,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,surfaceTexture);
         GLES20.glUniform1i(uSurfaceAtlas,2);
+        if(m.item>=11&&m.item<ModelStudio.ITEMS.length-1)ensureM29SkinAtlas();
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE3);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,skinTexture!=0?skinTexture:detailTexture);
+        GLES20.glUniform1i(uSkinAtlas,3);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,detailTexture);
         GLES20.glUniform1f(uStudioMaterial,m.material);
@@ -549,6 +600,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 17:
+            case 18:
+                if(studioM29Tpose==null||studioM29Relaxed==null)
+                    initM29ReferenceMeshes();
+                Mesh[] posed=m.item==17?studioM29Tpose:studioM29Relaxed;
+                chosen=posed[m.ultraMesh?1:0];
+                break;
             case 16:
                 if(studioM28Face==null||studioM28FaceLite==null)
                     initM28ReviewMeshes();
@@ -580,7 +638,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15||m.item==16)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=18)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;

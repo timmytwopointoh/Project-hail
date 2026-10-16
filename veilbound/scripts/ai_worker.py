@@ -24,7 +24,7 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 ROLES = {
     "combat": ["WorldState.java"],
     "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
-    "models": ["M28FaceSculpt.java", "M28SkinContinuity.java", "M26SculptDials.java", "HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "models": ["M29ReferencePose.java", "M28FaceSculpt.java", "M28SkinContinuity.java", "M26SculptDials.java", "HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "M25SkinPolish.java", "MaterialTextures.java", "SurfaceAtlas.java", "MaterialMapping.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
