@@ -49,6 +49,7 @@ def validate_proposal(proposal, allowed, read_source):
         raise ValueError("AI proposal must include 1-3 real edits")
     allowed = set(allowed)
     replacement = {}
+    seen_matches = set()
     total_inserted = 0
     for edit in edits:
         if not isinstance(edit, dict) or set(edit) != {"path", "find", "replace"}:
@@ -58,6 +59,9 @@ def validate_proposal(proposal, allowed, read_source):
             raise ValueError("AI proposal attempted to edit a file outside its role")
         if not isinstance(old, str) or not isinstance(new, str):
             raise ValueError("AI proposal edit must use literal source text")
+        if (path, old) in seen_matches:
+            raise ValueError("AI proposal repeated an exact match in the same source file")
+        seen_matches.add((path, old))
         if (not old or old == new or len(old) > MAX_REPLACEMENT_CHARS
                 or len(new) > MAX_REPLACEMENT_CHARS):
             raise ValueError("AI proposal contains a no-op or oversized edit")
