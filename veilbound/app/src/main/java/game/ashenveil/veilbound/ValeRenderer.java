@@ -27,7 +27,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
+    private int program,skyProgram,aPos,aNormal,aColor,aNextPos,aNextNormal,uBlend,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
@@ -43,6 +43,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private boolean lastMeshUltra=true;
     private boolean studioLinePrimitive=false;
     private Mesh studioImported;
+    // Optional imported Vesper GLB stays separate from the original player rig.
+    private final java.util.concurrent.atomic.AtomicReference<VesperGlb.Result> vesperQueue=
+        new java.util.concurrent.atomic.AtomicReference<>();
+    private volatile Mesh[] vesperIdle,vesperWalk,vesperTPose,vesperLegUp,vesperDance;
+    private volatile boolean vesperPlayable=false;
+    public void stageVesper(VesperGlb.Result avatar){vesperQueue.set(avatar);}
+    public boolean activateVesper(){
+        if(vesperQueue.get()==null && vesperIdle==null)return false;
+        vesperPlayable=true;return true;
+    }
     private final java.util.concurrent.atomic.AtomicReference<ArtKit.Model> importQueue=
         new java.util.concurrent.atomic.AtomicReference<>();
     public void stageImportedMesh(ArtKit.Model imported){importQueue.set(imported);}
@@ -65,10 +75,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final String VERTEX=
         "uniform mat4 uMvp; uniform mat4 uModel; attribute vec3 aPos; "+
         "attribute vec3 aNormal; attribute vec3 aColor; "+
+        "attribute vec3 aNextPos; attribute vec3 aNextNormal; uniform float uBlend; "+
         "varying vec3 vNormal; varying vec3 vColor; varying vec3 vWorld; varying vec3 vLocal; "+
-        "void main(){ vec4 w=uModel*vec4(aPos,1.); vWorld=w.xyz; "+
-        "vNormal=normalize(mat3(uModel)*aNormal); vColor=aColor; vLocal=aPos; "+
-        "gl_Position=uMvp*vec4(aPos,1.); }";
+        "void main(){ vec3 pos=mix(aPos,aNextPos,uBlend); "+
+        "vec3 n=normalize(mix(aNormal,aNextNormal,uBlend)); "+
+        "vec4 w=uModel*vec4(pos,1.); vWorld=w.xyz; "+
+        "vNormal=normalize(mat3(uModel)*n); vColor=aColor; vLocal=pos; "+
+        "gl_Position=uMvp*vec4(pos,1.); }";
     private static final String FRAGMENT=
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
         "varying vec3 vWorld; varying vec3 vLocal; uniform vec3 uTint; uniform vec3 uEye; "+
@@ -214,6 +227,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         aPos=GLES20.glGetAttribLocation(program,"aPos");
         aNormal=GLES20.glGetAttribLocation(program,"aNormal");
         aColor=GLES20.glGetAttribLocation(program,"aColor");
+        aNextPos=GLES20.glGetAttribLocation(program,"aNextPos");
+        aNextNormal=GLES20.glGetAttribLocation(program,"aNextNormal");
+        uBlend=GLES20.glGetUniformLocation(program,"uBlend");
         uMvp=GLES20.glGetUniformLocation(program,"uMvp");
         uModel=GLES20.glGetUniformLocation(program,"uModel");
         uTint=GLES20.glGetUniformLocation(program,"uTint");
@@ -289,6 +305,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float actualDt=Math.max(.0001f,Math.min((now-previous)*1e-9f,.25f));
         float dt=Math.max(.001f,Math.min(actualDt,.044f));
         previous=now;
+        acceptVesperQueue();
         state.update(dt);
         qualityClock+=actualDt;frames++;
         drawCalls=0;
@@ -423,6 +440,28 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return handle;
     }
 
+    private Mesh[] meshes(ArtKit.Model[] frames){
+        Mesh[] result=new Mesh[frames.length];
+        for(int i=0;i<result.length;i++)result[i]=new Mesh(frames[i].vertices);
+        return result;
+    }
+    private void acceptVesperQueue(){
+        VesperGlb.Result avatar=vesperQueue.getAndSet(null);
+        if(avatar!=null){
+            vesperIdle=new Mesh[avatar.idle.length];vesperWalk=new Mesh[avatar.walk.length];
+            for(int i=0;i<vesperIdle.length;i++)vesperIdle[i]=new Mesh(avatar.idle[i].vertices);
+            for(int i=0;i<vesperWalk.length;i++)vesperWalk[i]=new Mesh(avatar.walk[i].vertices);
+            vesperTPose=meshes(avatar.tPose);
+            vesperLegUp=meshes(avatar.legUp);
+            vesperDance=meshes(avatar.dance);
+            studioImported=vesperIdle[0];
+            studioWireMeshes[ModelStudio.ITEMS.length-1]=null;
+            Log.i("VESPER_GLTF","GLB_ANIMATION_READY joints="+avatar.joints+
+                " triangles="+avatar.triangles+" idle_frames="+vesperIdle.length+
+                " walk_frames="+vesperWalk.length+
+                " review_poses="+avatar.extraPoses);
+        }
+    }
     private void renderStudio(){
         initStudioHighDetail();
         ArtKit.Model pending=importQueue.getAndSet(null);
@@ -438,9 +477,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         float pitch=m.pitch,yaw=m.yaw;
         float horizontal=m.zoom*(float)Math.cos(pitch);
-        float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
+        float targetY=(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset?1.46f:
+            (m.item==2?2.72f:(m.item==6?3.50f:
             m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
-            m.item==10?1.07f:2.12f))+m.panY;
+            m.item==10?1.07f:2.12f)))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -486,6 +526,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uSurface,0f);
         GLES20.glUniform1f(uStudioMaterial,m.material);
         Mesh chosen;
+        Mesh nextAnimatedFrame=null;
+        float animationAlpha=0f;
         switch(m.item){
             case 0:chosen=m.ultraMesh?studioWarden:wardenModel;break;
             case 1:chosen=m.ultraMesh?studioHushed:hushedModel;break;
@@ -499,7 +541,26 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 9:chosen=environmentReliquary;break;
             case 10:chosen=environmentRoots;break;
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
-            default:chosen=studioImported!=null?studioImported:studioWarden;
+            default:
+                chosen=studioImported!=null?studioImported:studioWarden;
+                if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset &&
+                    vesperIdle!=null && studioImported==vesperIdle[0]){
+                    Mesh[] animated=m.pose==1?vesperTPose:
+                                    m.pose==2?vesperLegUp:
+                                    m.pose==3?vesperDance:vesperIdle;
+                    if(animated!=null && animated.length>0){
+                        float clock=qualityClock*(m.pose==3?6f:8f);
+                        int frame=((int)clock)%animated.length;
+                        chosen=animated[frame];
+                        if(animated.length>1){
+                            nextAnimatedFrame=animated[(frame+1)%animated.length];
+                            animationAlpha=clock-(int)clock;
+                        }
+                    }
+                    // A changing skinned pose invalidates cached wire-frame geometry.
+                    studioWireMeshes[m.item]=null;
+                }
+                break;
         }
         Matrix.setIdentityM(model,0);
         // All lab assets stand ON the exhibition plinth, not through it.
@@ -508,13 +569,21 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         else if(m.item==5)Matrix.scaleM(model,0,2.4f,2.4f,2.4f);
         else if(m.item==2)Matrix.scaleM(model,0,1.12f,1.12f,1.12f);
         if(m.material==4){
+            nextAnimatedFrame=null;
             if(studioWireMeshes[m.item]==null)
                 studioWireMeshes[m.item]=edgesOf(chosen);
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
         GLES20.glUniform1f(uSkinMode,m.item==11?1f:0f);
-        draw(chosen,model,1,1,1,.06f);
+        if(nextAnimatedFrame!=null)
+            drawInterpolated(chosen,nextAnimatedFrame,animationAlpha,model,1,1,1,.06f);
+        else draw(chosen,model,1,1,1,.06f);
+        if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset &&
+                    vesperIdle!=null && studioImported==vesperIdle[0]){
+            GLES20.glUniform1f(uSurfaceQuality,0f);
+            drawVesperAura(0f,.82f,0f,qualityClock);
+        }
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
         GLES20.glUniform1f(uStudioMaterial,0f);
@@ -706,6 +775,22 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private void drawKnight(float x,float y,float z,float yaw,boolean foe,
                             boolean boss,float tm,float walk,float swing,float dodge,
                             float moving,float fatigue,float stagger,float windup){
+        if(!foe && vesperPlayable && vesperIdle!=null && vesperWalk!=null){
+            Mesh[] frames=moving>.10f?vesperWalk:vesperIdle;
+            float phase=tm*(moving>.10f?9f:6f);
+            int index=((int)Math.floor(phase))%frames.length;
+            if(index<0)index+=frames.length;
+            float alpha=phase-(float)Math.floor(phase);
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,y,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+            GLES20.glUniform1f(uHeroShading,0f);
+            GLES20.glUniform1f(uSkinMode,0f);
+            GLES20.glUniform1f(uSurfaceQuality,0f);
+            drawInterpolated(frames[index],frames[(index+1)%frames.length],alpha,model,1,1,1,0);
+            drawVesperAura(x,y,z,tm);
+            return;
+        }
         float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
         // Dynamic material LOD: sharp BRDF only close to the camera.
         // Distant meshes retain fast ES2 per-vertex material lighting.
@@ -921,6 +1006,42 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Matrix.scaleM(model,0,sx,sy,sz);
         draw(cube,model,r,g,b,glow);
     }
+    /**
+     * Floating dark-magenta motes reuse the existing octahedron mesh:
+     * no extra triangles added to Vesper GLB. Procedural mobile-budget
+     * animation and breathing glow, only when Vesper is selected.
+     */
+    private boolean vesperAuraLogged=false;
+    private void drawVesperAura(float x,float y,float z,float seconds){
+        if(!vesperAuraLogged){
+            vesperAuraLogged=true;
+            Log.i("VESPER_GLTF","AURA_DRAW_ACTIVE motes=12 source=shared_octahedron");
+        }
+        GLES20.glUniform1f(uSurfaceQuality,0f);
+        GLES20.glUniform1f(uHeroShading,0f);
+        GLES20.glUniform1f(uSkinMode,0f);
+        GLES20.glUniform1f(uSurface,0f);
+        for(int i=0;i<9;i++){
+            float phase=seconds*(.31f+.027f*(i%4))+i*2.399963f;
+            float orbit=.60f+.095f*(float)Math.sin(seconds*.41f+i);
+            float px=x+orbit*(float)Math.cos(phase);
+            float pz=z+orbit*.63f*(float)Math.sin(phase);
+            float py=y+.61f+.13f*i+.10f*(float)Math.sin(seconds*(1.12f+.09f*i)+i);
+            float pulse=.72f+.28f*(float)Math.sin(seconds*2.4f+i*1.71f);
+            float radius=(.063f+.011f*(i%3))*pulse;
+            drawOcta(px,py,pz,radius,radius*1.45f,radius,
+                     .47f,.085f,.54f,.76f+pulse*.22f,seconds*41f+i*38f);
+        }
+        for(int i=0;i<3;i++){
+            float phase=seconds*.49f+i*2.094395f+.31f;
+            float px=x+.41f*(float)Math.cos(phase);
+            float pz=z+.33f*(float)Math.sin(phase);
+            float py=y+1.17f+.34f*(float)Math.sin(seconds*.82f+i*1.9f);
+            drawOcta(px,py,pz,.035f,.044f,.035f,
+                     .78f,.17f,.49f,.92f,seconds*26f+i*47f);
+        }
+        GLES20.glUniform1f(uSurface,1f);
+    }
     private void drawOcta(float x,float y,float z,float sx,float sy,float sz,
                           float r,float g,float b,float glow,float angle){
         Matrix.setIdentityM(model,0);Matrix.translateM(model,0,x,y,z);
@@ -935,6 +1056,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniformMatrix4fv(uModel,1,false,transformation,0);
         GLES20.glUniform3f(uTint,red,green,blue);
         GLES20.glUniform1f(uGlow,glow);
+        // Original game meshes remain unchanged; unbound next attributes are constants.
+        GLES20.glUniform1f(uBlend,0f);
+        GLES20.glDisableVertexAttribArray(aNextPos);
+        GLES20.glDisableVertexAttribArray(aNextNormal);
+        GLES20.glVertexAttrib3f(aNextPos,0,0,0);
+        GLES20.glVertexAttrib3f(aNextNormal,0,0,1);
         mesh.data.position(0);GLES20.glEnableVertexAttribArray(aPos);
         GLES20.glVertexAttribPointer(aPos,3,GLES20.GL_FLOAT,false,36,mesh.data);
         mesh.data.position(3);GLES20.glEnableVertexAttribArray(aNormal);
@@ -946,6 +1073,38 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(aPos);
         GLES20.glDisableVertexAttribArray(aNormal);
         GLES20.glDisableVertexAttribArray(aColor);
+    }
+    /** Hardware-interpolate two skinned sample meshes for continuous secondary motion.
+     * Used for Vesper only; original game characters keep their proven draw path.
+     * Requires the exact same indexed vertex layout and material order.
+     */
+    private void drawInterpolated(Mesh a,Mesh b,float blend,float[] transform,
+                                  float r,float g,float blue,float glow){
+        if(a==null || b==null || a.count!=b.count)return;
+        Matrix.multiplyMM(mvp,0,vp,0,transform,0);
+        GLES20.glUniformMatrix4fv(uMvp,1,false,mvp,0);
+        GLES20.glUniformMatrix4fv(uModel,1,false,transform,0);
+        GLES20.glUniform3f(uTint,r,g,blue);
+        GLES20.glUniform1f(uGlow,glow);
+        GLES20.glUniform1f(uBlend,Math.max(0f,Math.min(1f,blend)));
+        a.data.position(0);GLES20.glEnableVertexAttribArray(aPos);
+        GLES20.glVertexAttribPointer(aPos,3,GLES20.GL_FLOAT,false,36,a.data);
+        a.data.position(3);GLES20.glEnableVertexAttribArray(aNormal);
+        GLES20.glVertexAttribPointer(aNormal,3,GLES20.GL_FLOAT,false,36,a.data);
+        a.data.position(6);GLES20.glEnableVertexAttribArray(aColor);
+        GLES20.glVertexAttribPointer(aColor,3,GLES20.GL_FLOAT,false,36,a.data);
+        b.data.position(0);GLES20.glEnableVertexAttribArray(aNextPos);
+        GLES20.glVertexAttribPointer(aNextPos,3,GLES20.GL_FLOAT,false,36,b.data);
+        b.data.position(3);GLES20.glEnableVertexAttribArray(aNextNormal);
+        GLES20.glVertexAttribPointer(aNextNormal,3,GLES20.GL_FLOAT,false,36,b.data);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,a.count);
+        drawCalls++;
+        GLES20.glDisableVertexAttribArray(aPos);
+        GLES20.glDisableVertexAttribArray(aNormal);
+        GLES20.glDisableVertexAttribArray(aColor);
+        GLES20.glDisableVertexAttribArray(aNextPos);
+        GLES20.glDisableVertexAttribArray(aNextNormal);
+        GLES20.glUniform1f(uBlend,0f);
     }
     private void initDetailTexture(){
         byte[] rgba=prepared==null?MaterialTextures.stoneRgba():prepared.stoneRgba;

@@ -22,6 +22,7 @@ public final class WardenHud extends View {
     private float labLastX=0,labLastY=0,labPinchDistance=0;
     private int labDragPointer=-1;
     private Runnable importAction;
+    private Runnable vesperAction;
     private long lastStudioDiagnosticUptime=0;
     private long lastDiagnostic=0;
     private float paintAlpha=1;
@@ -32,6 +33,7 @@ public final class WardenHud extends View {
     private final float[] lastCamera={0};
 
     public void setImportAction(Runnable action){importAction=action;}
+    public void setVesperAction(Runnable action){vesperAction=action;}
     public WardenHud(Context context,WorldState state){
         super(context);game=state;setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         setFocusable(true);setContentDescription("Veilbound native touch controls");
@@ -214,12 +216,21 @@ public final class WardenHud extends View {
         text(c,"◀  BACK",35,47,17,GOLD,true,false);
         text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
-        text(c,"IMPORT OBJ",170,158,14,GOLD,true,true);
-        text(c,m.ultraMesh?"SCULPT: ULTRA":"SCULPT: LITE",429,158,14,GOLD,true,true);
-        text(c,"HAND DETAIL",660,158,14,GOLD,true,true);
-        text(c,"−",827,159,35,GOLD,true,true);
-        text(c,"+",931,159,35,GOLD,true,true);
-        text(c,"ZOOM",883,165,12,MIST,true,true);
+        if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset){
+            text(c,"IMPORT GLB",125,158,13,GOLD,true,true);
+            text(c,"IDLE",288,158,13,m.pose==0?PALE:GOLD,true,true);
+            text(c,"T-POSE",430,158,13,m.pose==1?PALE:GOLD,true,true);
+            text(c,"LEG UP",575,158,13,m.pose==2?PALE:GOLD,true,true);
+            text(c,"DANCE",718,158,13,m.pose==3?PALE:GOLD,true,true);
+            text(c,"PLAY AS VESPER",880,158,13,GOLD,true,true);
+        }else{
+            text(c,"IMPORT OBJ / GLB",170,158,14,GOLD,true,true);
+            text(c,m.ultraMesh?"SCULPT: ULTRA":"SCULPT: LITE",429,158,14,GOLD,true,true);
+            text(c,"HAND DETAIL",660,158,14,GOLD,true,true);
+            text(c,"−",827,159,35,GOLD,true,true);
+            text(c,"+",931,159,35,GOLD,true,true);
+            text(c,"ZOOM",883,165,12,MIST,true,true);
+        }
         text(c,"CAMERA  "+String.format(java.util.Locale.US,"%.1fm",m.zoom),
              824,43,14,MIST,true,false);
         text(c,"Drag to orbit • Pinch to zoom • Two fingers to pan",500,126,14,MIST,false,true);
@@ -305,6 +316,15 @@ public final class WardenHud extends View {
                 if(y<100&&x<145){
                     game.exitStudio();
                     Log.i("VEILBOUND_STATE","mode=title studio_exit_via_touch");
+                    invalidate();return true;
+                }
+                if(y>120&&y<213 && lab.snapshot().item==ModelStudio.ITEMS.length-1 && lab.snapshot().vesperAsset){
+                    if(x<205){if(importAction!=null)importAction.run();}
+                    else if(x<355)lab.selectVesperPose(0);
+                    else if(x<500)lab.selectVesperPose(1);
+                    else if(x<650)lab.selectVesperPose(2);
+                    else if(x<795)lab.selectVesperPose(3);
+                    else if(vesperAction!=null)vesperAction.run();
                     invalidate();return true;
                 }
                 if(y>120&&y<213&&x<310){

@@ -14,16 +14,19 @@ public final class ModelStudio {
     public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
     public static final class Snapshot {
-        public final int item,light,material;
+        public final int item,light,material,pose;
+        public final boolean vesperAsset;
         public final float yaw,pitch,zoom,panX,panY;
         public final boolean autoTurn,ultraMesh;
         Snapshot(ModelStudio s){
-            item=s.item;light=s.light;material=s.material;
+            item=s.item;light=s.light;material=s.material;pose=s.pose;vesperAsset=s.vesperAsset;
             yaw=s.yaw;pitch=s.pitch;zoom=s.zoom;
             panX=s.panX;panY=s.panY;autoTurn=s.autoTurn;ultraMesh=s.ultraMesh;
         }
     }
-    private int item=0,light=0,material=0;
+    private int item=0,light=0,material=0,pose=0;
+    private boolean vesperAsset=false;
+    public static final String[] VESPER_POSES={"IDLE","T-POSE","LEG UP","DANCE"};
     private float yaw=.50f,pitch=.12f,zoom=4.50f,panX=0,panY=0;
     private boolean autoTurn=false,ultraMesh=true;
     private int reviewView=0;
@@ -39,14 +42,21 @@ public final class ModelStudio {
     public synchronized String reviewViewName(){return REVIEW_NAMES[reviewView];}
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
     public synchronized Snapshot snapshot(){return new Snapshot(this);}
+    public synchronized void selectVesperPose(int requested){
+        if(item==ITEMS.length-1 && vesperAsset && requested>=0 && requested<VESPER_POSES.length){
+            pose=requested;autoTurn=false;
+        }
+    }
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
+        pose=0;
         panX=panY=0;
         if(item==11){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:4.50f;
     }
-    public synchronized void selectImported(){item=ITEMS.length-1;reset();zoom=5.3f;}
+    public synchronized void selectImported(){item=ITEMS.length-1;pose=0;vesperAsset=false;reset();zoom=5.3f;}
+    public synchronized void selectVesper(){item=ITEMS.length-1;pose=0;vesperAsset=true;reset();zoom=3.80f;}
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
     public synchronized void nextMaterial(){material=(material+1)%MATERIALS.length;}
     public synchronized void toggleTurntable(){autoTurn=!autoTurn;}

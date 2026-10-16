@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.net.Uri;
 import android.widget.Toast;
 import java.io.InputStream;
+import java.io.BufferedInputStream;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -79,6 +80,7 @@ public final class MainActivity extends Activity {
     private void createGameScene(BootAssets prebuilt){
         if(isFinishing())return;
         game=new WorldState();
+        verifyVesperGlbFixture();
         scene=new GLSurfaceView(this);
         scene.setEGLContextClientVersion(2);
         scene.setPreserveEGLContextOnPause(true);
@@ -109,6 +111,17 @@ public final class MainActivity extends Activity {
         hud.setImportAction(new Runnable(){
             @Override public void run(){chooseObjFile();}
         });
+        hud.setVesperAction(new Runnable(){
+            @Override public void run(){
+                if(renderer.activateVesper()){
+                    game.exitStudio();game.start();
+                    Toast.makeText(MainActivity.this,"Vesper selected — enter the Vale to play",
+                        Toast.LENGTH_SHORT).show();
+                    Log.i("VESPER_GLTF","PLAYER_SELECTED");
+                }else Toast.makeText(MainActivity.this,"Import the Vesper GLB first",
+                    Toast.LENGTH_SHORT).show();
+            }
+        });
         root.addView(scene,0,new FrameLayout.LayoutParams(-1,-1));
         root.addView(hud,1,new FrameLayout.LayoutParams(-1,-1));
         if(foreground)scene.onResume();
@@ -125,10 +138,52 @@ public final class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
         setIntent(intent);
+        // Emulator-only visual QA of the actual Vesper particle rendering path.
+        // This synthetic two-joint shape is NOT Vesper's finished character.
+        if(game!=null && renderer!=null &&
+            (getApplicationInfo().flags &
+             android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0 &&
+            "game.ashenveil.veilbound.VESPER_STAGE_QA".equals(intent.getAction())){
+            try(InputStream in=getAssets().open("vesper_import_smoke.glb")){
+                renderer.stageVesper(VesperGlb.load(in));
+                game.enterStudio();
+                game.studio.selectVesper();
+                Log.i("VESPER_GLTF","AURA_STAGE_SMOKE_REQUEST synthetic_fixture=true");
+            }catch(Exception e){
+                Log.e("VESPER_GLTF","AURA_STAGE_SMOKE_FAIL",e);
+            }
+        }
         if(game!=null&&"game.ashenveil.veilbound.INSPECT".equals(intent.getAction())){
             WorldState.Snapshot s=game.snapshot();
             Log.i("VEILBOUND_STATE","INSPECT mode="+s.mode+" x="+s.x+" z="+s.z+
                   " hp="+s.health+" stamina="+s.stamina+" sigils="+s.fragments);
+        }
+    }
+    /**
+     * Independently exercised on the Android 15 emulator on debug builds.
+     * A synthetic two-joint test only: NEVER imply the real Vesper model
+     * has been imported, rendered, or visually approved by this result.
+     */
+    private void verifyVesperGlbFixture(){
+        if((getApplicationInfo().flags &
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0)return;
+        try(InputStream in=getAssets().open("vesper_import_smoke.glb")){
+            VesperGlb.Result sample=VesperGlb.load(in);
+            if(sample.joints!=2 || sample.triangles!=1 ||
+                    sample.idle.length!=8 || sample.walk.length!=8)
+                throw new java.io.IOException("Smoke rig dimensions invalid");
+            float[] a=sample.idle[0].vertices,b=sample.idle[2].vertices;
+            float movement=0f;
+            for(int v=0;v<a.length;v+=9)
+                for(int k=0;k<3;k++)
+                    movement=Math.max(movement,Math.abs(a[v+k]-b[v+k]));
+            if(movement<.015f)
+                throw new java.io.IOException("Animated skin pose did not deform");
+            Log.i("VESPER_GLTF","GLB_IMPORT_SMOKE_PASS synthetic_fixture=true"+
+                  " joints="+sample.joints+" triangles="+sample.triangles+
+                  " max_movement="+movement);
+        }catch(Exception error){
+            Log.e("VESPER_GLTF","GLB_IMPORT_SMOKE_FAIL",error);
         }
     }
     private void chooseObjFile(){
@@ -146,24 +201,42 @@ public final class MainActivity extends Activity {
         final Uri uri=data.getData();
         new Thread(new Runnable(){
             @Override public void run(){
-                try(InputStream stream=getContentResolver().openInputStream(uri)){
-                    if(stream==null)throw new java.io.IOException("Cannot open OBJ file");
-                    final ArtKit.Model imported=ObjMeshLoader.load(stream);
-                    renderer.stageImportedMesh(imported);
-                    runOnUiThread(new Runnable(){
-                        @Override public void run(){
-                            game.studio.selectImported();
-                            Toast.makeText(MainActivity.this,
-                                "Imported "+imported.triangleCount+" triangles into the Atelier",
-                                Toast.LENGTH_LONG).show();
-                        }
-                    });
+                try(InputStream opened=getContentResolver().openInputStream(uri)){
+                    if(opened==null)throw new java.io.IOException("Cannot open model file");
+                    BufferedInputStream stream=new BufferedInputStream(opened);
+                    stream.mark(8);
+                    byte[] signature=new byte[4];int got=stream.read(signature);
+                    stream.reset();
+                    boolean glb=got==4 && signature[0]==0x67 && signature[1]==0x6c &&
+                        signature[2]==0x54 && signature[3]==0x46;
+                    if(glb){
+                        final VesperGlb.Result imported=VesperGlb.load(stream);
+                        renderer.stageVesper(imported);
+                        runOnUiThread(new Runnable(){
+                            @Override public void run(){
+                                game.studio.selectVesper();
+                                Toast.makeText(MainActivity.this,"Vesper GLB loaded: "+
+                                    imported.joints+" joints, "+imported.triangles+
+                                    " triangles. Tap PLAY AS VESPER.",Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }else{
+                        final ArtKit.Model imported=ObjMeshLoader.load(stream);
+                        renderer.stageImportedMesh(imported);
+                        runOnUiThread(new Runnable(){
+                            @Override public void run(){
+                                game.studio.selectImported();
+                                Toast.makeText(MainActivity.this,"Imported "+imported.triangleCount+
+                                    " OBJ triangles into the Atelier",Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
                 }catch(final Exception error){
                     Log.e("VEILBOUND_STUDIO","Import failed",error);
                     runOnUiThread(new Runnable(){
                         @Override public void run(){
                             Toast.makeText(MainActivity.this,
-                                "OBJ import failed: "+error.getMessage(),
+                                "Model import failed: "+error.getMessage(),
                                 Toast.LENGTH_LONG).show();
                         }
                     });
