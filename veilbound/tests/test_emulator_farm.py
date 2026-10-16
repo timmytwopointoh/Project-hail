@@ -99,6 +99,23 @@ class EmulatorFarmTests(unittest.TestCase):
             self.assertFalse(incomplete["success"])
             self.assertEqual(1, incomplete["passed"])
 
+    def test_all_emulators_must_use_same_compiled_apk(self):
+        sha = "a" * 64
+        with tempfile.TemporaryDirectory() as root:
+            for cfg in farm.CONFIGS[:2]:
+                folder = Path(root) / ("veilbound-emulator-" + cfg["id"] + "-inspection")
+                folder.mkdir()
+                (folder / "emulator_report.json").write_text(json.dumps({
+                    "status": "passed", "screenshots": [{} for _ in range(17)]}))
+                (folder / "visual_quality_metrics.json").write_text("{}")
+                (folder / "apk_sha256.txt").write_text(sha + "\n")
+            self.assertTrue(farm.summarize(root, 2, expected_apk_sha=sha)["success"])
+            wrong = Path(root) / ("veilbound-emulator-" + farm.CONFIGS[1]["id"] + "-inspection")
+            (wrong / "apk_sha256.txt").write_text("b" * 64)
+            result = farm.summarize(root, 2, expected_apk_sha=sha)
+            self.assertFalse(result["success"])
+            self.assertFalse(result["instances"][1]["apk_digest_matches"])
+
     def test_real_runner_rejects_blocked_qa_even_when_emulator_says_passed(self):
         sha = "a" * 40
         with tempfile.TemporaryDirectory() as root:
