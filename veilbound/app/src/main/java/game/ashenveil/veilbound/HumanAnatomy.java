@@ -20,7 +20,11 @@ public final class HumanAnatomy {
      * inspection approve the replacement. The armored game is untouched.
      */
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
-        return ShapeEngine.combine(ContinuousHuman.buildWithoutDigits(lite),
-                                   HumanHandSculpt.build(lite));
+        return buildWithSculptedHands(lite,ContinuousHuman.BASE);
+    }
+    public static ArtKit.Model buildWithSculptedHands(boolean lite,float[] controls){
+        ContinuousHuman.validate(controls);
+        return ShapeEngine.combine(ContinuousHuman.buildWithoutDigits(lite,controls),
+                                   HumanHandSculpt.build(lite,controls[0]));
     }
 }
