@@ -87,6 +87,51 @@ public final class ShapeEngine {
         return f.finish();
     }
     /**
+     * Open hard-surface shoulder defense. Builds only the forward curved
+     * shell, leaving mail and the upper-arm joint visible underneath instead
+     * of wrapping a full cylindrical sleeve around the entire shoulder.
+     * Multiple ring contours shape the neck taper and independent lames.
+     */
+    public static ArtKit.Model pauldronShell(Ring[] rings,int arcSegments,
+                                            Palette plate,Palette edge){
+        if(rings==null||rings.length<3||rings.length>12||
+           arcSegments<8||arcSegments>40||plate==null||edge==null)
+            throw new IllegalArgumentException("Pauldron profile invalid");
+        Forge f=new Forge();
+        for(int row=0;row<rings.length-1;row++){
+            Ring a=rings[row],b=rings[row+1];
+            if(b.y<=a.y)throw new IllegalArgumentException("Unordered pauldron rings");
+            for(int col=0;col<arcSegments;col++){
+                float lo=(float)Math.PI*col/arcSegments;
+                float hi=(float)Math.PI*(col+1)/arcSegments;
+                float[] p=shoulderPoint(a,lo,0f);
+                float[] q=shoulderPoint(b,lo,0f);
+                float[] r=shoulderPoint(b,hi,0f);
+                float[] t=shoulderPoint(a,hi,0f);
+                // Edge metal glints at borders and at each overlapping lame.
+                boolean border=col==0||col==arcSegments-1;
+                Palette color=border||row==rings.length-2?edge:plate;
+                f.quad(p,q,r,t,color);
+                if(row>0){
+                    // Raised folded-metal lip between separate shoulder lames.
+                    float[] a0=shoulderPoint(a,lo,.013f);
+                    float[] a1=shoulderPoint(a,hi,.013f);
+                    f.quad(p,a0,a1,t,edge);
+                }
+            }
+        }
+        return f.finish();
+    }
+    private static float[] shoulderPoint(Ring ring,float theta,float offset){
+        float c=(float)Math.cos(theta),front=(float)Math.sin(theta);
+        // Rounded cross-section is ONLY an internal design coordinate;
+        // outward-facing geometry is a segmented, open embossed plate.
+        float crease=1f+.05f*(float)Math.cos(theta*4f);
+        return new float[]{ring.cx+ring.rx*c*crease,
+                           ring.y,
+                           ring.cz+ring.rz*front+ring.keel*front*front+offset};
+    }
+    /**
      * Forged plate with FOUR purposeful surfaces: base flange, 45-degree
      * dressed edge, inset bevel and a BROAD low-relief face. A uniform
      * peaked triangle fan made these look like artificial pyramids; this
