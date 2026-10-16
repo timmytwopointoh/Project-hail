@@ -138,6 +138,21 @@ public final class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent){
         super.onNewIntent(intent);
         setIntent(intent);
+        // Emulator-only visual QA of the actual Vesper particle rendering path.
+        // This synthetic two-joint shape is NOT Vesper's finished character.
+        if(game!=null && renderer!=null &&
+            (getApplicationInfo().flags &
+             android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0 &&
+            "game.ashenveil.veilbound.VESPER_STAGE_QA".equals(intent.getAction())){
+            try(InputStream in=getAssets().open("vesper_import_smoke.glb")){
+                renderer.stageVesper(VesperGlb.load(in));
+                game.enterStudio();
+                game.studio.selectImported();
+                Log.i("VESPER_GLTF","AURA_STAGE_SMOKE_REQUEST synthetic_fixture=true");
+            }catch(Exception e){
+                Log.e("VESPER_GLTF","AURA_STAGE_SMOKE_FAIL",e);
+            }
+        }
         if(game!=null&&"game.ashenveil.veilbound.INSPECT".equals(intent.getAction())){
             WorldState.Snapshot s=game.snapshot();
             Log.i("VEILBOUND_STATE","INSPECT mode="+s.mode+" x="+s.x+" z="+s.z+
