@@ -526,6 +526,50 @@ def main():
             "game_preview":True,"actual_angles":4,"detail_capture":True,
             "new_eye_socket_and_lid_geometry":True,"manual_approval":False,
             "old_knight_untouched":True,"hair_unchanged":True}
+        # Reference material / anatomy experiment, not a game hero swap.
+        touch(w*.65,h*.865) # M28 anatomical face -> M29 real T-pose
+        time.sleep(1.0)
+        for attempt in range(40):
+            reference_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                              timeout=20).decode("utf-8","replace")
+            if ("item=17" in reference_log and
+                "M29_TPOSE_AND_RELAXED_READY" in reference_log and
+                "M29_SKIN_MICRO_ATLAS_READY" in reference_log):
+                break
+            time.sleep(.45)
+        else:
+            raise AssertionError("M29 reference skin + T-pose failed Android launch")
+        tpose_first=OUT/"01_m29_tpose_front.png"
+        report["screenshots"].append(shot(tpose_first.name))
+        previous=tpose_first
+        for angle in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)
+            time.sleep(1.0)
+            name="01_m29_tpose_"+angle+".png"
+            report["screenshots"].append(shot(name))
+            with Image.open(previous) as a,Image.open(OUT/name) as b:
+                diff=ImageStat.Stat(ImageChops.difference(
+                    a.convert("RGB").resize((180,105)),
+                    b.convert("RGB").resize((180,105)))).mean
+            if sum(diff)/3<.12:
+                raise AssertionError("M29 T-pose camera did not change: "+angle)
+            previous=OUT/name
+        touch(w*.65,h*.865)  # T-pose -> relaxed reference (new model)
+        time.sleep(1.25)
+        reference_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                          timeout=20).decode("utf-8","replace")
+        if "item=18" not in reference_log:
+            raise AssertionError("M29 relaxed reference pose selection failed")
+        relaxed_name="01_m29_relaxed_front.png"
+        report["screenshots"].append(shot(relaxed_name))
+        touch(w*.5,h*.758)
+        time.sleep(1.0)
+        report["screenshots"].append(shot("01_m29_relaxed_side.png"))
+        atelier["m29_reference_skin_and_pose"]={
+            "tpose_real_geometry":True,"relaxed_real_geometry":True,
+            "four_tpose_angles":True,"skin_atlas_uploaded":True,
+            "human_look_manual_review_required":True,
+            "photo_skin_verified":False,"historical_knight_untouched":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
