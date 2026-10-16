@@ -23,3 +23,11 @@ Source: [M25 anatomy wave 38875627662](https://github.com/timmytwopointoh/Projec
 - 50 candidate slots = 10 scoped manager lanes × 5 bounded numeric proposals, NOT 50 trained autonomous AI workers.
 - M25 pipeline separately runs VEILFORGE mesh topology, skin material bake and glTF candidate export. Never automatically repair production mesh or accept an aggregate score.
 - First 50-slot revision completed all structural gates; revised face geometry, Android 15 four-emulator performance and visual pass still require independent evidence and human acceptance.
+
+## Second candidate: post-correction visual review
+Evidence: [M25 corrected 50-slot run 38876111750](https://github.com/timmytwopointoh/Project-hail/actions/runs/38876111750), head_cranium `face_front.png`, `face_side.png`, `face_three_quarter.png`.
+- Compared to the first revision, eyes are narrower and less protruding, brow/lip patches less dark, lower face a little narrower, and high-detail head sampling denser.
+- **Still visually rejected for final realism**: eyes remain simple colored convex plates with little surrounding eyelid anatomy, cheeks/jaw are overly faceted, lower-face transition is still puppet-like, and true facial expression/eyelid rigging is missing. Some ragged crop borders in the offline camera are software-render clipping artifacts, not proof of mesh holes.
+- Need localized orbital sockets, naturally shaped eyelid rims, real upper/lower lip geometry, improved nasal alae and bridge, connected higher-resolution facial edge loops, retopology and texture coordinates before likeness approval. Do not solve this by adding isolated dot decals or indiscriminately increasing SDF capsules.
+- Current VEILFORGE export source: 59,861 triangles, 1,869 open boundary edges, zero nonmanifold and degenerate. Conservative export repair adds 438 safe triangles, reduces boundary edges to 1,073, still zero nonmanifold/degenerate. **Not closed/watertight; not automatically game-approved.**
+- M25 technical gates passed on the corrected wave: geometry, 10 candidate managers, offline 14-view meshes, three facial closeup angles, glTF and PBR skin export, manual-approval flag remains false.
