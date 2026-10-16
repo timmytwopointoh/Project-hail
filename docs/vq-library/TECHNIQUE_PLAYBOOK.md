@@ -173,3 +173,7 @@ CI run 38970974341 correctly failed because old test doubles omitted the
 modal score and the static auditor matched an obsolete inline gate string.
 Keep the stricter real-frame requirement; update synthetic fixtures and audit
 the shared implementation instead of relaxing the screenshot policy.
+
+## M34-10 factory verification
+
+Factory Actions run 38971117494 passed 164 tests, eight producers, four Android 15 roles, 154 real captures, independent PNG pixel recomputation, and LOD/semantic reviews. Source commit 5aec7a0d681896996be9c58e88d6a493c6af4a5a. M30 Android shader comparison and physical device/artistic approval remain pending.

@@ -120,3 +120,13 @@ Never overwrite original meshes, auto-merge unreviewed changes, disable failed
 tests, mislabel emulator screenshots as actual mobile hardware tests or promote
 a game asset from a technical report alone. Work on a new versioned feature
 branch and retain an exact source SHA and artifact digests.
+
+## Newer verified factory source and backup
+
+M34-10 shared Android screenshot truth gate passed factory Actions run
+38971117494 on commit 5aec7a0d681896996be9c58e88d6a493c6af4a5a:
+164 tests, four real Android 15 emulator roles and 154 PNG frames. The
+source branch is feature/veilforge-m34-shared-android-qa-20261016;
+the refreshed archive branch is feature/vq-library-snapshot-m34-10-20261016.
+The older pinned recovery base remains valid. Separate M30 Android normal-map
+comparison, physical-device performance and artist signoff remain open.

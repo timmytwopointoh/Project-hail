@@ -3,14 +3,14 @@
   "as_of": "2026-10-16",
   "repository": "timmytwopointoh/Project-hail",
   "source_of_truth": {
-    "branch": "feature/vq-library-snapshot-20261016",
-    "derived_from_sha": "6481720458f99258e19f1ed1fe16071adc508e73",
+    "branch": "feature/vq-library-snapshot-m34-10-20261016",
+    "derived_from_sha": "5aec7a0d681896996be9c58e88d6a493c6af4a5a",
     "source_ci": {
-      "run_id": 38918040166,
+      "run_id": 38971117494,
       "conclusion": "success",
-      "scope": "full VEILFORGE universal factory and four emulator roles"
+      "scope": "164 tests, eight asset producers, four Android 15 roles, 154 screenshots, LOD and semantic review"
     },
-    "important": "Snapshot contains one commit's tracked files, not independent unmerged branches."
+    "important": "Single snapshot commit. Separate M30 Android normal/flat control and physical device review remain open."
   },
   "verified_workstreams": [
     {
@@ -73,6 +73,15 @@
         38918040166
       ],
       "note": "Actual APK 2304080 bytes and 154 accepted PNGs each; 319/340-second job spans. M34-09 partial until >=3 comparable clean runs and controlled speedup analysis. Separate unmerged branch."
+    },
+    {
+      "name": "M34-10 factory Android PNG evidence",
+      "branch": "feature/veilforge-m34-shared-android-qa-20261016",
+      "sha": "5aec7a0d681896996be9c58e88d6a493c6af4a5a",
+      "status": "factory_android_pass_m30_pending",
+      "run": 38971117494,
+      "tests": 164,
+      "screenshots": 154
     }
   ],
   "separate_projects": [

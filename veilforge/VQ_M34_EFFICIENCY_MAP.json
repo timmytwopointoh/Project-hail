@@ -97,7 +97,7 @@
       "name": "Shared single emulator QA SDK for M30, factory and unified queue",
       "status": "partial",
       "acceptance": "One tested ADB, screenshot, image and log validator API; compatibility tests for existing reviewers.",
-      "implementation_note": "Shared fail-closed frame policy and independent real-PNG pixel/hash/path validator integrated into factory and M30 capture/review. Full Android 15 CI on this branch and legacy M30 logcat-to-stream migration remain necessary before verified status."
+      "implementation_note": "Shared strict frame gate and independent PNG pixel/hash/path validator for factory and M30. Full factory Actions run 38971117494 passed at source 5aec7a0d681896996be9c58e88d6a493c6af4a5a: 164 tests, 8 producers, 4 Android 15 roles, 154 real screenshots, LOD and semantic reviews. Separate M30 Android normal-on/off compatibility and M30 legacy logcat consolidation pending."
     },
     {
       "id": "M34-11",
