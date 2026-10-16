@@ -1,0 +1,49 @@
+name: VEILBOUND - M11 Player AI Worker Trial
+on:
+  push:
+    branches: ['feature/veilbound-m11-player-worker-test']
+    paths: ['veilbound/PLAYER_WORKER_TEST.md']
+permissions:
+  contents: read
+# A one-time opt-in for this user-requested test. Runs actual isolated
+# local inference; reviewed proposals are never pushed into game automatically.
+jobs:
+  player-proposal:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        role: [models, animation, materials]
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install self-hosted Qwen2.5-Coder in loopback VM
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Execute hierarchical manager-approved coding worker
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: |
+          python3 veilbound/scripts/local_ai_pilot.py \
+            --role "${{ matrix.role }}" \
+            --backlog veilbound/player_worker_backlog.json \
+            --out "inspection_output/m11-${{ matrix.role }}"
+      - name: Archive full model proposal and trusted test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-m11-${{ matrix.role }}-proposal
+          path: inspection_output/m11-${{ matrix.role }}/
+          if-no-files-found: warn
+          retention-days: 14
