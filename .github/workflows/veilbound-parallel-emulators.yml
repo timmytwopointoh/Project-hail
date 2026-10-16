@@ -1,6 +1,6 @@
 name: VEILBOUND - Parallel Android Emulator Farm
 on:
-  # One explicitly requested, isolated two-emulator CI verification.
+  # One explicitly requested isolated four-emulator expansion after a passed 2/2 run.
   # Once verified, remove this temporary push trigger; manual 1/2/4/8 remains.
   push:
     branches: ['feature/veilbound-parallel-emulator-reliability']
@@ -41,7 +41,7 @@ jobs:
         id: plan
         run: |
           python3 veilbound/scripts/emulator_farm.py \
-            --count "${{ inputs.emulator_instances || '2' }}" \
+            --count "${{ inputs.emulator_instances || '4' }}" \
             --github-output "${GITHUB_OUTPUT}" \
             --out inspection_output/farm-plan
           cat inspection_output/farm-plan/emulator_farm_report.md >> "${GITHUB_STEP_SUMMARY}"
@@ -55,6 +55,8 @@ jobs:
     name: Build and validate one common native APK
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      apk_sha256: ${{ steps.apk-digest.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,6 +74,10 @@ jobs:
         run: |
           test -s veilbound/app/build/outputs/apk/debug/app-debug.apk
           unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
+      - name: Record immutable common APK SHA256
+        id: apk-digest
+        run: |
+          echo "sha256=$(sha256sum veilbound/app/build/outputs/apk/debug/app-debug.apk | cut -d ' ' -f1)" >> "${GITHUB_OUTPUT}"
       - name: Share this exact APK with all emulator instances
         uses: actions/upload-artifact@v4
         with:
@@ -101,6 +107,9 @@ jobs:
         with:
           name: veilbound-emulator-shared-debug-apk
           path: veilbound/app/build/outputs/apk/debug/
+      - name: Prove downloaded APK is byte-identical to common build
+        run: |
+          echo "${{ needs.build-shared-apk.outputs.apk_sha256 }}  veilbound/app/build/outputs/apk/debug/app-debug.apk" | sha256sum -c -
       - name: Install screenshot image analysis dependencies
         run: python3 -m pip install --quiet --user Pillow
       - name: Enable KVM for this runner only
@@ -123,7 +132,20 @@ jobs:
           disable-animations: false
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: bash veilbound/scripts/emulator_test.sh
+          script: |
+            bash -ec '
+              observed_api="$(adb shell getprop ro.build.version.sdk | tr -d "\\r")"
+              if [ "$observed_api" != "${{ matrix.api }}" ]; then
+                echo "Wrong Android API: requested ${{ matrix.api }}, emulator reports $observed_api" >&2
+                exit 3
+              fi
+              bash veilbound/scripts/emulator_test.sh
+            '
+      - name: Preserve actual APK fingerprint per emulator (also after failure)
+        if: always()
+        run: |
+          mkdir -p inspection_output/veilbound
+          sha256sum veilbound/app/build/outputs/apk/debug/app-debug.apk | cut -d ' ' -f1 > inspection_output/veilbound/apk_sha256.txt
       - name: Analyze each emulator's real screenshots and GLES diagnostics
         if: always()
         run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
@@ -165,6 +187,8 @@ jobs:
           python3 veilbound/scripts/emulator_farm.py \
             --count "${{ needs.emulator-director.outputs.count }}" \
             --summarize inspection_output/farm-results \
+            --expected-sha "${{ github.sha }}" \
+            --expected-apk-sha "${{ needs.build-shared-apk.outputs.apk_sha256 }}" \
             --out inspection_output/farm-summary
           cat inspection_output/farm-summary/emulator_farm_report.md >> "${GITHUB_STEP_SUMMARY}"
       - name: Retain aggregate proof even if a device fails
