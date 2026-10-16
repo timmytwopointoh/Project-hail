@@ -1,6 +1,6 @@
 # VEILFORGE / VEILBOUND rights and provenance policy
 
-**Claimed project steward:** GitHub account [timmytwopointoh](https://github.com/timmytwopointoh).
+**Named project steward and rights claimant:** Timothy Harris.\n**Associated account:** [timmytwopointoh](https://github.com/timmytwopointoh).
 **Repository:** [timmytwopointoh/Project-hail](https://github.com/timmytwopointoh/Project-hail).
 **Scope:** Original VEILFORGE asset engine, VEILBOUND worker hierarchy and emulator CI,
 the shared ten-slot pipeline, original human-authored source files, project-specific
