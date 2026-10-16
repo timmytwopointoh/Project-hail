@@ -84,14 +84,22 @@ jobs:
           python3 veilforge/factory.py \
             --catalog inspection_output/vq-studio/corrected_catalog.json --id "$ASSET" \
             --out inspection_output/vq-studio/source
-      - name: Publish real OBJ early for VQ black-space inspection
+      - name: Check source OBJ and freeze first real geometry revision
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          REQUEST: ${{ inputs.request_id }}
+        run: |
+          set -euo pipefail
+          python3 vq-studio/live_snapshot.py \
+            --obj "inspection_output/vq-studio/source/$ASSET.obj" \
+            --out inspection_output/vq-studio/snapshot-r001 \
+            --request-id "$REQUEST" --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 1
+      - name: Upload hash-verified early OBJ snapshot for automatic mobile loading
         uses: actions/upload-artifact@v4
         with:
-          name: vq-studio-live-obj-${{ inputs.request_id }}
-          path: |
-            inspection_output/vq-studio/source/*.obj
-            inspection_output/vq-studio/source/*.gltf
-            inspection_output/vq-studio/source/*.bin
+          name: vq-studio-snapshot-r001-${{ inputs.request_id }}
+          path: inspection_output/vq-studio/snapshot-r001/
           if-no-files-found: error
           retention-days: 3
       - name: Inspect and render fourteen real source-mesh perspectives
@@ -113,6 +121,25 @@ jobs:
           assert x["production_approved"] is False
           print("VQ_JOB_EVIDENCE_PASS 14 REAL OBJ FRAMES")
           PY
+      - name: Check independent model QA and freeze inspected revision
+        env:
+          ASSET: ${{ inputs.catalog_model }}
+          REQUEST: ${{ inputs.request_id }}
+        run: |
+          set -euo pipefail
+          python3 vq-studio/live_snapshot.py \
+            --obj "inspection_output/vq-studio/source/$ASSET.obj" \
+            --report inspection_output/vq-studio/inspection/vq_model_report.json \
+            --out inspection_output/vq-studio/snapshot-r002 \
+            --request-id "$REQUEST" --run-id "$GITHUB_RUN_ID" \
+            --source-commit "$GITHUB_SHA" --sequence 2
+      - name: Upload technical-QA-verified model for hands-free viewport refresh
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-snapshot-r002-${{ inputs.request_id }}
+          path: inspection_output/vq-studio/snapshot-r002/
+          if-no-files-found: error
+          retention-days: 3
       - name: Upload first verified live milestone snapshot before worker finishes
         uses: actions/upload-artifact@v4
         with:
