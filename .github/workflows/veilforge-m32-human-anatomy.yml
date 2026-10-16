@@ -12,6 +12,8 @@ on:
       - 'veilforge/vq_model_tools.py'
       - 'veilforge/vq_brushes.py'
       - 'veilforge/vq_adaptive_remesh.py'
+      - 'veilforge/m32_shoulder_brush.json'
+      - 'veilforge/m32_anatomy_remesh.json'
       - 'docs/veilbound/M32_ANATOMY_SKILL_MAP.md'
   workflow_dispatch:
 permissions:
@@ -213,5 +215,50 @@ jobs:
         with:
           name: m32-anatomy-director-lesson-and-reference-fit
           path: inspection_output/m32-director/
+          retention-days: 21
+          if-no-files-found: warn
+
+  vq-sculpt-and-remesh-experiment:
+    name: Bounded VQ bilateral shoulder sculpt and conforming remesh — review only
+    needs: specialty-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m32-vq-human-face
+          path: inspection_output/m32-vq-source
+      - name: Refine actual unposed character without modifying M32 game source
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet Pillow
+          ROOT=inspection_output/m32-shoulder-refinement
+          python3 veilforge/vq_refinement_pipeline.py \
+            --obj inspection_output/m32-vq-source/human_candidate.obj \
+            --brush veilforge/m32_shoulder_brush.json \
+            --refine veilforge/m32_anatomy_remesh.json \
+            --out "$ROOT"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("inspection_output/m32-shoulder-refinement")
+          a=json.loads((p/"refinement_evidence.json").read_text())
+          assert a["source_triangles"]>50000
+          assert a["brushed_triangles"]==a["source_triangles"]
+          assert a["remeshed_triangles"]>a["source_triangles"]
+          assert a["adaptive_interior_edges"]>0
+          assert a["brush_and_refine_technical_gates_passed"] is True
+          assert a["artist_approval"] is False and a["game_ready"] is False
+          print("M32_VQ_ADAPTIVE_HUMAN_SCULPT_REVIEW",a["adaptive_interior_edges"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m32-vq-shoulder-refinement-review-only
+          path: inspection_output/m32-shoulder-refinement/
           retention-days: 21
           if-no-files-found: warn
