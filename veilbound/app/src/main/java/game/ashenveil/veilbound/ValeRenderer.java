@@ -695,7 +695,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             Matrix.translateM(model,0,0,1.93f,-.51f);
             Matrix.rotateM(model,0,heroFrame.mantlePitch,1,0,0);
             Matrix.rotateM(model,0,heroFrame.mantleYaw,0,1,0);
+            // The velvet mantle uses broad matte cloth response; only the
+            // armor and weapon receive the dedicated steel Fresnel pass.
+            GLES20.glUniform1f(uHeroShading,0f);
             draw(rig.mantle,model,.91f,.97f,1f,0);
+            GLES20.glUniform1f(uHeroShading,1f);
         }
         float brace=windup>0?22f*(1f-windup/(boss?.92f:.72f)):0f;
         float armDrive=swing>0?25f+26f*CombatMotion.smooth(phase/.32f):0f;
