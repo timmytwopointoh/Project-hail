@@ -17,7 +17,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final WorldState state;
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
@@ -60,7 +60,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
         "uniform sampler2D uDetail; uniform float uStudioMode; "+
         "uniform float uStudioMaterial; uniform vec3 uStudioLight; uniform vec3 uStudioKeyColor; "+
-        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform float uSurfaceQuality; "+
+        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform float uSurfaceQuality; uniform float uHeroShading; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "vec2 atlasUV(vec2 uv,float id){"+
         "vec2 offset=vec2(mod(id,2.),floor(id*.5))*.5;"+
@@ -85,6 +85,14 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "vec3 bounceHalf=normalize(cameraDir+normalize(vec3(-.4,.83,-.25)));"+
         "float specCore=pow(max(dot(n,bounceHalf),0.),24.);"+
         "col+=vec3(.32,.43,.48)*specCore*metalHint*.47; "+
+        // Mobile-budget plate fresnel highlights exclusive to the playable hero.
+        "if(uHeroShading>.5){"+
+        "float facing=max(dot(n,normalize(vec3(-.25,.87,.31))),0.);"+
+        "float metalPlate=smoothstep(.07,.25,vColor.b-vColor.r);"+
+        "float edge=pow(1.-max(dot(n,cameraDir),0.),3.);"+
+        "vec3 silver=vec3(.41,.57,.66)*(edge*.38+specCore*.78+facing*.05);"+
+        "col+=silver*metalPlate;"+
+        "col*=.92+.08*facing;} "+
         "vec3 ember=vWorld-vec3(-4.4,1.4,11.);"+
         "float emberGlow=1./(1.+dot(ember,ember)*.23);"+
         "col+=vec3(.85,.28,.08)*emberGlow*.90; "+
@@ -189,6 +197,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uStudioLight=GLES20.glGetUniformLocation(program,"uStudioLight");
         uStudioKeyColor=GLES20.glGetUniformLocation(program,"uStudioKeyColor");
         uSurfaceQuality=GLES20.glGetUniformLocation(program,"uSurfaceQuality");
+        uHeroShading=GLES20.glGetUniformLocation(program,"uHeroShading");
         uAlbedoAtlas=GLES20.glGetUniformLocation(program,"uAlbedoAtlas");
         uSurfaceAtlas=GLES20.glGetUniformLocation(program,"uSurfaceAtlas");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
@@ -264,6 +273,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1i(uDetail,0);
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform1f(uStudioMode,0f);
+        GLES20.glUniform1f(uHeroShading,0f);
         // Main-world ground uses the inexpensive micro-grit pass; the full
         // 512px atlas BRDF is reserved for on-screen near character models.
         ensureSurfaceAtlas();
@@ -395,6 +405,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1i(uDetail,0);
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform1f(uStudioMode,1f);
+        GLES20.glUniform1f(uHeroShading,0f);
         ensureSurfaceAtlas();
         GLES20.glUniform1f(uSurfaceQuality,1f);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
@@ -649,6 +660,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         // Distant meshes retain fast ES2 per-vertex material lighting.
         boolean materialQuality=dist2<80f && fps>6.0f;
         GLES20.glUniform1f(uSurfaceQuality,materialQuality?1f:0f);
+        GLES20.glUniform1f(uHeroShading,foe?0f:1f);
         Rigged rig=boss?knightRig:(foe?revenantRig:
             (fps>=8.5f?playerRig:playerLiteRig));
         if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
@@ -735,6 +747,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             }
         }
         GLES20.glUniform1f(uSurfaceQuality,0f);
+        GLES20.glUniform1f(uHeroShading,0f);
     }
     private void drawRigLimb(Mesh limb,float jointX,float jointY,
                              float x,float y,float z,float yaw,float size,
