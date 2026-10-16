@@ -11,6 +11,7 @@ package game.ashenveil.veilbound;
 public final class HumanAnatomy {
     private HumanAnatomy(){}
     public static ArtKit.Model build(boolean lite){
-        return ContinuousHuman.build(lite);
+        return ShapeEngine.combine(ContinuousHuman.buildWithoutDigits(lite),
+                                   HumanHandSculpt.build(lite));
     }
 }
