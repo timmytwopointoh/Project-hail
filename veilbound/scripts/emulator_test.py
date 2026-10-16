@@ -295,6 +295,17 @@ def main():
             report["screenshots"].append(frame)
             atelier["world_assets"][name]=True
             # Snapshot captures verify the actual registered studio geometry.
+        # New human is a SEPARATE studio-only test asset; preserve every
+        # original combat model and original imported OBJ slot.
+        touch(w*.65,h*.865)  # roots index 10 -> unarmored human index 11
+        time.sleep(1.45)
+        human=shot("01_atelier_unarmored_human.png")
+        report["screenshots"].append(human)
+        human_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                      timeout=20).decode("utf-8","replace")
+        atelier["unarmored_human_selected"]="item=11" in human_log
+        if not atelier["unarmored_human_selected"]:
+            raise AssertionError("M17 separate unarmored HUMAN BASE never selected")
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
