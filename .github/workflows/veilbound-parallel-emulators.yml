@@ -1,10 +1,5 @@
 name: VEILBOUND - Parallel Android Emulator Farm
 on:
-  # One explicitly requested isolated four-emulator expansion after a passed 2/2 run.
-  # Once verified, remove this temporary push trigger; manual 1/2/4/8 remains.
-  push:
-    branches: ['feature/veilbound-parallel-emulator-reliability']
-    paths: ['.github/workflows/veilbound-parallel-emulators.yml']
   workflow_dispatch:
     inputs:
       emulator_instances:
@@ -17,7 +12,8 @@ permissions:
   contents: read
 # One immutable APK. Each emulator runs on a separate GitHub Ubuntu runner,
 # not competing for KVM, ADB ports, logcat or filesystem resources on one VM.
-# Optional capacity is eight separate emulator VMs; automatic runs use two.
+# Four independently running VMs have passed real game testing; one/two/four/eight
+# remains a manual choice. Eight is configured but not yet run as a complete farm.
 # Runners may queue on GitHub account limits; no extra API or secret is required.
 concurrency:
   group: veilbound-emulator-farm-${{ github.ref }}
@@ -41,7 +37,7 @@ jobs:
         id: plan
         run: |
           python3 veilbound/scripts/emulator_farm.py \
-            --count "${{ inputs.emulator_instances || '4' }}" \
+            --count "${{ inputs.emulator_instances || '2' }}" \
             --github-output "${GITHUB_OUTPUT}" \
             --out inspection_output/farm-plan
           cat inspection_output/farm-plan/emulator_farm_report.md >> "${GITHUB_STEP_SUMMARY}"
