@@ -115,7 +115,7 @@ public final class HumanVariantCLI {
             throws Exception{
         final int width=640,height=720;
         final float[] direction=camera(view);
-        final float cx=side*.554f,cz=.115f,cy=.705f,zoom=1260f;
+        final float cx=side*.554f,cz=.115f,cy=1.235f,zoom=1160f;
         final float origin=cx*direction[2]-cz*direction[0];
         BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
         Graphics2D g=image.createGraphics();
@@ -129,7 +129,7 @@ public final class HumanVariantCLI {
             boolean inHand=true;
             for(int k=0;k<3;k++){
                 int j=i+k*9;
-                if(v[j+1]<.465f||v[j+1]>.975f||
+                if(v[j+1]<.970f||v[j+1]>1.58f||
                    v[j]*side<.395f||v[j]*side>.795f){
                     inHand=false;break;
                 }
