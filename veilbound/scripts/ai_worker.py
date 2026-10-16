@@ -134,7 +134,10 @@ def draft_code(role, out):
         ". SPECIFIC TASK: " + task_goal +
         ". Preserve public method signatures, constructor arguments, API "
         "contracts and behavior not related to this task. "
-        "Make ONE short meaningful edit, preferably inside one method. "
+        "Make ONE short functional logic change, preferably inside one method. "
+        "Whitespace-only, comment-only and spelling-only replacements are "
+        "REJECTED: change actual Java logic tokens, a boundary check, "
+        "a mathematical expression or a safe state transition related to task. "
         "Never add imports, subprocesses, file reads, network access, "
         "test bypasses, or invented performance evidence. "
         "Copy each find string BYTE FOR BYTE from one displayed file, "
