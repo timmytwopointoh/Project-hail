@@ -270,6 +270,7 @@ public final class ViewerActivity extends Activity {
             return id[0];
         }
         void load()throws Exception{
+            Log.i(TAG,"KAIYU_M8_LOAD_BEGIN before_json_parse");
             // GLSurfaceView may create a new EGL context for every test-view
             // Activity restart. Never append old glTF meshes repeatedly:
             // this previously inflated 7 models into >200 in emulator QA.
@@ -292,6 +293,7 @@ public final class ViewerActivity extends Activity {
             JSONArray gltfMaterials=doc.getJSONArray("materials");
             JSONArray meshes=doc.getJSONArray("meshes");
             for(int j=0;j<meshes.length();j++){
+                if(j%10==0)Log.i(TAG,"KAIYU_M8_LOAD_PROGRESS mesh="+j+"/"+meshes.length());
                 JSONObject in=meshes.getJSONObject(j);
                 MeshData mesh=new MeshData();
                 mesh.id=in.getString("name");
@@ -424,6 +426,7 @@ public final class ViewerActivity extends Activity {
         }
         @Override public void onSurfaceCreated(javax.microedition.khronos.opengles.GL10 unused,
                                                 javax.microedition.khronos.egl.EGLConfig config){
+            Log.i(TAG,"KAIYU_M8_SURFACE_CREATED_BEGIN");
             GLES20.glClearColor(.065f,.084f,.113f,1f);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             try{
