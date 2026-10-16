@@ -42,11 +42,25 @@ jobs:
             --model qwen2.5-coder:0.5b \
             --out inspection_output/local-ai-smoke
           cat inspection_output/local-ai-smoke/real_local_ai_smoke.json >> "${GITHUB_STEP_SUMMARY}"
+      - name: Install production coding model on local runner
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Prove actual 1.5B model inference and structured proposal response
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: |
+          python3 veilbound/scripts/local_ai_smoke.py \
+            --model qwen2.5-coder:1.5b \
+            --out inspection_output/local-ai-production-smoke
+          cat inspection_output/local-ai-production-smoke/real_local_ai_smoke.json >> "${GITHUB_STEP_SUMMARY}"
       - name: Archive actual inference proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: veilbound-local-ai-actual-inference-proof
-          path: inspection_output/local-ai-smoke/
+          path: |
+            inspection_output/local-ai-smoke/
+            inspection_output/local-ai-production-smoke/
           if-no-files-found: warn
           retention-days: 14
