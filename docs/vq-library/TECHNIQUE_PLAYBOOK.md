@@ -116,3 +116,22 @@ When new lessons are learned:
 general projection-cage baking, production tangent conventions, convincing
 anatomy, deforming facial rigs, hair/cloth physics, calibrated PBR and real
 target-phone frame-time measurements. Those remain roadmap goals.
+
+## M34-11 — Source-only reachability inventory
+
+The read-only `tools/vq_source_reachability.py` uses Python AST imports,
+literal dynamic imports, GitHub workflow source references and test roots
+to map references in one pinned checkout. It records module SHA256 values,
+flags nonliteral imports and labels unmatched modules for **manual review**,
+not removal.
+
+Verified GitHub Actions run 38924708967 at source commit
+5efdaccb562a0187a714ef0593589de86c0f89ac: six adversarial tests
+passed; 66 Python sources inspected; zero manual-review candidates.
+No emulator was needed for this source-only milestone. The audit cannot
+prove reachability for Java, external consumers, plugins, reflection or
+unmerged branches. No game code or model assets were changed.
+
+Use `.github/workflows/vq-source-reachability.yml` for repeat checks.
+Preserve the source hash and CI report; require separate investigation
+before treating any code as unused.

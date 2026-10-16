@@ -2,7 +2,7 @@ name: VQ Library - Durable Source Snapshot
 
 on:
   push:
-    branches: ['feature/vq-library-snapshot-*']
+    branches: ['feature/vq-library-snapshot-*', 'feature/vq-m34-source-reachability-*']
     paths:
       - 'veilforge/library_archive.py'
       - 'veilforge/tests/test_library_archive.py'

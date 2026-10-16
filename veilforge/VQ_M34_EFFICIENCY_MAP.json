@@ -101,8 +101,9 @@
       "id": "M34-11",
       "priority": "P1",
       "name": "Targeted source health audit and orphan-code investigation",
-      "status": "planned",
-      "acceptance": "Reachable import and workflow references across all engine/test entrypoints, never delete externally referenced code or game sources."
+      "status": "partial",
+      "acceptance": "Reachable import and workflow references across all engine/test entrypoints, never delete externally referenced code or game sources.",
+      "implementation_note": "Source-only GitHub CI run 38924708967 (commit 5efdaccb562a0187a714ef0593589de86c0f89ac) passed 6 adversarial tests and scanned 66 Python sources with zero manual-review candidates. Python AST, tests and literal workflow references covered. Java/Gradle, external branches and dynamic consumers remain to be audited. No modules removed."
     },
     {
       "id": "M34-12",

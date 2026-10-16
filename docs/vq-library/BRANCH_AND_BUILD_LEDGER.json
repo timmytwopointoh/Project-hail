@@ -3,14 +3,15 @@
   "as_of": "2026-10-16",
   "repository": "timmytwopointoh/Project-hail",
   "source_of_truth": {
-    "branch": "feature/vq-library-snapshot-20261016",
+    "branch": "feature/vq-m34-source-reachability-20261016",
     "derived_from_sha": "6481720458f99258e19f1ed1fe16071adc508e73",
     "source_ci": {
       "run_id": 38918040166,
       "conclusion": "success",
       "scope": "full VEILFORGE universal factory and four emulator roles"
     },
-    "important": "Snapshot contains one commit's tracked files, not independent unmerged branches."
+    "important": "Snapshot contains one commit's tracked files, not independent unmerged branches.",
+    "note": "Descends from verified M34 source and the prior Library snapshot. The latest full-source archive commit is recorded by its GitHub Actions run."
   },
   "verified_workstreams": [
     {
@@ -61,6 +62,14 @@
       "sha": "6481720458f99258e19f1ed1fe16071adc508e73",
       "status": "technical_ci_full_android_pass",
       "run": 38918040166
+    },
+    {
+      "name": "M34-11 source-only Python/workflow reachability audit",
+      "branch": "feature/vq-m34-source-reachability-20261016",
+      "sha": "5efdaccb562a0187a714ef0593589de86c0f89ac",
+      "status": "source_only_ci_pass_partial_cross_language_scope",
+      "run": 38924708967,
+      "observed": "66 Python sources scanned, 6 adversarial tests passed, zero manual-review candidates; no source removals, no emulator claims"
     }
   ],
   "separate_projects": [
@@ -90,6 +99,7 @@
     "Never claim branches merged unless git merge history establishes it.",
     "Actions artifacts expire; use Library ZIP or git checkout for recovery.",
     "No private keys/signing secrets are archived.",
-    "Manual artistic and real-device performance gates remain open."
+    "Manual artistic and real-device performance gates remain open.",
+    "M34-11 does not cover Java, Gradle, reflective loads, unmerged branches or external consumers."
   ]
 }
