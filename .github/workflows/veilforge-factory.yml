@@ -34,6 +34,7 @@ jobs:
           set -euo pipefail
           python3 -m unittest discover -s veilforge/tests -v
           python3 -m compileall -q veilforge
+          python3 veilforge/roadmap.py --out inspection_output/library-manager
       - id: plan
         name: Assign independently isolated asset workers from validated catalog
         run: |

@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "engine": "VEILFORGE",
+  "scope": "Stand-alone universal asset-building engine; games are downstream clients, not development scope.",
+  "release_policy": {
+    "continuous_iteration": "hourly scheduled review/improvement task",
+    "human_signoff_required": true,
+    "automatic_merge": false,
+    "game_source_mutation": false,
+    "paid_resource_retries": "avoid unless they unblock measurable progress",
+    "complete_when": "Every required milestone has verified test artifacts, actual visual and downstream importer evidence, and user/artist approval. Do not infer completion from a green build."
+  },
+  "status_definitions": {
+    "verified": "Measurable subset has passed actual CI; does not imply photorealism",
+    "partial": "Useful tested foundation exists, but acceptance gate not met",
+    "planned": "Acceptance gate untested or not implemented"
+  },
+  "milestones": [
+    {
+      "id": "VF-001",
+      "domain": "core",
+      "name": "Reproducible asset catalog and safe input schema",
+      "status": "verified",
+      "gate": "pass 8-asset catalog reproducibility; reject invalid names/scales/seeds",
+      "depends_on": [],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-002",
+      "domain": "core",
+      "name": "Six reusable primitive/specialist builder families",
+      "status": "verified",
+      "gate": "six categories produce original geometry, materials and glTF in isolated workers",
+      "depends_on": [
+        "VF-001"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-003",
+      "domain": "export",
+      "name": "glTF scene assembly with reusable instances",
+      "status": "verified",
+      "gate": "compile 8 instances referencing 7 independently verified mesh sources",
+      "depends_on": [
+        "VF-002"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-004",
+      "domain": "export",
+      "name": "Indexed attribute-preserving mesh optimization",
+      "status": "partial",
+      "gate": "deduplicate exact attributes per primitive; independently verify triangles, buffers, index bounds and bytes saved",
+      "depends_on": [
+        "VF-002"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-005",
+      "domain": "geometry",
+      "name": "Topology repair and semantic boundary classification",
+      "status": "partial",
+      "gate": "closed human mesh 0 open boundary edges and 0 nonmanifold edges; intentionally open components classified",
+      "depends_on": [
+        "VF-002"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-006",
+      "domain": "sculpt",
+      "name": "High resolution detailed geometry and non-destructive sculpt layers",
+      "status": "planned",
+      "gate": "editable layer stack with headless DCC export; geometry validation on at least 3 asset families",
+      "depends_on": [
+        "VF-005"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-007",
+      "domain": "materials",
+      "name": "Production UV unwrap and texture-space continuity",
+      "status": "planned",
+      "gate": "verified UV seams, orientation, texel density and packing; checkerboard render across 3 assets",
+      "depends_on": [
+        "VF-004"
+      ],
+      "owner": "materials",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-008",
+      "domain": "materials",
+      "name": "Layered PBR texture synthesis and baking",
+      "status": "partial",
+      "gate": "albedo/normal/roughness/metallic/AO baker with testable UV alignment and headless PBR renders",
+      "depends_on": [
+        "VF-007"
+      ],
+      "owner": "materials",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-009",
+      "domain": "materials",
+      "name": "Realistic skin, stone, wood, cloth and metal shader benchmarks",
+      "status": "planned",
+      "gate": "reference-driven matched lighting turntables with manual material signoff",
+      "depends_on": [
+        "VF-008"
+      ],
+      "owner": "materials",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-010",
+      "domain": "geometry",
+      "name": "Automatic cinematic-to-mobile LOD chains",
+      "status": "planned",
+      "gate": "LOD0 to LOD3 preserves salient silhouettes and UVs; measurable reduction with error thresholds",
+      "depends_on": [
+        "VF-004",
+        "VF-005"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-011",
+      "domain": "geometry",
+      "name": "Interchangeable meshes, instancing and texture atlases",
+      "status": "partial",
+      "gate": "shared geometry/material indexing validated at scale with runtime memory reporting",
+      "depends_on": [
+        "VF-004"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-012",
+      "domain": "characters",
+      "name": "Retopologized five-digit hands, anatomical face and deformable body",
+      "status": "partial",
+      "gate": "clean mesh and five digits verified at 14 angles plus poses; human artist signoff",
+      "depends_on": [
+        "VF-005"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-013",
+      "domain": "animation",
+      "name": "Skin weights, skeletal animation, blend shapes, facial rigging",
+      "status": "planned",
+      "gate": "rest-pose and 30+ joint stress tests; glTF skin/animation importer verification",
+      "depends_on": [
+        "VF-012"
+      ],
+      "owner": "animation",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-014",
+      "domain": "simulation",
+      "name": "Strand and cloth dynamics, collision-safe animation",
+      "status": "planned",
+      "gate": "hair/cape sim in 5 dynamic movement tests without exploding or tearing",
+      "depends_on": [
+        "VF-013"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-015",
+      "domain": "builders",
+      "name": "Creatures, monsters, clothing, armor and modular gear",
+      "status": "planned",
+      "gate": "reproducible, editable original assets spanning each family with deformation tests",
+      "depends_on": [
+        "VF-012"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-016",
+      "domain": "builders",
+      "name": "World biomes, modular interiors, roads, architecture, cave systems",
+      "status": "partial",
+      "gate": "3 coherent scene biomes and 2 modular interiors with nonintersecting placement checks",
+      "depends_on": [
+        "VF-003"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-017",
+      "domain": "builders",
+      "name": "Props, tools, furniture, machinery, vehicles, weapons",
+      "status": "partial",
+      "gate": "at least 20 parametric variants; collision metadata and functional assembly points",
+      "depends_on": [
+        "VF-002"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-018",
+      "domain": "builders",
+      "name": "Water, vegetation, particles, VFX and decals",
+      "status": "planned",
+      "gate": "deterministic authoring outputs and renderer-verified effects in 3 environments",
+      "depends_on": [
+        "VF-016"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-019",
+      "domain": "builders",
+      "name": "2D UI art, icons and decals; audio-source pipeline routing",
+      "status": "planned",
+      "gate": "versioned sprites/UI packs and dedicated properly licensed audio pipeline, without claiming mesh generates sound",
+      "depends_on": [
+        "VF-001"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-020",
+      "domain": "quality",
+      "name": "Image comparison and aesthetically meaningful render QA",
+      "status": "partial",
+      "gate": "14-angle actual asset images; reference scoring grounded in captured renders + manual approval",
+      "depends_on": [
+        "VF-003"
+      ],
+      "owner": "studio",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-021",
+      "domain": "quality",
+      "name": "GPU/Android device tests and target platform budgets",
+      "status": "planned",
+      "gate": "real-device or emulator import, screenshots, FPS/VRAM and memory measurements for 3 tiers",
+      "depends_on": [
+        "VF-010",
+        "VF-020"
+      ],
+      "owner": "studio",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-022",
+      "domain": "integration",
+      "name": "Secure versioned multi-platform asset pack publication",
+      "status": "planned",
+      "gate": "signed checksums, import validation, rollback, never auto-promote unfinished assets",
+      "depends_on": [
+        "VF-021"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-023",
+      "domain": "orchestration",
+      "name": "Bounded manager-worker CI development/review cycle",
+      "status": "verified",
+      "gate": "12 role-specific review assignments, isolated CI and no automatic game edits",
+      "depends_on": [
+        "VF-001"
+      ],
+      "owner": "models",
+      "automatic_approval": false
+    },
+    {
+      "id": "VF-024",
+      "domain": "quality",
+      "name": "High-quality scene showcase accepted by human",
+      "status": "planned",
+      "gate": "artist-reviewed character, environment and game-ready demonstration with original reproducible source",
+      "depends_on": [
+        "VF-013",
+        "VF-018",
+        "VF-021"
+      ],
+      "owner": "studio",
+      "automatic_approval": false
+    }
+  ]
+}

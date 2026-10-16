@@ -40,6 +40,24 @@ class FactoryTest(unittest.TestCase):
             qa=inspect_obj(dest/"sword.obj")
             self.assertEqual(qa["degenerate_triangles"],0)
             self.assertEqual(qa["triangles"],m.triangle_count)
+            self.assertEqual(gt["extras"]["original_vertex_corners"],3*m.triangle_count)
+            self.assertLess(gt["extras"]["indexed_vertices"],3*m.triangle_count)
+            self.assertEqual(gt["extras"]["vertices_saved"],
+                gt["extras"]["original_vertex_corners"]-gt["extras"]["indexed_vertices"])
+            # Each primitive preserves its input triangle index count while
+            # reusing exact matching attribute tuples. Indices never refer
+            # outside that primitive's vertex accessor.
+            binary=(dest/"sword.bin").read_bytes()
+            import struct
+            for primitive in gt["meshes"][0]["primitives"]:
+                index_access=gt["accessors"][primitive["indices"]]
+                positions=gt["accessors"][primitive["attributes"]["POSITION"]]
+                self.assertEqual(index_access["count"]%3,0)
+                view=gt["bufferViews"][index_access["bufferView"]]
+                offset=view["byteOffset"]+index_access.get("byteOffset",0)
+                values=struct.unpack_from("<"+"I"*index_access["count"],binary,offset)
+                self.assertLess(max(values),positions["count"])
+                self.assertGreaterEqual(positions["count"],3)
     def test_deterministic_artifact_hash(self):
         with tempfile.TemporaryDirectory() as tmp:
             left=Path(tmp)/"a";right=Path(tmp)/"b"

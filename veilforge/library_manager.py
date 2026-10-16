@@ -73,6 +73,18 @@ def review(catalog,collected,out):
                     problems.append(f"{name}: missing actual geometry preview {label}")
             if not (preview/"contact_sheet.png").is_file():
                 problems.append(f"{name}: missing review sheet")
+            corners=row.get("source_vertex_corners")
+            indexed=row.get("indexed_vertices")
+            saved=row.get("vertices_saved")
+            bytes_size=row.get("gltf_binary_bytes")
+            if (not all(isinstance(v,int) and not isinstance(v,bool)
+                        for v in (corners,indexed,saved,bytes_size)) or
+                corners!=row["triangles"]*3 or
+                indexed<3 or indexed>corners or
+                saved!=corners-indexed or bytes_size<32):
+                problems.append(f"{name}: invalid indexed-mesh savings evidence")
+            if gltfpath.is_file() and gltf.get("extras",{}).get("indexed_vertices")!=indexed:
+                problems.append(f"{name}: indexed-mesh exporter/manifest mismatch")
             quality=row.get("mesh_quality",{})
             if quality.get("degenerate_triangles")!=0:
                 problems.append(f"{name}: invalid degenerate geometry")
@@ -82,6 +94,8 @@ def review(catalog,collected,out):
                 "triangles":row["triangles"],"budget":row["budget"],
                 "materials":len(row["materials"]),"boundaries":quality.get("boundary_edges"),
                 "nonmanifold_edges":quality.get("nonmanifold_edges"),
+                "vertex_corners":corners,"indexed_vertices":indexed,
+                "vertices_saved":saved,"gltf_buffer_bytes":bytes_size,
                 "review":"pending"}
         except (KeyError,ValueError,TypeError,OSError,IndexError) as error:
             problems.append(f"{entry}: invalid asset evidence: {error}")

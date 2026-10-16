@@ -387,12 +387,28 @@ def export_gltf(mesh,dest,spec):
             accessor["max"]=[max(values[i::arity]) for i in range(arity)]
         accessors.append(accessor)
         return len(accessors)-1
+    total_source_corners=0
+    total_indexed_vertices=0
     for material,faces in sorted(mesh.parts.items()):
         pos=[];normal=[];uv=[];color=[];indices=[]
+        # Exact corner-attribute welding, not spatial-only vertex welding:
+        # preserve UV seams, hard surface normals, colors and material boundaries.
+        # Each equivalent vertex occurs only once per PBR material primitive.
+        corner_index={}
         for a,b,c,n,coords,tint in faces:
             for p,tc in zip((a,b,c),coords):
-                pos.extend(p);normal.extend(n);uv.extend(tc);color.extend(tint)
-                indices.append(len(indices))
+                total_source_corners+=1
+                key=(tuple(p),tuple(n),tuple(tc),tuple(tint))
+                index=corner_index.get(key)
+                if index is None:
+                    index=len(pos)//3
+                    corner_index[key]=index
+                    pos.extend(p)
+                    normal.extend(n)
+                    uv.extend(tc)
+                    color.extend(tint)
+                indices.append(index)
+        total_indexed_vertices+=len(pos)//3
         attributes={
             "POSITION":add(pos,3,"f",5126,34962,True),
             "NORMAL":add(normal,3,"f",5126,34962),
@@ -415,7 +431,12 @@ def export_gltf(mesh,dest,spec):
          "bufferViews":views,"accessors":accessors,
          "extras":{"asset_id":spec["id"],"category":spec["category"],
                    "tier":spec["detail"],"seed":spec["seed"],
-                   "triangles":mesh.triangle_count,"rigged":False,"production_approved":False}}
+                   "triangles":mesh.triangle_count,
+                   "original_vertex_corners":total_source_corners,
+                   "indexed_vertices":total_indexed_vertices,
+                   "vertices_saved":total_source_corners-total_indexed_vertices,
+                   "vertex_indexing":"exact-position-normal-uv-color-within-material",
+                   "rigged":False,"production_approved":False}}
     dest.write_text(json.dumps(doc,indent=2)+"\n",encoding="utf-8")
     (dest.parent/(dest.stem+".bin")).write_bytes(output)
     return doc
@@ -437,6 +458,10 @@ def build_asset(catalog,ident,dest):
         "detail":spec["detail"],"seed":spec["seed"],
         "scale":spec.get("scale",1),"tags":spec.get("tags",[]),
         "source_obj":obj.name,"gltf":gltf.name,"triangles":mesh.triangle_count,
+        "source_vertex_corners":doc["extras"]["original_vertex_corners"],
+        "indexed_vertices":doc["extras"]["indexed_vertices"],
+        "vertices_saved":doc["extras"]["vertices_saved"],
+        "gltf_binary_bytes":(dest/(ident+".bin")).stat().st_size,
         "budget":TIERS[spec["detail"]],"materials":sorted(mesh.parts),
         "bounds":mesh.bounds(),"obj_sha256":hashlib.sha256(obj.read_bytes()).hexdigest(),
         "gltf_sha256":hashlib.sha256(gltf.read_bytes()).hexdigest(),

@@ -103,3 +103,9 @@ or gameplay navigation/collision quality.
 ~~~bash
 python3 veilforge/assembly.py --catalog veilforge/catalog.json   --scenes veilforge/scenes.json --id ruin_courtyard_demo   --assets-root inspection_output/library-collected   --out inspection_output/scene-package
 ~~~
+
+## M4 — Index-preserving asset optimization and continuous development
+
+VEILFORGE now preserves vertex identity exactly within each glTF material primitive: equal position, hard/soft normal, UV coordinate, and RGBA vertex tint map to one indexed vertex. UV seams, normals and boundaries are never welded merely because their positions coincide. All input triangle indices remain, and independent CI tests check index bounds and buffer lengths. Each asset manifest reports original corner count, indexed vertices, vertices saved, and binary bytes. This is **lossless geometry/attribute deduplication**, not triangle decimation or completed LOD generation.
+
+A schema-validated 24-group objective [ENGINE_MASTER_PLAN.json](ENGINE_MASTER_PLAN.json) now governs scoped engine iterations. `python3 veilforge/roadmap.py --out inspection_output/library-manager` reports the next eligible job and blocks false completion claims. The recurring orchestration remains external to GitHub: GitHub Actions validate pushes and create review artifacts; they **do not** execute autonomous unreviewed source changes, incur hourly CI charges on their own, or alter games. The final release gate requires real imagery and human signoff.
