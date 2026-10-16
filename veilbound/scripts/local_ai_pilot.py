@@ -39,7 +39,31 @@ def pilot(role, out, *, backlog=Path("veilbound/worker_backlog.json")):
         os.environ["VEILBOUND_TASK_ID"] = assigned["task_id"]
         os.environ["VEILBOUND_WORKER_SLOT"] = assigned["slot_id"]
         result["actual_ai_inference_attempted"] = True
-        result.update(draft_code(role, out))
+        result["attempt_history"] = []
+        for attempt in range(3):
+            try:
+                proposal = draft_code(role, out)
+                result.update(proposal)
+                result["attempt_history"].append({
+                    "attempt": attempt+1,"status": proposal.get("status")})
+                if proposal.get("status") == "proposed_change_passed_java_tests":
+                    break
+                details = (out/"validation.txt").read_text(errors="replace") if (
+                    out/"validation.txt").is_file() else proposal.get("status","")
+                os.environ["VEILBOUND_REPAIR_FEEDBACK"] = (
+                    "Last attempt failed compilation/tests. Keep all public method signatures "
+                    "unchanged and preserve existing callers. Trusted javac/test output: "+
+                    details[-1200:])
+            except (ValueError, KeyError, TypeError) as edit_error:
+                result["attempt_history"].append({
+                    "attempt": attempt+1,"status":"invalid_proposal",
+                    "reason":str(edit_error)[:180]})
+                os.environ["VEILBOUND_REPAIR_FEEDBACK"] = (
+                    "Rejected proposal: "+str(edit_error)+
+                    ". Copy an EXISTING exact snippet from the supplied source; "
+                    "never change public signatures or add parameters.")
+                if attempt==2:
+                    raise
         result["approved_by_division"] = division
         result["approved_by_specialist"] = assigned["team"]
         result["source"] = "hierarchical-local-model-pilot"
