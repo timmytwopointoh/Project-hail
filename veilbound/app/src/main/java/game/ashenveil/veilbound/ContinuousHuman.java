@@ -50,6 +50,7 @@ public final class ContinuousHuman {
     }
     private static final class Field{
         final ArrayList<Blob> shapes=new ArrayList<>();
+        boolean smoothSurface;
         void add(float x,float y,float z,float rx,float ry,float rz){
             shapes.add(new Blob(x,y,z,rx,ry,rz));
         }
@@ -68,7 +69,11 @@ public final class ContinuousHuman {
                 // .025 smoothing blended adjacent .04-wide digits into a
                 // mitten. Keep soft transitions at elbow/shoulder/palm.
                 float k=(y<.765f&&y>.46f&&Math.abs(x)>.40f)
-                    ?.0035f:.025f;
+                    ?.0035f:(smoothSurface
+                       // Whole-body only. Facial detail has a tighter union
+                       // radius; toes stay clearly distinct.
+                       ?(y>2.18f?.016f:y<.24f?.015f:.036f)
+                       :.025f);
                 float v=b.distance(x,y,z);
                 if(d==99f){d=v;continue;}
                 // Smooth minimum applied in signed-distance space. Fuses
@@ -85,13 +90,17 @@ public final class ContinuousHuman {
         for(float v:g)if(!Float.isFinite(v)||v<.83f||v>1.17f)
             throw new IllegalArgumentException("Human proportion outside reviewed range");
     }
-    private static Field anatomy(float[] g){return anatomy(g,true,false);}
+    private static Field anatomy(float[] g){return anatomy(g,true,false,false);}
     private static Field anatomy(float[] g,boolean includeDigits){
-        return anatomy(g,includeDigits,false);
+        return anatomy(g,includeDigits,false,false);
     }
     private static Field anatomy(float[] g,boolean includeDigits,boolean m24){
-
+        return anatomy(g,includeDigits,m24,false);
+    }
+    private static Field anatomy(float[] g,boolean includeDigits,
+                                 boolean m24,boolean m25){
         Field f=new Field();
+        f.smoothSurface=m25;
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
         f.add(0,1.095f,-.01f,.294f*g[4],.229f,.206f);
@@ -361,8 +370,17 @@ public final class ContinuousHuman {
     }
     private static ArtKit.Model build(boolean lite,float[] controls,
                                       boolean includeDigits,boolean refined){
+        return build(lite,controls,includeDigits,refined,false);
+    }
+    /** Smoothened M25 is opt-in; never modifies the M20 or M24 baseline. */
+    static ArtKit.Model buildM25WithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false,true,true);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,
+                                      boolean includeDigits,boolean refined,
+                                      boolean smoothSkin){
         validate(controls);
-        Field field=anatomy(controls,includeDigits,refined);
+        Field field=anatomy(controls,includeDigits,refined,smoothSkin);
         float h=lite?.062f:.039f;
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
