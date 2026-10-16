@@ -78,6 +78,35 @@ public final class HumanHandSculpt {
         };
         return ShapeEngine.bevelPlate(polygon,z,.0007f,.0006f,NAIL,SKIN);
     }
+    /**
+     * Complete standalone HAND ASSET for the Atelier and OBJ interchange:
+     * independent shaped palm/wrist lofts, plus all ten detailed digits.
+     * The attached-human variant intentionally uses the existing implicit
+     * palms instead, so it does not duplicate visible palm surfaces.
+     */
+    public static ArtKit.Model buildStandalone(boolean lite,float shoulderSpan){
+        if(!Float.isFinite(shoulderSpan)||shoulderSpan<.83f||shoulderSpan>1.17f)
+            throw new IllegalArgumentException("Shoulder span out of range");
+        ArtKit.Model[] pair=new ArtKit.Model[3];
+        pair[0]=build(lite,shoulderSpan);
+        for(int side:new int[]{-1,1}){
+            float x=side*.554f*shoulderSpan;
+            ShapeEngine.Ring[] palm={
+                new ShapeEngine.Ring(x,.735f,.080f,.073f,.055f,0,0),
+                new ShapeEngine.Ring(x,.755f,.078f,.099f,.070f,0,0),
+                new ShapeEngine.Ring(x,.815f,.070f,.108f,.078f,0,0),
+                new ShapeEngine.Ring(x,.860f,.062f,.110f,.081f,0,0),
+                new ShapeEngine.Ring(x,.907f,.057f,.101f,.077f,0,0),
+                new ShapeEngine.Ring(x,.956f,.052f,.090f,.071f,0,0),
+                new ShapeEngine.Ring(x,1.025f,.047f,.098f,.079f,0,0)
+            };
+            pair[side<0?1:2]=ShapeEngine.loft(palm,lite?16:32,SKIN);
+        }
+        return ShapeEngine.combine(pair);
+    }
+    public static ArtKit.Model buildStandalone(boolean lite){
+        return buildStandalone(lite,1f);
+    }
     /** Actual model returned to both Android Atelier and offline OBJ exporter. */
     public static ArtKit.Model build(boolean lite){return build(lite,1f);}
     public static ArtKit.Model build(boolean lite,float shoulderSpan){
