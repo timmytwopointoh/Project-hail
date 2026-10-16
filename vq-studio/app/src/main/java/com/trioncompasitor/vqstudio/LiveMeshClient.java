@@ -34,6 +34,19 @@ public final class LiveMeshClient {
         try{response=app.getContentResolver().call(PROVIDER,"latest",null,request);}
         catch(IllegalArgumentException e){throw new IOException(
            "Install the VQ-enabled Trion companion and connect GitHub",e);}
+        return readVerifiedResponse(app,requestId,runId,response);
+    }
+    /** Explicit, debug-only, paired emulator data-path check. */
+    public static Snapshot pairedTestFixture(Context app,int revision)throws Exception{
+        if(!BuildConfig.DEBUG)throw new SecurityException("Paired test not available in production");
+        if(revision!=1&&revision!=2)throw new IOException("Unknown test revision");
+        Bundle args=new Bundle();
+        args.putInt("revision",revision);
+        Bundle result=app.getContentResolver().call(PROVIDER,"debug_fixture",null,args);
+        return readVerifiedResponse(app,"eeeeeeeeeeeeeeee","999999999",result);
+    }
+    private static Snapshot readVerifiedResponse(Context app,String requestId,
+                                                 String runId,Bundle response)throws Exception{
         if(response==null)throw new IOException("Trion model provider is unavailable");
         String state=response.getString("state","");
         if("no_verified_snapshot_yet".equals(state))return null;
