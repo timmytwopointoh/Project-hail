@@ -128,6 +128,11 @@ def validate_proposal(proposal, allowed, read_source):
                 "detects NaN. Use Float.isNaN(x) instead.")
         if FORBIDDEN_JAVA_ADDITIONS.search(additions):
             raise ValueError("AI proposal introduces prohibited Java capabilities")
+        if re.search(r"(?:==|!=)\\s*(?:(?:Float|Double)\\s*\\.\\s*NaN)\\b|"
+                     r"(?:Float|Double)\\s*\\.\\s*NaN\\s*(?:==|!=)", additions):
+            raise ValueError(
+                "Java NaN comparisons using == or != never detect NaN; "
+                "use Float.isNaN(x) or Double.isNaN(x) instead")
         total_inserted += len(new)
         if total_inserted > MAX_TOTAL_INSERTED:
             raise ValueError("AI proposal exceeds total change budget")
