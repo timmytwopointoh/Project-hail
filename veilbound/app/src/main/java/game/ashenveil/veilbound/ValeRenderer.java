@@ -27,7 +27,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading;
+    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
@@ -75,7 +75,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "uniform vec3 uFog; uniform float uGlow; uniform float uSurface; "+
         "uniform sampler2D uDetail; uniform float uStudioMode; "+
         "uniform float uStudioMaterial; uniform vec3 uStudioLight; uniform vec3 uStudioKeyColor; "+
-        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform float uSurfaceQuality; uniform float uHeroShading; "+
+        "uniform sampler2D uAlbedoAtlas; uniform sampler2D uSurfaceAtlas; uniform float uSurfaceQuality; uniform float uHeroShading; uniform float uSkinMode; "+
         "float grit(vec3 p){return fract(sin(dot(p,vec3(19.17,71.31,43.89)))*43758.5453);} "+
         "vec2 atlasUV(vec2 uv,float id){"+
         "vec2 offset=vec2(mod(id,2.),floor(id*.5))*.5;"+
@@ -139,6 +139,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "(an.x>an.z?vec3(0.,nm.y,nm.x):vec3(nm.x,nm.y,0.));"+
         "n=normalize(n+perturb);"+
         "base*=mix(vec3(.57),albedoGrain*1.45,.76);"+
+        // M20 unarmored human is NOT plated brass! Override metal/gloss
+        // and leather atlas for natural matte skin ONLY in human studio.
+        "float flesh=step(.53,vColor.r)*step(.28,vColor.g)*(1.-step(.54,vColor.g))*"+
+        "step(.22,vColor.b)*(1.-step(.39,vColor.b));"+
+        "if(uSkinMode>.5){"+
+        "float tone=.975+.045*grit(floor(vLocal*71.));"+
+        "if(flesh>.5){"+
+        "metallic=0.;rough=.90;ao=1.;"+
+        "base=vColor*uTint*vec3(1.03,.985,.95)*tone;"+
+        "n=normalize(vNormal);"+
+        "}else{metallic=0.;rough=.90;}"+
+        "}"+
         "}"+
         "float ndl=max(dot(n,light),0.);"+
         "float bounce=max(dot(n,normalize(vec3(.39,.34,-.76))),0.);"+
@@ -216,6 +228,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         uStudioKeyColor=GLES20.glGetUniformLocation(program,"uStudioKeyColor");
         uSurfaceQuality=GLES20.glGetUniformLocation(program,"uSurfaceQuality");
         uHeroShading=GLES20.glGetUniformLocation(program,"uHeroShading");
+        uSkinMode=GLES20.glGetUniformLocation(program,"uSkinMode");
         uAlbedoAtlas=GLES20.glGetUniformLocation(program,"uAlbedoAtlas");
         uSurfaceAtlas=GLES20.glGetUniformLocation(program,"uSurfaceAtlas");
         skyPos=GLES20.glGetAttribLocation(skyProgram,"aPos");
@@ -300,6 +313,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform3f(uEye,cx,cy,cz);
         GLES20.glUniform1f(uStudioMode,0f);
         GLES20.glUniform1f(uHeroShading,0f);
+        GLES20.glUniform1f(uSkinMode,0f);
         // Main-world ground uses the inexpensive micro-grit pass; the full
         // 512px atlas BRDF is reserved for on-screen near character models.
         ensureSurfaceAtlas();
@@ -499,7 +513,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
+        GLES20.glUniform1f(uSkinMode,m.item==11?1f:0f);
         draw(chosen,model,1,1,1,.06f);
+        GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
         GLES20.glUniform1f(uStudioMaterial,0f);
         if(m.item<3){
