@@ -79,6 +79,15 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M32 RELAXED"),
               "M32 relaxed anatomy reference missing");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M35 MOUTH NEUTRAL"),
+              "Actual new anatomical mouth missing in testing grounds");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M35 MOUTH OPEN"),
+              "Mouth articulation preview not selectable");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M35 MOUTH T-POSE"),
+              "M35 attached mouth and T-pose inspection missing");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");
