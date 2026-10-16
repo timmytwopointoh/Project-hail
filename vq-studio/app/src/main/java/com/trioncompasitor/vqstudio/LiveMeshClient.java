@@ -10,8 +10,6 @@ import java.util.Locale;
 
 /** Caller of Trion's UID-checked provider. NO GitHub token in VQ Studio. */
 public final class LiveMeshClient {
-    private static final Uri PROVIDER=Uri.parse(
-        "content://com.trioncompasitor.assistant.vq.snapshots");
     private LiveMeshClient(){}
     public static final class Snapshot {
         public final String requestId,runId,sha,stage,asset;
@@ -31,7 +29,7 @@ public final class LiveMeshClient {
         request.putString("request_id",requestId);
         request.putString("run_id",runId);
         Bundle response;
-        try{response=app.getContentResolver().call(PROVIDER,"latest",null,request);}
+        try{response=app.getContentResolver().call(CompanionRoute.provider(app),"latest",null,request);}
         catch(IllegalArgumentException e){throw new IOException(
            "Install the VQ-enabled Trion companion and connect GitHub",e);}
         return readVerifiedResponse(app,requestId,runId,response);
@@ -42,7 +40,7 @@ public final class LiveMeshClient {
         if(revision!=1&&revision!=2)throw new IOException("Unknown test revision");
         Bundle args=new Bundle();
         args.putInt("revision",revision);
-        Bundle result=app.getContentResolver().call(PROVIDER,"debug_fixture",null,args);
+        Bundle result=app.getContentResolver().call(CompanionRoute.provider(app),"debug_fixture",null,args);
         return readVerifiedResponse(app,"eeeeeeeeeeeeeeee","999999999",result);
     }
     private static Snapshot readVerifiedResponse(Context app,String requestId,
@@ -63,7 +61,7 @@ public final class LiveMeshClient {
             throw new IOException("Trion returned an invalid revision proof");
         Uri source=Uri.parse(uri);
         if(!"content".equals(source.getScheme())||
-           !"com.trioncompasitor.assistant.vq.snapshots".equals(source.getAuthority())||
+           !CompanionRoute.provider(app).getAuthority().equals(source.getAuthority())||
            !("/mesh/"+sha).equals(source.getPath()))
             throw new IOException("VQ model URI is not the authenticated local provider");
         MessageDigest digest=MessageDigest.getInstance("SHA-256");
