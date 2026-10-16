@@ -747,23 +747,42 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         float brace=windup>0?22f*(1f-windup/(boss?.92f:.72f)):0f;
         float armDrive=swing>0?25f+26f*CombatMotion.smooth(phase/.32f):0f;
-        drawRigLimb(rig.leftArm,rig.parts.shoulderX,rig.parts.shoulderY,
-                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(-step*18f-12f-flinch*13f+roll*20f):heroFrame.leftArmPitch,
-                    foe?(-8f-fatigue*inhale*44f):heroFrame.leftArmRoll,false,0f);
-        drawRigLimb(rig.rightArm,rig.parts.shoulderX,rig.parts.shoulderY,
-                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(step*16f+13f-armDrive-brace):heroFrame.rightArmPitch,
-                    foe?(-22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f)):
-                        heroFrame.rightArmRoll,true,0f);
-        drawRigLimb(rig.leftLeg,rig.parts.hipX,rig.parts.hipY,
-                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(step*22f-roll*35f):heroFrame.leftLegPitch,2f,false,
-                    foe?0f:heroFrame.leftFootLift);
-        drawRigLimb(rig.rightLeg,rig.parts.hipX,rig.parts.hipY,
-                    x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(-step*22f+roll*24f):heroFrame.rightLegPitch,-2f,true,
-                    foe?0f:heroFrame.rightFootLift);
+        if(foe){
+            drawRigLimb(rig.leftArm,rig.parts.shoulderX,rig.parts.shoulderY,
+                        x,y+bob,z,yaw,scale,-step*18f-12f-flinch*13f+roll*20f,
+                        -8f-fatigue*inhale*44f,false,0f);
+            drawRigLimb(rig.rightArm,rig.parts.shoulderX,rig.parts.shoulderY,
+                        x,y+bob,z,yaw,scale,step*16f+13f-armDrive-brace,
+                        -22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f),
+                        true,0f);
+            drawRigLimb(rig.leftLeg,rig.parts.hipX,rig.parts.hipY,
+                        x,y+bob,z,yaw,scale,step*22f-roll*35f,2f,false,0f);
+            drawRigLimb(rig.rightLeg,rig.parts.hipX,rig.parts.hipY,
+                        x,y+bob,z,yaw,scale,-step*22f+roll*24f,-2f,true,0f);
+        }else{
+            // Parent/child hierarchy: thigh drives shin at the KNEE and
+            // upper arm drives gauntlet at the ELBOW. No detached hand motion.
+            drawRigTwoPiece(rig.leftArm,rig.leftForearm,
+                rig.parts.shoulderX,rig.parts.shoulderY,rig.parts.elbowY,.065f,
+                x,y+heroFrame.bob,z,yaw,scale,
+                heroFrame.leftArmPitch,heroFrame.leftArmRoll,
+                heroFrame.leftElbowPitch,false,0f);
+            drawRigTwoPiece(rig.rightArm,rig.rightForearm,
+                rig.parts.shoulderX,rig.parts.shoulderY,rig.parts.elbowY,.065f,
+                x,y+heroFrame.bob,z,yaw,scale,
+                heroFrame.rightArmPitch,heroFrame.rightArmRoll,
+                heroFrame.rightElbowPitch,true,0f);
+            drawRigTwoPiece(rig.leftLeg,rig.leftShin,
+                rig.parts.hipX,rig.parts.hipY,rig.parts.kneeY,.08f,
+                x,y+heroFrame.bob,z,yaw,scale,
+                heroFrame.leftLegPitch,2f,heroFrame.leftKneePitch,
+                false,heroFrame.leftFootLift);
+            drawRigTwoPiece(rig.rightLeg,rig.rightShin,
+                rig.parts.hipX,rig.parts.hipY,rig.parts.kneeY,.08f,
+                x,y+heroFrame.bob,z,yaw,scale,
+                heroFrame.rightLegPitch,-2f,heroFrame.rightKneePitch,
+                true,heroFrame.rightFootLift);
+        }
 
         Matrix.setIdentityM(model,0);
         Matrix.translateM(model,0,x,y+(foe?bob:heroFrame.bob),z);
@@ -810,6 +829,31 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Matrix.rotateM(model,0,pitch,1,0,0);
         Matrix.rotateM(model,0,right?-spread:spread,0,0,1);
         draw(limb,model,1,1,1,0);
+    }
+    /**
+     * Two joints share one matrix stack. The child transform is relative to
+     * the rotated parent, so contact between elbow->gauntlet and knee->greave
+     * persists through the stride. Reuses the renderer matrix, zero heap
+     * allocations per draw; enemies keep their proven original 7-part rig.
+     */
+    private void drawRigTwoPiece(Mesh upper,Mesh lower,float upperX,
+                                 float upperY,float lowerY,float lowerZ,
+                                 float x,float y,float z,float yaw,float size,
+                                 float pitch,float spread,float bend,
+                                 boolean right,float footLift){
+        Matrix.setIdentityM(model,0);
+        Matrix.translateM(model,0,x,y+footLift,z);
+        Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+        Matrix.scaleM(model,0,size,size,size);
+        Matrix.translateM(model,0,right?upperX:-upperX,upperY,0);
+        Matrix.rotateM(model,0,pitch,1,0,0);
+        Matrix.rotateM(model,0,right?-spread:spread,0,0,1);
+        draw(upper,model,1,1,1,0);
+        if(lower.count>0){
+            Matrix.translateM(model,0,0,lowerY-upperY,lowerZ);
+            Matrix.rotateM(model,0,bend,1,0,0);
+            draw(lower,model,1,1,1,0);
+        }
     }
     private static Mesh buildVerdigrisPool(){
         Builder b=new Builder();
@@ -926,12 +970,17 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final class Rigged {
         final CharacterRig.Parts parts;
         final Mesh torso,leftArm,rightArm,leftLeg,rightLeg,mantle,helmet;
+        final Mesh leftForearm,rightForearm,leftShin,rightShin;
         Rigged(CharacterRig.Parts p){
             parts=p;torso=new Mesh(p.torso.vertices);
             leftArm=new Mesh(p.leftArm.vertices);rightArm=new Mesh(p.rightArm.vertices);
             leftLeg=new Mesh(p.leftLeg.vertices);rightLeg=new Mesh(p.rightLeg.vertices);
             mantle=new Mesh(p.mantle==null?new float[0]:p.mantle.vertices);
             helmet=new Mesh(p.helmet==null?new float[0]:p.helmet.vertices);
+            leftForearm=new Mesh(p.leftForearm==null?new float[0]:p.leftForearm.vertices);
+            rightForearm=new Mesh(p.rightForearm==null?new float[0]:p.rightForearm.vertices);
+            leftShin=new Mesh(p.leftShin==null?new float[0]:p.leftShin.vertices);
+            rightShin=new Mesh(p.rightShin==null?new float[0]:p.rightShin.vertices);
         }
     }
     private static final class Mesh {
