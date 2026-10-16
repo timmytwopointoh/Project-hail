@@ -1,0 +1,180 @@
+name: VEILFORGE M29 - Human Reference Pose and Skin
+on:
+  push:
+    branches:
+      - feature/veilbound-m29-reference-skin-tpose
+    paths:
+      - '.github/workflows/veilforge-m29-human-reference.yml'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M29*.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java'
+      - 'veilbound/tools/HumanVariantCLI.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M29ReferenceSkinTest.java'
+      - 'docs/veilbound/M29_REFERENCE_AND_SKIN_PLAN.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-m29-human-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  anatomy-and-skin:
+    name: Deterministic pose/skin anatomy tests and preserved knight
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and test actual T-pose, standing reference and skin texture
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m29-java
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m29-java \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/ModelStudio.java" "$TEST/M29ReferenceSkinTest.java" \
+            veilbound/tools/HumanVariantCLI.java
+          java -Xmx2g -cp /tmp/m29-java game.ashenveil.veilbound.M29ReferenceSkinTest
+          python3 -m unittest discover -s veilforge/tests -v
+          test -s docs/veilbound/M29_REFERENCE_AND_SKIN_PLAN.md
+
+  reference-geometry-workers:
+    name: Source-reference pose renderer / ${{ matrix.pose }}
+    needs: anatomy-and-skin
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        pose: [baseline, tpose, relaxed]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile real source geometry and the 14-view renderer
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m29-export
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          javac -d /tmp/m29-export \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            veilbound/tools/HumanVariantCLI.java
+      - name: Real 14-angle mesh views, head and hands with bounded source
+        env:
+          POSE: ${{ matrix.pose }}
+        run: |
+          set -euo pipefail
+          ROOT="inspection_output/m29-$POSE"
+          mkdir -p "$ROOT"
+          export ROOT
+          BASE=1,1,1,1,1,1,1,1,1,1,1,1
+          case "$POSE" in
+            baseline) FLAG=--m28 ;;
+            tpose) FLAG=--m29-tpose ;;
+            relaxed) FLAG=--m29-relaxed ;;
+          esac
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m29-export \
+            game.ashenveil.veilbound.HumanVariantCLI "$BASE" "$ROOT" "$FLAG"
+          python3 veilforge/engine.py inspect \
+            --obj "$ROOT/human_candidate.obj" --out "$ROOT/mesh_quality.json"
+          python3 - <<'PY'
+          import os,json
+          from pathlib import Path
+          r=Path(os.environ["ROOT"])
+          q=json.loads((r/"mesh_quality.json").read_text())
+          a=json.loads((r/"mesh_evidence.json").read_text())
+          assert q["triangles"]>10000
+          assert len(a["camera_views"])==14
+          assert not a["reviewed"] and not a["photo_realistic"]
+          for angle in ("front","side","three_quarter"):
+              assert (r/("face_"+angle+".png")).stat().st_size>1500
+          assert len(list(r.glob("*_hand_*.png")))==6
+          assert q["nonmanifold_edges"]==0 and q["degenerate_triangles"]==0
+          print("M29_SOURCE_POSE_AND_SKIN_PASS",os.environ["POSE"],
+                "tris",q["triangles"],"open",q["boundary_edges"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m29-actual-geometry-${{ matrix.pose }}
+          path: inspection_output/m29-${{ matrix.pose }}/
+          retention-days: 21
+          if-no-files-found: warn
+
+  reference-director:
+    name: Comparative reference and VEILFORGE material review
+    needs: reference-geometry-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m29-actual-geometry-*
+          path: inspection_output/reviews
+      - name: Validate all three real 3D poses; preserve manual image gate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/reviews")
+          quality={}
+          for name in ("baseline","tpose","relaxed"):
+              path=root/("m29-actual-geometry-"+name)
+              info=json.loads((path/"mesh_quality.json").read_text())
+              quality[name]={"triangles":info["triangles"],
+                             "boundary_edges":info["boundary_edges"],
+                             "nonmanifold_edges":info["nonmanifold_edges"]}
+          assert len({x["triangles"] for x in quality.values()})==1
+          assert all(x["nonmanifold_edges"]==0 for x in quality.values())
+          out=Path("inspection_output/m29-director")
+          out.mkdir(parents=True,exist_ok=True)
+          data={"engine":"VEILFORGE","iteration":"M29",
+                "source": "M28 reviewed unarmored candidate",
+                "reference_images":"T-pose and secondary 3/4 generated in conversation",
+                "source_image_pixels_available_in_repository":False,
+                "poses":quality,"real_mesh_reference_poses":2,
+                "new_skin_material":"deterministic micro-normal roughness atlas",
+                "skin_atlas_photographic":False,
+                "human_visual_reference_alignment":"PENDING",
+                "android_emulator_result":"SEPARATE WORKFLOW",
+                "ready_for_playable_hero":False,
+                "original_knight_preserved":True,"hair_unchanged":True}
+          (out/"M29_REFERENCE_DIRECTOR.json").write_text(json.dumps(data,indent=2)+"\n")
+          print(json.dumps(data,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m29-comparison-review-only
+          path: inspection_output/m29-director/
+          retention-days: 21
+          if-no-files-found: warn
