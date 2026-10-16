@@ -229,31 +229,48 @@ public final class HumanVariantCLI {
         ImageIO.write(image,"png",file.toFile());
     }
     public static void main(String[] args) throws Exception{
-        if(args.length!=2)throw new IllegalArgumentException("args: <12 comma-separated controls> <output-folder>");
+        if(args.length<2||args.length>4)
+            throw new IllegalArgumentException(
+                "args: <12 proportion controls> <output-folder> [8 sculpt dials] [--mesh-only]");
+        boolean meshOnly="--mesh-only".equals(args[args.length-1]);
+        boolean hasDials=args.length>=3&&!"--mesh-only".equals(args[2]);
+        if(args.length==4&&(!hasDials||!meshOnly))
+            throw new IllegalArgumentException("Unexpected M26 CLI options");
+        float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model mesh=HumanAnatomy.buildM25Candidate(false,p);
+        ArtKit.Model mesh=hasDials?
+            HumanAnatomy.buildM26Candidate(false,p,dials):
+            HumanAnatomy.buildM25Candidate(false,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
         obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
-        for(int view=0;view<VIEWS.length;view++)
-            render(mesh,view,dir.resolve(VIEWS[view]+".png"));
-        for(int side:new int[]{-1,1})
+        if(!meshOnly){
+            for(int view=0;view<VIEWS.length;view++)
+                render(mesh,view,dir.resolve(VIEWS[view]+".png"));
+            for(int side:new int[]{-1,1})
+                for(int view:new int[]{0,1,3})
+                    renderHand(mesh,view,side,dir.resolve(
+                        (side<0?"left":"right")+"_hand_"+VIEWS[view]+".png"));
             for(int view:new int[]{0,1,3})
-                renderHand(mesh,view,side,dir.resolve(
-                    (side<0?"left":"right")+"_hand_"+VIEWS[view]+".png"));
-        for(int view:new int[]{0,1,3})
-            renderFace(mesh,view,dir.resolve("face_"+VIEWS[view]+".png"));
+                renderFace(mesh,view,dir.resolve("face_"+VIEWS[view]+".png"));
+        }
         StringBuilder views=new StringBuilder();
         for(String view:VIEWS){
             if(views.length()>0)views.append(',');
             views.append('"').append(view).append('"');
         }
-        String json="{\"model\":\"m25_refined_face_skin_candidate\",\"triangles\":"+
-            mesh.triangleCount+",\"reviewed\":false,\"photo_realistic\":false,"+
-            "\"offline_preview\":true,\"hand_closeups_per_side\":3,\"camera_views\":["+views+"]}";
+        String json="{\"model\":\""+
+            (hasDials?"m26_review_conditioned_sculpt_candidate":
+                      "m25_refined_face_skin_candidate")+
+            "\",\"triangles\":"+mesh.triangleCount+
+            ",\"reviewed\":false,\"photo_realistic\":false,"+
+            "\"offline_preview\":"+(!meshOnly)+
+            ",\"sculpt_dials\":"+(hasDials?8:0)+
+            ",\"hand_closeups_per_side\":"+(meshOnly?0:3)+
+            ",\"camera_views\":["+(meshOnly?"":views.toString())+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");
         System.out.println("VEILBOUND_HUMAN_VARIANT_PASS triangles="+mesh.triangleCount+
             " offline_camera_views="+VIEWS.length);
