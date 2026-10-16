@@ -1,0 +1,80 @@
+name: VQ Studio - End-to-End Model Correction and Retention
+on:
+  push:
+    branches: ['app/vq-studio-companion-v1']
+    paths:
+      - 'vq-studio/corrections.py'
+      - 'vq-studio/screenshot_gc.py'
+      - 'vq-studio/tests/**'
+      - '.github/workflows/vq-studio-pipeline-smoke.yml'
+      - '.github/workflows/vq-studio-jobs.yml'
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+jobs:
+  verify-real-corrected-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify VQ evidence retention and parameter limits
+        run: |
+          python3 -m pip install --quiet pillow==11.3.0
+          python3 -m unittest discover -s vq-studio/tests -v
+          python3 -m unittest discover -s veilforge/tests -v
+      - name: Build original and reviewed larger-source variant
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/vq-pipeline
+          python3 veilforge/factory.py --catalog veilforge/catalog.json \
+            --id ancient_tree --out inspection_output/vq-pipeline/baseline
+          python3 vq-studio/corrections.py \
+            --catalog veilforge/catalog.json --id ancient_tree --adjustment larger \
+            --out inspection_output/vq-pipeline/corrected_catalog.json
+          python3 veilforge/factory.py \
+            --catalog inspection_output/vq-pipeline/corrected_catalog.json \
+            --id ancient_tree --out inspection_output/vq-pipeline/adjusted
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          base=Path("inspection_output/vq-pipeline")
+          a=json.loads((base/"baseline/asset_manifest.json").read_text())
+          b=json.loads((base/"adjusted/asset_manifest.json").read_text())
+          assert a["obj_sha256"]!=b["obj_sha256"], "Correction produced identical mesh"
+          assert a["triangles"]==b["triangles"], "Uniform size adjustment destroyed geometry"
+          print("VQ_CORRECTION_GENERATED_REAL_DIFFERENT_3D_MESH")
+          PY
+      - name: Create 14 real geometry screenshots, audit, then purge scratch
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_model_tools.py \
+            --obj inspection_output/vq-pipeline/adjusted/ancient_tree.obj \
+            --gltf inspection_output/vq-pipeline/adjusted/ancient_tree.gltf \
+            --out inspection_output/vq-pipeline/inspection
+          python3 vq-studio/screenshot_gc.py \
+            --inspection inspection_output/vq-pipeline/inspection \
+            --evidence inspection_output/vq-pipeline/retained \
+            --next-action needs_artist_review
+          test "$(find inspection_output/vq-pipeline/inspection/views -name 'orbit_*.png' | wc -l)" -eq 0
+          test -s inspection_output/vq-pipeline/retained/contact_sheet.png
+          test -s inspection_output/vq-pipeline/retained/checkpoint.json
+      - name: Sign exact model inspection result
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/vq-pipeline/retained/vq_model_report.json
+      - name: Upload generated model, review sheet and checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-studio-real-corrected-model-${{ github.sha }}
+          path: |
+            inspection_output/vq-pipeline/adjusted/
+            inspection_output/vq-pipeline/retained/
+          if-no-files-found: warn
+          retention-days: 7
