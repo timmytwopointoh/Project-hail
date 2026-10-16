@@ -1,0 +1,58 @@
+name: VEILBOUND - M18 Skinned Human AI Worker Loop
+on:
+  push:
+    branches: ['feature/veilbound-m18-skinned-human-rig']
+    paths:
+      - 'veilbound/human_rig_worker_backlog.json'
+      - '.github/workflows/veilbound-human-anatomy-workers.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilbound-m18-rig-ai-${{ github.ref }}
+  cancel-in-progress: true
+# Each specialist runs an independently isolated CPU-hosted Qwen code model.
+# Proposals are TESTED, REVIEW-ONLY and never applied automatically to game.
+jobs:
+  human-coding-worker:
+    name: Human prototype / ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        role: [models, animation, materials, studio]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare original bounded local coding model
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Execute director / division / specialist human anatomy task
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+          SPECIALIST_ROLE: ${{ matrix.role }}
+        run: |
+          mkdir -p "inspection_output/human-${SPECIALIST_ROLE}"
+          python3 veilbound/scripts/local_ai_pilot.py \
+            --role "${SPECIALIST_ROLE}" \
+            --backlog veilbound/human_rig_worker_backlog.json \
+            --out "inspection_output/human-${SPECIALIST_ROLE}"
+      - name: Archive independently validated proposal (manual review required)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-human-${{ matrix.role }}-proposal
+          path: inspection_output/human-${{ matrix.role }}/
+          if-no-files-found: warn
+          retention-days: 14
