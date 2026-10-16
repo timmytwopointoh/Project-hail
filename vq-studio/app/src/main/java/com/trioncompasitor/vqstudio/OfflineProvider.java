@@ -38,7 +38,27 @@ public final class OfflineProvider extends ContentProvider {
   }
   @Override public android.os.ParcelFileDescriptor openFile(Uri uri,String mode)throws FileNotFoundException{
     allowTrion();
-    throw new FileNotFoundException("Raw 3D mesh files are private to VQ Studio");
+    if(!"r".equals(mode)||uri==null||!AUTHORITY.equals(uri.getAuthority()))
+      throw new FileNotFoundException("Only read-only VQ source is supported");
+    java.util.List<String> parts=uri.getPathSegments();
+    if(parts.size()!=3||!"mesh".equals(parts.get(0))||
+       !parts.get(1).matches("[a-f0-9]{20}")||
+       !parts.get(2).matches("[12]"))
+      throw new FileNotFoundException("Unknown private asset revision");
+    String id=parts.get(1);
+    int rev=Integer.parseInt(parts.get(2));
+    OfflineRepository repo=OfflineRepository.of(getContext());
+    OfflineRepository.Snapshot snapshot=repo.get(id);
+    if(snapshot.id.isEmpty()||snapshot.rev!=rev||!snapshot.sha.matches("[a-f0-9]{64}"))
+      throw new FileNotFoundException("Source revision not approved for transfer");
+    // Read and digest-verify the exact saved local OBJ before transferring it.
+    try{
+      byte[] verified=repo.load(snapshot);
+      if(verified.length>256*1024)throw new FileNotFoundException("Use bounded mobile model export");
+      File path=new File(new File(getContext().getFilesDir(),"model_repository"),id+"-r"+rev+".obj");
+      return android.os.ParcelFileDescriptor.open(path,android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+    }catch(FileNotFoundException e){throw e;}
+     catch(Exception e){throw new FileNotFoundException("VQ model integrity verification failed");}
   }
   @Override public Cursor query(Uri uri,String[] p,String s,String[] a,String o){allowTrion();throw new UnsupportedOperationException();}
   @Override public String getType(Uri uri){allowTrion();return null;}
