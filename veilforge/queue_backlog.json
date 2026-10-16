@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "description": "Review-only deterministic VEILFORGE workers and Android visual QA. Pending tasks are repeatable until reviewer updates this queue. No source mutation or automatic merge.",
+  "tickets": [
+    {
+      "id": "emulator-scene-world",
+      "kind": "emulator",
+      "role": "scene-world",
+      "priority": 1,
+      "status": "pending"
+    },
+    {
+      "id": "emulator-nature-mobile",
+      "kind": "emulator",
+      "role": "nature-mobile",
+      "priority": 2,
+      "status": "pending"
+    },
+    {
+      "id": "emulator-props-equipment",
+      "kind": "emulator",
+      "role": "props-equipment",
+      "priority": 3,
+      "status": "pending"
+    },
+    {
+      "id": "emulator-characters",
+      "kind": "emulator",
+      "role": "characters",
+      "priority": 4,
+      "status": "pending"
+    },
+    {
+      "id": "asset-ancient_gate_standard",
+      "kind": "asset",
+      "asset": "ancient_gate_standard",
+      "priority": 10,
+      "status": "pending"
+    },
+    {
+      "id": "asset-ancient_gate_mobile",
+      "kind": "asset",
+      "asset": "ancient_gate_mobile",
+      "priority": 11,
+      "status": "pending"
+    },
+    {
+      "id": "asset-ancient_tree",
+      "kind": "asset",
+      "asset": "ancient_tree",
+      "priority": 12,
+      "status": "pending"
+    },
+    {
+      "id": "asset-forest_tree_mobile",
+      "kind": "asset",
+      "asset": "forest_tree_mobile",
+      "priority": 13,
+      "status": "pending"
+    },
+    {
+      "id": "asset-ceremonial_sword",
+      "kind": "asset",
+      "asset": "ceremonial_sword",
+      "priority": 14,
+      "status": "pending"
+    },
+    {
+      "id": "asset-treasure_chest",
+      "kind": "asset",
+      "asset": "treasure_chest",
+      "priority": 15,
+      "status": "pending"
+    },
+    {
+      "id": "asset-cargo_cart",
+      "kind": "asset",
+      "asset": "cargo_cart",
+      "priority": 16,
+      "status": "pending"
+    },
+    {
+      "id": "asset-rolling_terrain",
+      "kind": "asset",
+      "asset": "rolling_terrain",
+      "priority": 17,
+      "status": "pending"
+    }
+  ]
+}
