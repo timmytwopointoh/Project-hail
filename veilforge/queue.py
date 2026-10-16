@@ -150,6 +150,21 @@ def evidence_ok(job: dict, folder: Path, source_sha: str, apk_sha: str) -> list[
                     p=folder/buffer["uri"]
                     if not p.is_file() or p.stat().st_size!=buffer["byteLength"]:
                         errors.append("Invalid glTF binary")
+                maps=m.get("texture_maps",{})
+                if not maps or not isinstance(maps,dict):
+                    errors.append("Missing authored PBR material maps")
+                expected_images=set()
+                for material,bake in maps.items():
+                    if len(bake.get("maps",{}))!=4:
+                        errors.append("Missing four PBR maps for "+material)
+                    for metadata in bake.get("maps",{}).values():
+                        uri="textures/"+material+"/"+metadata["file"]
+                        expected_images.add(uri)
+                        texture=folder/uri
+                        if not texture.is_file() or sha(texture)!=metadata["sha256"]:
+                            errors.append("Corrupt PBR texture: "+uri)
+                if {i.get("uri") for i in g.get("images",[])}!=expected_images:
+                    errors.append("glTF materials do not reference verified textures")
         except (KeyError,ValueError,TypeError,OSError) as error:
             errors.append(f"Invalid asset evidence: {error}")
     else:
