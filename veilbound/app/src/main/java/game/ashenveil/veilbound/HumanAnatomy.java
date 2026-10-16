@@ -32,9 +32,9 @@ public final class HumanAnatomy {
     }
     public static ArtKit.Model buildM24Candidate(boolean lite,float[] controls){
         ContinuousHuman.validate(controls);
-        return ShapeEngine.combine(
+        return M24BodyRetarget.transform(ShapeEngine.combine(
             ContinuousHuman.buildM24WithoutDigits(lite,controls),
-            HumanHandSculpt.build(lite,controls[0]));
+            HumanHandSculpt.build(lite,controls[0])));
     }
     public static ArtKit.Model buildWithSculptedHands(boolean lite,float[] controls){
         ContinuousHuman.validate(controls);
