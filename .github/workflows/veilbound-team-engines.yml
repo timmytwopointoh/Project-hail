@@ -1,0 +1,61 @@
+name: VEILBOUND - Six Isolated Production Engines
+on:
+  push:
+    branches: ['feature/veilbound-m13-loading-sculpt-engines']
+    paths:
+      - 'veilbound/tools/**'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java'
+      - 'veilbound/engines/**'
+      - '.github/workflows/veilbound-team-engines.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+# Each manager team gets its OWN ephemeral runner, immutable source checkout,
+# separate scratch space and separate output artifact. Sharing a Java geometry
+# kernel is not equivalent to giving the workers unrestricted shell or Blender.
+jobs:
+  independent-production-engine:
+    name: Team engine / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        team: [models, animation, materials, world, combat, studio]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile offline scene and specialist engine kernel
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/veilbound-engine"
+          javac -d "${RUNNER_TEMP}/veilbound-engine" \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/{ArtKit,DetailArtKit,CinematicArtKit,ShapeEngine,HeroPose,CombatMotion,CharacterRig,WorldState,ModelStudio,EnvironmentKit,SurfaceAtlas,MaterialTextures,ObjMeshLoader,BootAssets}.java \
+            veilbound/tools/TeamEngineCLI.java \
+            veilbound/tests/game/ashenveil/veilbound/ShapeEngineTest.java
+          java -cp "${RUNNER_TEMP}/veilbound-engine" game.ashenveil.veilbound.ShapeEngineTest
+      - name: Execute isolated specialist engine
+        env:
+          TEAM: ${{ matrix.team }}
+        run: |
+          set -euo pipefail
+          mkdir -p "inspection_output/team-engines/${TEAM}"
+          java -Xmx1400m -cp "${RUNNER_TEMP}/veilbound-engine" \
+            game.ashenveil.veilbound.TeamEngineCLI "${TEAM}" \
+            "inspection_output/team-engines/${TEAM}" | tee "inspection_output/team-engines/${TEAM}/engine_log.txt"
+          python3 veilbound/scripts/team_engine_check.py --team "${TEAM}" \
+            --out "inspection_output/team-engines/${TEAM}"
+      - name: Preserve engine artifacts for manager and AI review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-${{ matrix.team }}-engine-output
+          path: inspection_output/team-engines/${{ matrix.team }}/
+          if-no-files-found: warn
+          retention-days: 14
