@@ -17,8 +17,10 @@ public final class HeroPoseTest {
             "M12 independently articulated sculpted armet is missing");
         check(rig.torso.triangleCount>0&&rig.leftArm.triangleCount>0&&
             rig.rightArm.triangleCount>0,"Hero armor joints are missing");
-        check(sculpt.triangleCount>DetailArtKit.bellwarden().triangleCount+2000,
-            "Gameplay hero must show the premium sculpt jump");
+        // Quality is no longer measured by beating legacy gauntlet-facet
+        // counts: the new sculpt replaces those unrelated old primitives.
+        check(sculpt.triangleCount>9000,
+            "New shaped full-body player sculpt lacks adequate detail");
         ArtKit.Model lite=CinematicArtKit.bellwardenLite();
         CharacterRig.Parts liteRig=CharacterRig.split(lite,false,false);
         check(liteRig.vertices()==lite.vertices.length/9,"Sculpted fallback lost triangles");
