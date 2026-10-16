@@ -1,0 +1,204 @@
+package com.trioncompasitor.vqstudio;
+
+import android.app.*;
+import android.os.*;
+import android.content.*;
+import android.graphics.Color;
+import android.net.Uri;
+import android.view.*;
+import android.widget.*;
+import org.json.*;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.*;
+
+/**
+ * VQ Studio is a companion: GitHub live workflow telemetry, local 3D viewport,
+ * explicit Trion-only start/cancel controls. No GitHub tokens in this app.
+ */
+public final class MainActivity extends Activity {
+  private static final int PICK_OBJ=7;
+  private final Handler timer=new Handler(Looper.getMainLooper());
+  private final ExecutorService io=Executors.newSingleThreadExecutor();
+  private boolean active=false;
+  private TextView status,history,meshLabel,small;
+  private ModelViewport viewport;
+  private String requestId="",runId="";
+  private LinearLayout root;
+  private final int mint=Color.rgb(94,244,198),ink=Color.rgb(224,238,238);
+  private final Runnable updater=new Runnable(){@Override public void run(){
+    if(!active)return;
+    refresh();
+    timer.postDelayed(this,15000);
+  }};
+  @Override public void onCreate(Bundle b){
+    super.onCreate(b);
+    requestId=getPreferences(0).getString("request_id","");
+    runId=getPreferences(0).getString("run_id","");
+    handleIntent(getIntent());
+    root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+    root.setBackgroundColor(Color.BLACK);
+    root.setPadding(dp(12),dp(12),dp(12),dp(8));
+    TextView title=text("VQ  /  MODEL STUDIO",23,mint);
+    root.addView(title);
+    status=text("Connecting to VQ worker status…",12,ink);root.addView(status);
+    viewport=new ModelViewport(this);
+    root.addView(viewport,new LinearLayout.LayoutParams(-1,0,5));
+    meshLabel=text("DEMONSTRATION MESH — not a worker result",12,Color.LTGRAY);root.addView(meshLabel);
+    LinearLayout buttons=new LinearLayout(this);
+    buttons.setOrientation(LinearLayout.HORIZONTAL);
+    buttons.addView(button("Trion controls",this::openTrion),new LinearLayout.LayoutParams(0,dp(55),1));
+    buttons.addView(button("Import OBJ",this::pickModel),new LinearLayout.LayoutParams(0,dp(55),1));
+    root.addView(buttons);
+    LinearLayout toggles=new LinearLayout(this);
+    toggles.addView(button("Glow edges",()->viewport.toggleWire()),new LinearLayout.LayoutParams(0,dp(48),1));
+    toggles.addView(button("Rotate / stop",()->viewport.toggleOrbit()),new LinearLayout.LayoutParams(0,dp(48),1));
+    toggles.addView(button("Update",this::refresh),new LinearLayout.LayoutParams(0,dp(48),1));
+    root.addView(toggles);
+    small=text("LIVE: GitHub worker steps • 3D: the most recently imported OBJ\nModel geometry will not change until a verified new snapshot is loaded.",12,ink);
+    root.addView(small);
+    ScrollView scroll=new ScrollView(this);
+    history=text("No worker update yet.",12,Color.rgb(159,210,210));history.setTextIsSelectable(true);
+    scroll.addView(history);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,3));
+    setContentView(root);
+  }
+  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density);}
+  private TextView text(String txt,int size,int color){
+    TextView t=new TextView(this);t.setText(txt);t.setTextSize(size);t.setTextColor(color);
+    t.setPadding(dp(7),dp(5),dp(7),dp(5));return t;
+  }
+  private Button button(String label,Runnable task){
+    Button b=new Button(this);b.setText(label);b.setAllCaps(false);
+    b.setTextSize(11);b.setOnClickListener(v->task.run());return b;
+  }
+  private void handleIntent(Intent intent){
+    if(intent==null)return;
+    if(VQProtocol.SHOW_JOB.equals(intent.getAction())){
+      String id=intent.getStringExtra("request_id");
+      String run=intent.getStringExtra("run_id");
+      if(VQProtocol.validRequestId(id))requestId=id;
+      if(VQProtocol.validRunId(run))runId=run;
+      getPreferences(0).edit().putString("request_id",requestId)
+          .putString("run_id",runId).apply();
+    }
+  }
+  @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);handleIntent(i);refresh();}
+  @Override protected void onResume(){super.onResume();active=true;timer.removeCallbacks(updater);timer.post(updater);}
+  @Override protected void onPause(){active=false;timer.removeCallbacks(updater);super.onPause();}
+  @Override protected void onDestroy(){timer.removeCallbacks(updater);io.shutdownNow();super.onDestroy();}
+  private void openTrion(){
+    Intent intent=new Intent();
+    intent.setClassName(VQProtocol.TRION_PACKAGE,VQProtocol.TRION_BRIDGE);
+    intent.putExtra("request_id",requestId);intent.putExtra("run_id",runId);
+    try{startActivity(intent);}catch(Exception e){
+      new AlertDialog.Builder(this).setTitle("Trion bridge not installed")
+        .setMessage("Install the companion version of Trion Assistant to submit, stop and correct VQ jobs. VQ Studio never receives or stores your GitHub token.")
+        .setPositiveButton("OK",null).show();
+    }
+  }
+  private void pickModel(){
+    Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);
+    startActivityForResult(i,PICK_OBJ);
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);
+    if(request!=PICK_OBJ||result!=RESULT_OK||data==null)return;
+    final Uri uri=data.getData();
+    if(uri==null)return;
+    status.setText("Loading real source OBJ…");
+    io.execute(()->{
+      try(InputStream in=getContentResolver().openInputStream(uri)){
+        MeshData mesh=MeshData.read(in,"Imported real OBJ / "+uri.getLastPathSegment());
+        runOnUiThread(()->{
+          viewport.setMesh(mesh);
+          meshLabel.setText(mesh.label+" • "+mesh.triangles.length+" triangles");
+          status.setText("Local OBJ loaded; remote job progress is shown below");
+        });
+      }catch(Exception e){
+        runOnUiThread(()->new AlertDialog.Builder(this).setTitle("OBJ import failed")
+          .setMessage(e.getMessage()).setPositiveButton("OK",null).show());
+      }
+    });
+  }
+  private static String get(String endpoint)throws Exception{
+    if(!endpoint.startsWith("https://api.github.com/repos/timmytwopointoh/Project-hail/actions/"))
+      throw new IOException("Untrusted status endpoint");
+    HttpURLConnection h=(HttpURLConnection)new URL(endpoint).openConnection();
+    h.setConnectTimeout(10000);h.setReadTimeout(12000);
+    h.setRequestProperty("Accept","application/vnd.github+json");
+    h.setRequestProperty("User-Agent","VQStudio/0.1");
+    try{
+      if(h.getResponseCode()!=200)throw new IOException("GitHub status unavailable (HTTP "+h.getResponseCode()+")");
+      try(InputStream in=h.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+        byte[] buf=new byte[8192];int n;while((n=in.read(buf))>=0){
+          if(out.size()+n>600000)throw new IOException("Excess status data");
+          out.write(buf,0,n);
+        }
+        return out.toString("UTF-8");
+      }
+    }finally{h.disconnect();}
+  }
+  private void refresh(){
+    if(!active)return;
+    io.execute(()->{
+      try{
+        String base="https://api.github.com/repos/"+VQProtocol.REPO+"/actions/";
+        JSONObject payload=new JSONObject(get(base+"workflows/"+VQProtocol.WORKFLOW+"/runs?branch="+
+          URLEncoder.encode(VQProtocol.BRANCH,"UTF-8")+"&per_page=12"));
+        JSONArray runs=payload.optJSONArray("workflow_runs");
+        JSONObject chosen=null;
+        if(runs!=null){
+          for(int i=0;i<runs.length();i++){
+            JSONObject item=runs.getJSONObject(i);
+            String title=item.optString("display_title","");
+            if(VQProtocol.validRequestId(requestId)&&title.contains(requestId)){
+              chosen=item;break;
+            }
+            if(VQProtocol.validRunId(runId)&&runId.equals(item.optString("id"))){chosen=item;break;}
+          }
+        }
+        String headline,progress;
+        if(chosen==null){
+          headline="ONLINE • no matching VQ model job"+(requestId.isEmpty()?"":" / "+requestId);
+          progress="Trion can submit a catalog model. The editor shows a demonstration mesh until you import actual OBJ data.\n";
+        }else{
+          String id=chosen.getString("id");
+          String state=chosen.optString("status","unknown");
+          String conclusion=chosen.optString("conclusion","");
+          headline="VQ WORKER • "+state+(conclusion.equals("null")?"":" / "+conclusion);
+          StringBuilder trace=new StringBuilder();
+          trace.append(chosen.optString("display_title")).append("\n");
+          trace.append("Run: ").append(id).append("\n");
+          trace.append("Updated: ").append(chosen.optString("updated_at","")).append("\n\n");
+          JSONObject jobs=new JSONObject(get(base+"runs/"+id+"/jobs?per_page=20"));
+          JSONArray list=jobs.optJSONArray("jobs");
+          if(list!=null)for(int i=0;i<list.length();i++){
+            JSONObject j=list.getJSONObject(i);
+            trace.append("● ").append(j.optString("name")).append(" [")
+                .append(j.optString("conclusion").equals("null")?j.optString("status"):j.optString("conclusion")).append("]\n");
+            JSONArray steps=j.optJSONArray("steps");
+            if(steps!=null)for(int k=0;k<steps.length();k++){
+              JSONObject step=steps.getJSONObject(k);
+              trace.append("  ").append(step.optString("status").equals("completed")?"✓":"·").append(" ")
+                  .append(step.optString("name")).append("\n");
+            }
+          }
+          progress=trace.toString();
+          String finalId=id;
+          runOnUiThread(()->{
+            runId=finalId;
+            getPreferences(0).edit().putString("run_id",finalId).apply();
+          });
+        }
+        final String a=headline,b=progress;
+        runOnUiThread(()->{if(!active)return;status.setText(a);history.setText(b);});
+      }catch(Exception e){
+        runOnUiThread(()->{if(!active)return;status.setText("NETWORK UNAVAILABLE • local 3D viewer still works");
+          history.setText("Worker status could not be refreshed: "+e.getMessage()+
+             "\nNo evidence of a new model update. Use Trion to inspect authenticated jobs.");});
+      }
+    });
+  }
+}
