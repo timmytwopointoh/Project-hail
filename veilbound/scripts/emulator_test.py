@@ -473,6 +473,40 @@ def main():
             "game_preview":True,"four_actual_angles":True,
             "review_only":True,"visually_approved":False,
             "auto_promoted":False,"original_knight_preserved":True}
+        # M28 new full human uses physically different eye sockets/lids;
+        # capture the SAME stable game pipeline rather than static concept art.
+        touch(w*.65,h*.865)  # M26 study -> M28 anatomical face
+        time.sleep(1.5)
+        for candidate_wait in range(32):
+            log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                    timeout=20).decode("utf-8","replace")
+            if "item=16" in log and "M28_INTEGRATED_ORBITS_READY" in log:
+                break
+            time.sleep(.55)
+        else:
+            raise AssertionError("VEILFORGE M28 new face geometry not loaded in Android")
+        m28_front=OUT/"01_m28_orbital_front.png"
+        report["screenshots"].append(shot(m28_front.name))
+        last=m28_front
+        for angle in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)
+            time.sleep(1.2)
+            image_name="01_m28_orbital_"+angle+".png"
+            report["screenshots"].append(shot(image_name))
+            with Image.open(last) as a,Image.open(OUT/image_name) as b:
+                diff=ImageStat.Stat(ImageChops.difference(
+                    a.convert("RGB").resize((180,105)),
+                    b.convert("RGB").resize((180,105)))).mean
+            if sum(diff)/3<.12:
+                raise AssertionError("M28 face geometry failed actual camera "+angle)
+            last=OUT/image_name
+        touch(w*.65,h*.265) # precise face closeup / head inspection
+        time.sleep(1.0)
+        report["screenshots"].append(shot("01_m28_orbital_detail.png"))
+        atelier["m28_integrated_face"]={
+            "game_preview":True,"actual_angles":4,"detail_capture":True,
+            "new_eye_socket_and_lid_geometry":True,"manual_approval":False,
+            "old_knight_untouched":True,"hair_unchanged":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
