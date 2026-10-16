@@ -1,0 +1,57 @@
+name: VEILBOUND - Local AI End-to-End Studio Pilot
+on:
+  push:
+    branches: ['feature/veilbound-parallel-ai-qa']
+    paths:
+      - '.github/workflows/veilbound-local-ai-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+# Explicitly bounded one-worker integration gate. No GitHub API token, model
+# API key, or writes/merges, and no reliance on the character team's branch.
+jobs:
+  real-studio-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check proposal policy and QA integrity unit tests
+        run: |
+          python3 -m unittest discover -s veilbound/tests -p 'test_proposal_guard.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_evidence_guard.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_local_ai.py' -v
+          python3 -m py_compile veilbound/scripts/ai_worker.py veilbound/scripts/local_ai_pilot.py
+      - name: Boot private on-runner 1.5B coding model
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Director -> division -> specialist -> local coder -> real Java tests
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: |
+          python3 veilbound/scripts/local_ai_pilot.py \
+            --role studio \
+            --out inspection_output/local-studio-worker
+      - name: Show report and preserve measured result
+        if: always()
+        run: |
+          if [ -f inspection_output/local-studio-worker/worker_result.json ]; then
+            cat inspection_output/local-studio-worker/worker_result.json >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - name: Archive source patch and verified Java test outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-studio-end-to-end-evidence
+          path: inspection_output/local-studio-worker/
+          if-no-files-found: warn
+          retention-days: 14
