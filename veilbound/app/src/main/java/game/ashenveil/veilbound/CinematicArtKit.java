@@ -452,7 +452,7 @@ public final class CinematicArtKit {
                       .042f,8,.54f,.58f,.60f);
             }
         }
-        return f.result();
+        return ShapeEngine.combine(f.result(),ShapeEngine.bellwardenForgedPlates(true));
     }
     public static ArtKit.Model bellwarden(){
         // The original faceted block mannequin is deliberately NOT carried
@@ -462,7 +462,8 @@ public final class CinematicArtKit {
         float[] handmade=DetailArtKit.bellwarden().vertices;
         int primitiveFloats=ArtKit.bellwarden().vertices.length;
         Form f=new Form(Arrays.copyOfRange(handmade,primitiveFloats,handmade.length));
-        bellwardenSculpt(f);return f.result();
+        bellwardenSculpt(f);
+        return ShapeEngine.combine(f.result(),ShapeEngine.bellwardenForgedPlates(false));
     }
     public static ArtKit.Model hushed(){
         Form f=new Form(DetailArtKit.hushed().vertices);
