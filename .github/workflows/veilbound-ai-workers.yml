@@ -9,13 +9,13 @@ on:
         default: '6'
         options: ['6', '12', '24', '50']
       max_parallel:
-        description: 'Simultaneous coding jobs (queued jobs wait for a runner)'
+        description: 'Simultaneous local CPU model jobs (each downloads ~1 GB)'
         required: true
         type: choice
         default: '2'
         options: ['2', '4', '8', '12']
       run_mode:
-        description: 'Plan only (free) or call paid Gemini coding workers'
+        description: 'Plan only or run self-hosted AI coding workers (no AI API key)'
         required: true
         type: choice
         default: 'plan_only'
@@ -30,6 +30,8 @@ on:
       - '.github/workflows/veilbound-ai-workers.yml'
       - 'veilbound/scripts/worker_manager.py'
       - 'veilbound/scripts/ai_worker.py'
+      - 'veilbound/scripts/local_ai.py'
+      - 'veilbound/scripts/install_local_ai.sh'
       - 'veilbound/worker_backlog.json'
       - 'veilbound/scripts/team_manager.py'
   workflow_run:
@@ -38,9 +40,9 @@ on:
 permissions:
   contents: read
   actions: read
-# A push runs the *planner* by default. To enable charged AI work on pushes
-# and emulator completions, explicitly set ENABLE_AUTO_AI_WORKERS=true.
-# Manual dispatch runs workers whether or not auto mode is enabled.
+# Pushes run director and manager checks only; model downloads and
+# inference require explicit manual run_mode=coding_proposals.
+# All inference is on localhost, with no outside AI APIs or keys.
 jobs:
   manager:
     if: >-
@@ -89,19 +91,7 @@ jobs:
           name: veilbound-master-worker-plan-${{ github.run_attempt }}
           path: inspection_output/manager/
           retention-days: 14
-      - name: Confirm Gemini key exists before billable coding work
-        if: >-
-          (github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals') ||
-          (github.event_name != 'workflow_dispatch' && vars.ENABLE_AUTO_AI_WORKERS == 'true')
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          if [ -z "${GEMINI_API_KEY}" ]; then
-            echo "::error::GEMINI_API_KEY not configured. Add it under Settings > Secrets and variables > Actions."
-            echo "Manager plan was saved; no code workers were started."
-            exit 1
-          fi
-          echo "Gemini credential present; value intentionally not logged." >> "${GITHUB_STEP_SUMMARY}"
+
   division-managers:
     needs: manager
     if: needs.manager.outputs.division_count != '0'
@@ -191,14 +181,13 @@ jobs:
     needs: [manager, team-managers]
     if: >-
       needs.manager.outputs.worker_count != '0' &&
-      ((github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals') ||
-       (github.event_name != 'workflow_dispatch' && vars.ENABLE_AUTO_AI_WORKERS == 'true'))
+      github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals'
     name: Independent coder / ${{ matrix.slot_id }} / ${{ matrix.role }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 48
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJSON(inputs.max_parallel || '4') }}
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '2') }}
       matrix: ${{ fromJSON(needs.manager.outputs.matrix) }}
     permissions:
       contents: read
@@ -232,10 +221,11 @@ jobs:
             --task-id "${VEILBOUND_TASK_ID}" \
             --goal "${VEILBOUND_TASK_GOAL}" \
             --output inspection_output/approved-team/team_approval.json
+      - name: Install and launch VEILBOUND's CPU-local open-weight coding AI
+        run: bash veilbound/scripts/install_local_ai.sh
       - name: Generate isolated source patch and validate trusted Java tests
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
           VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
           VEILBOUND_TASK_ID: ${{ matrix.task_id }}
           VEILBOUND_WORKER_SLOT: ${{ matrix.slot_id }}
