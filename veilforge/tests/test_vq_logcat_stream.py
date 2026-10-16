@@ -55,7 +55,7 @@ class EventCursorTests(unittest.TestCase):
     def test_frame_retries_use_monitor_not_full_buffer_polling(self):
         blank = {"foreground_fraction": 0, "channel_stddev": 0}
         valid = {"foreground_fraction": .15, "channel_stddev": 18,
-                 "renderer_background_confirmed": True}
+                 "renderer_background_confirmed": True, "modal_overlay_fraction": 0.0}
         monitor = SimpleNamespace(assert_healthy=lambda: None)
         with patch("android_visual_qa.screenshot", side_effect=["blank", "real"]), \
              patch("android_visual_qa.metrics", side_effect=[blank, valid]), \

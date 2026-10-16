@@ -60,10 +60,15 @@ def audit(root,out=None):
         issues.append("Old duplicate review jobs remain")
     capture=(root/"veilforge/android_visual_qa.py").read_text(encoding="utf-8")
     m30=(root/"veilforge/vq_m30_android_qa.py").read_text(encoding="utf-8")
-    if ('last.get("renderer_background_confirmed") is True' not in capture or
-        "def renderer_background_confirmed(" not in capture):
+    sdk_path=root/"veilforge/vq_android_qa_sdk.py"
+    sdk=sdk_path.read_text(encoding="utf-8") if sdk_path.is_file() else ""
+    if ("def renderer_background_confirmed(" not in capture or
+        "if frame_is_trusted(last):" not in capture or
+        'score.get("renderer_background_confirmed") is True' not in sdk or
+        "MAX_MODAL = 0.70" not in sdk):
         issues.append("General screenshot gate does not reject splash screens")
-    if 'background_ok=score["renderer_background_confirmed"]' not in m30:
+    if ("if frame_is_trusted(score):" not in m30 or
+        "from vq_android_qa_sdk import frame_is_trusted" not in m30):
         issues.append("M30 screenshot gate does not reuse strict common validation")
     # M34-08: the factory uses one persistent, fail-closed ADB logcat
     # subscriber. A compatibility-only one-off dump may remain on failure.

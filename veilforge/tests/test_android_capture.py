@@ -10,7 +10,7 @@ class PresentedFrameTest(unittest.TestCase):
     def test_waits_for_real_visible_frame(self):
         blank={"foreground_fraction":1.0,"channel_stddev":0.0}
         visible={"foreground_fraction":.14,"channel_stddev":19.5,
-                 "renderer_background_confirmed":True}
+                 "renderer_background_confirmed":True,"modal_overlay_fraction":0.0}
         with patch("android_visual_qa.screenshot", side_effect=["blank","visible"]) as shot, \
              patch("android_visual_qa.metrics", side_effect=[blank,visible]), \
              patch("android_visual_qa.adb", return_value="FRAME_OK"), \

@@ -167,3 +167,9 @@ normal-off noise-control test and factory's 14-view per-asset identity gates.
 This branch does **not** consolidate the M30 legacy logcat polling path or
 prove Android performance improvements. Real emulator CI and independent
 reviewer compatibility are mandatory before marking this candidate verified.
+
+**Compatibility regression discovered and repaired:** the first candidate
+CI run 38970974341 correctly failed because old test doubles omitted the
+modal score and the static auditor matched an obsolete inline gate string.
+Keep the stricter real-frame requirement; update synthetic fixtures and audit
+the shared implementation instead of relaxing the screenshot policy.
