@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 
 from ai_worker import JAVA, ROLES
+from proposal_guard import semantic_fingerprint
 
 def allowed_paths(role):
     if role not in ROLES:
@@ -77,6 +78,8 @@ def verify_reviewed_patch(root, artifact, pending):
     expected = []
     for path, proposed in pending.items():
         original = (Path(root) / path).read_text(encoding="utf-8")
+        if semantic_fingerprint(original) == semantic_fingerprint(proposed):
+            raise ValueError("Reviewed AI patch changes only comments or formatting: " + path)
         expected.extend(difflib.unified_diff(
             original.splitlines(keepends=True),
             proposed.splitlines(keepends=True),
