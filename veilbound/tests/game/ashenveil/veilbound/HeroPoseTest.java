@@ -46,9 +46,9 @@ public final class HeroPoseTest {
         HeroPose.sample(f,3.5f,2.3f,.9f,.8f,0,0,0);
         check(Math.abs(f.rootPitch-idlePitch)>.1f,"Exertion must change posture");
         check(Math.abs(f.mantlePitch-idleCape)>1f,"Mantle must react to locomotion");
-        HeroPose.sample(f,3.5f,2.3f,1f,.2f,0,0,0);
+        HeroPose.sample(f,3.5f,1.1f,1f,.2f,0,0,0);
         float leftRaise=f.leftFootLift;
-        HeroPose.sample(f,3.5f,4.55f,1f,.2f,0,0,0);
+        HeroPose.sample(f,3.5f,3.3f,1f,.2f,0,0,0);
         check(leftRaise>0.03f && f.rightFootLift>0.03f,
             "Foot contact alternation must raise opposite toes");
         check(Math.abs(f.helmetYaw)<20f && Math.abs(f.helmetPitch)<20f,
