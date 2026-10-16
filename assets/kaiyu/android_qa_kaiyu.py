@@ -2,10 +2,33 @@
 Checks the model actually renders, 14 camera poses, no blank or modal screens;
 does not claim motion playback, reference likeness, or physical-device FPS.
 """
-import sys, argparse, json, hashlib, re
+import sys, argparse, json, hashlib, re, time
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from veilforge import android_visual_qa as qa
+
+def wait_kaiyu_frame(yaw, pitch, timeout=210):
+ """Kaiyu-only frame gate: do not use unrelated courtyard mesh-count sentinel.
+
+ Require the exact static Kaiyu source triangle count and a per-pose draw marker.
+ This checks OpenGL draw callbacks only; screenshot validity is checked separately.
+ """
+ deadline=time.monotonic()+timeout
+ loaded=False
+ while time.monotonic()<deadline:
+  log=qa.adb('logcat','-d','-s','VEILFORGE_PROBE:I','VEILFORGE_PROBE:E','*:S',timeout=25)
+  if 'LOAD_FAIL' in log or 'GL_ERROR' in log or 'ASSET_NOT_FOUND' in log:
+   raise RuntimeError('Kaiyu GLES failure: '+log[-4000:])
+  for entry in log.splitlines():
+   if 'GLTF_LOADED actual_scene=true' in entry:
+    count=re.search(r'models=(\\d+) nodes=(\\d+) source_triangles=(\\d+)',entry)
+    if not count or tuple(map(int,count.groups()))!=(90,90,133584):
+     raise RuntimeError('Kaiyu scene counts differ from reviewed source: '+entry)
+    loaded=True
+   if loaded and 'FRAME_OK asset=kaiyu ' in entry and (' yaw='+str(yaw)+' pitch='+str(pitch)+' ') in entry:
+    return log
+  time.sleep(.6)
+ raise RuntimeError('Kaiyu frame callback timeout at yaw='+str(yaw)+' pitch='+str(pitch)+' (loaded='+str(loaded)+')')
 
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--apk',required=True);ap.add_argument('--out',required=True)
@@ -20,7 +43,7 @@ def main():
  for i,(yaw,pitch) in enumerate(qa.VIEWS):
   qa.adb('shell','am','start','--activity-single-top','-n',qa.ACTIVITY,'--es','asset','kaiyu','--ei','yaw',str(yaw),'--ei','pitch',str(pitch),timeout=35)
   try:
-   log=qa.wait_frame('kaiyu',yaw,pitch,timeout=210)
+   log=wait_kaiyu_frame(yaw,pitch,timeout=210)
   except Exception as exc:
    # Preserve real device evidence on a first-frame failure, never invent a PASS.
    (out/'android_first_frame_failure.txt').write_text(
