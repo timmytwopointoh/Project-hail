@@ -12,16 +12,16 @@ import java.util.Arrays;
 public final class M25FaceSculpt {
     private M25FaceSculpt(){}
     public static final float EYE_X=.076f, EYE_Y=2.420f;
-    public static final float EYE_FRONT=.207f;
+    public static final float EYE_FRONT=.199f;
     public static final int EYES=2;
 
-    private static final float[] SCLERA={.76f,.655f,.588f};
-    private static final float[] IRIS={.235f,.160f,.112f};
+    private static final float[] SCLERA={.718f,.603f,.541f};
+    private static final float[] IRIS={.286f,.186f,.137f};
     private static final float[] PUPIL={.081f,.069f,.068f};
-    private static final float[] LID={.575f,.337f,.266f};
-    private static final float[] BROW={.405f,.264f,.212f};
-    private static final float[] LIP={.595f,.337f,.310f};
-    private static final float[] NOSTRIL={.34f,.215f,.177f};
+    private static final float[] LID={.611f,.374f,.291f};
+    private static final float[] BROW={.504f,.307f,.244f};
+    private static final float[] LIP={.615f,.367f,.322f};
+    private static final float[] NOSTRIL={.465f,.274f,.208f};
 
     private static final class Writer {
         float[] values=new float[4096];
@@ -82,18 +82,18 @@ public final class M25FaceSculpt {
             float x=side*EYE_X;
             // Sclera is inset into the sculpted brow and cheek; its tinted
             // surface remains clearly distinct from a painted black dot.
-            lens(w,x,EYE_Y,EYE_FRONT,.040f,.020f,.018f,SCLERA,sides);
-            lens(w,x-side*.005f,EYE_Y,.211f,.013f,.0135f,.006f,IRIS,sides);
-            lens(w,x-side*.005f,EYE_Y,.215f,.0062f,.0075f,.0025f,PUPIL,sides);
+            lens(w,x,EYE_Y,EYE_FRONT,.032f,.0145f,.013f,SCLERA,sides);
+            lens(w,x-side*.003f,EYE_Y,.203f,.0098f,.0105f,.0045f,IRIS,sides);
+            lens(w,x-side*.003f,EYE_Y,.207f,.0043f,.0054f,.002f,PUPIL,sides);
             // Upper eyelid hugs the ocular opening, brow sits higher.
-            lens(w,x,EYE_Y+.020f,.192f,.043f,.0042f,.004f,LID,sides);
-            lens(w,x,EYE_Y+.049f,.179f,.046f,.0055f,.004f,BROW,sides);
+            lens(w,x,EYE_Y+.015f,.196f,.034f,.0032f,.003f,LID,sides);
+            lens(w,x,EYE_Y+.046f,.181f,.040f,.0042f,.002f,BROW,sides);
             // Small flared nostril shadows flank the fused nasal tip.
-            lens(w,side*.029f,2.298f,.236f,.012f,.0045f,.003f,NOSTRIL,sides);
+            lens(w,side*.027f,2.299f,.230f,.0078f,.003f,.002f,NOSTRIL,sides);
         }
         // Subtle curved upper/lower lip, retaining a neutral expression.
-        lens(w,0,2.278f,.214f,.048f,.008f,.004f,LIP,sides);
-        lens(w,0,2.264f,.211f,.043f,.009f,.004f,LIP,sides);
+        lens(w,0,2.276f,.211f,.044f,.006f,.003f,LIP,sides);
+        lens(w,0,2.267f,.209f,.038f,.0064f,.003f,LIP,sides);
         return w.finish();
     }
 }
