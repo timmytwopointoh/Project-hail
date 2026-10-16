@@ -185,7 +185,11 @@ def mesh_delta(before: Path, after: Path):
             continue
         changed+=1
         x,y,z=orig[:3]
-        if y>2.60 or (1.0<y<1.5 and abs(x)<.4 and z<-.11):
+        red,green,blue=orig[3:6]
+        hair=(y>2.50 and red<.24 and green<.24 and blue<.24)
+        shorts=(.87<y<1.22 and abs(x)<.41 and
+                red<.27 and green<.27 and blue<.27)
+        if hair or shorts:
             protected_changed+=1
         if y>2.27: region="head"
         elif y>1.55: region="torso_shoulders"
