@@ -1,4 +1,4 @@
-# VEILFORGE ownership and authorship declaration — unsigned template
+# VEYLQUORIN (VQ; formerly VEILFORGE) ownership and authorship declaration — unsigned template
 
 **STATUS: NOT EXECUTED.** This is a draft for personal review, not a signature,
 assignment, notarial act, ownership certification or authorization by another
@@ -7,7 +7,7 @@ public repository. Obtain legal advice before relying on the declaration.
 
 **Named claimant (self-reported):** Timothy Harris
 **Connected GitHub username:** timmytwopointoh
-**Relevant project:** VEILFORGE, VEILBOUND's supporting development engines,
+**Relevant project:** VEYLQUORIN (VQ; formerly VEILFORGE), VEILBOUND's supporting development engines,
 worker management/CI and emulator inspection system in Project-hail.
 **Evidence snapshot commit SHA:** [insert immutable SHA shown in latest
 GitHub provenance run]
