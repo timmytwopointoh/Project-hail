@@ -47,6 +47,31 @@ class AndroidM30Tests(unittest.TestCase):
             r=review(root,root/"review",source_sha="sha",apk_sha="apk")
             self.assertFalse(r["android_material_gate_passed"])
             self.assertTrue(any("missing source screenshot" in p for p in r["problems"]))
+    def test_splash_screen_cannot_masquerade_as_a_real_gles_model_frame(self):
+        from PIL import Image,ImageDraw
+        from unittest.mock import patch
+        from vq_m30_android_qa import capture_real_model_frame,detail_pixel_delta
+        splash=Image.new("RGB",(800,480),(48,48,48))
+        paint=ImageDraw.Draw(splash)
+        paint.rectangle((260,180,460,300),fill=(180,190,205))
+        valid=Image.new("RGB",(800,480),(17,21,29))
+        paint=ImageDraw.Draw(valid)
+        paint.rectangle((280,180,510,350),fill=(80,73,59))
+        images=[splash,valid]
+        def fake(path):
+            pic=images.pop(0)
+            pic.save(path)
+            return pic
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/"screen.png"
+            with patch("vq_m30_android_qa.screenshot",side_effect=fake),patch("vq_m30_android_qa.time.sleep"):
+                pic,metrics,attempts=capture_real_model_frame(path,retries=2)
+            self.assertEqual(attempts,2)
+            self.assertEqual(pic.getpixel((400,38)),(17,21,29))
+            shifted=valid.copy()
+            ImageDraw.Draw(shifted).rectangle((290,190,460,310),fill=(86,78,66))
+            self.assertGreater(detail_pixel_delta(valid,shifted),.01)
+            self.assertEqual(detail_pixel_delta(valid,valid),0)
     def test_android_shader_contains_real_normal_toggle_and_ao_sampler(self):
         java=(ROOT/"android-probe/app/src/main/java/game/veilforge/probe/ViewerActivity.java").read_text()
         for marker in ("uNormalTexture","uAOTexture","aTangent","aBitangent",

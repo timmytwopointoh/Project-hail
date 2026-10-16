@@ -26,8 +26,8 @@ def review(root,out,*,source_sha=None,apk_sha=None):
             if apk_sha and r.get("apk_sha256")!=apk_sha:
                 issues.append(role+": test APK mismatch")
             views=r.get("screenshots",[])
-            if len(views)!=14 or r.get("actual_emulator_frames")!=15:
-                issues.append(role+": missing 14 real orbit views and 1 flat comparison")
+            if len(views)!=14 or r.get("actual_emulator_frames")!=17:
+                issues.append(role+": missing 14 genuine orbit views and 3 same-angle material controls")
             for v in views:
                 name=v.get("image","")
                 frame=path.parent/name
@@ -37,12 +37,19 @@ def review(root,out,*,source_sha=None,apk_sha=None):
                     issues.append(role+": screenshot hash mismatch")
                 if v.get("metrics",{}).get("modal_overlay_fraction",1)>=.70:
                     issues.append(role+": system dialog obscured screenshot")
+            on_reference=path.parent/"normal_on_reference.png"
+            if not on_reference.is_file() or hashlib.sha256(on_reference.read_bytes()).hexdigest()!=r.get("normal_on_reference_sha256"):
+                issues.append(role+": missing/altered matched normal-on reference")
+            on_repeat=path.parent/"normal_on_repeat.png"
+            if not on_repeat.is_file() or hashlib.sha256(on_repeat.read_bytes()).hexdigest()!=r.get("normal_on_repeat_sha256"):
+                issues.append(role+": missing same-angle noise-control frame")
             baseline=path.parent/"flat_baseline.png"
             if not baseline.is_file() or hashlib.sha256(baseline.read_bytes()).hexdigest()!=r.get("flat_baseline_sha256"):
                 issues.append(role+": missing/altered no-normal baseline")
             difference=r.get("normal_map_on_off_pixel_difference",0)
-            if not isinstance(difference,(int,float)) or difference<.0015:
-                issues.append(role+": no measured normal-shading effect")
+            if not isinstance(difference,(int,float)) or not .003<=difference<=.15 or (
+                difference<=r.get("same_angle_repeat_render_difference",1)+.001):
+                issues.append(role+": no verified localized shading beyond same-angle GPU noise")
             deltas[role]=difference
         except (KeyError,ValueError,TypeError,OSError) as exc:
             issues.append(f"{path}: malformed QA evidence: {exc}")
@@ -50,7 +57,7 @@ def review(root,out,*,source_sha=None,apk_sha=None):
         issues.append("Missing emulator role: "+role)
     result={"schema_version":1,"milestone":"M30","android_15_emulators_completed":len(roles),
             "expected_emulators":len(ROLES),
-            "verified_real_screenshots":len(roles)*15 if not issues else 0,
+            "verified_real_screenshots":len(roles)*17 if not issues else 0,
             "normal_map_pixel_differences":deltas,
             "problems":issues,"android_material_gate_passed":not issues,
             "artist_approved":False,"game_promoted":False,"physical_devices_tested":False,
