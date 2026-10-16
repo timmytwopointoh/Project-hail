@@ -306,6 +306,27 @@ def main():
         atelier["unarmored_human_selected"]="item=11" in human_log
         if not atelier["unarmored_human_selected"]:
             raise AssertionError("M17 separate unarmored HUMAN BASE never selected")
+        # M20 actual GL-turntable captures across four calibrated camera
+        # orientations. These are real Android screenshots, NOT generated art.
+        atelier["human_turnaround"]={}
+        front=shot("01_human_review_front.png")
+        report["screenshots"].append(front)
+        prior=OUT/"01_human_review_front.png"
+        for label in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)  # Native Atelier cycle view: 0,90,180,315
+            time.sleep(1.3)
+            photo=shot("01_human_review_"+label+".png")
+            report["screenshots"].append(photo)
+            with Image.open(prior) as aa,Image.open(OUT/("01_human_review_"+label+".png")) as bb:
+                delta=ImageStat.Stat(ImageChops.difference(
+                    aa.convert("RGB").resize((180,105)),
+                    bb.convert("RGB").resize((180,105)))).mean
+            value=round(sum(delta)/3,3)
+            atelier["human_turnaround"][label]=value
+            if value<.15:
+                raise AssertionError("M20 human "+label+
+                  " angle did not visibly update geometry: "+str(value))
+            prior=OUT/("01_human_review_"+label+".png")
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
