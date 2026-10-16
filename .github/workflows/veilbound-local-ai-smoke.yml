@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/veilbound-local-ai-smoke.yml'
       - 'veilbound/scripts/local_ai.py'
+      - 'veilbound/tests/test_local_ai.py'
       - 'veilbound/scripts/local_ai_smoke.py'
       - 'veilbound/scripts/install_local_ai.sh'
 permissions:
