@@ -1,5 +1,10 @@
 name: VEILBOUND - Parallel Android Emulator Farm
 on:
+  # One explicitly requested, isolated two-emulator CI verification.
+  # Once verified, remove this temporary push trigger; manual 1/2/4/8 remains.
+  push:
+    branches: ['feature/veilbound-parallel-emulator-reliability']
+    paths: ['.github/workflows/veilbound-parallel-emulators.yml']
   workflow_dispatch:
     inputs:
       emulator_instances:
