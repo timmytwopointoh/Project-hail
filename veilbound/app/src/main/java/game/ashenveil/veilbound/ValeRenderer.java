@@ -217,7 +217,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         // retained medium LOD for weak GPU frames. Enemies are untouched.
         ArtKit.Model heroSculpt=CinematicArtKit.bellwarden();
         playerRig=new Rigged(CharacterRig.split(heroSculpt,false,false));
-        playerLiteRig=new Rigged(CharacterRig.split(DetailArtKit.bellwarden(),false,false));
+        playerLiteRig=new Rigged(CharacterRig.split(CinematicArtKit.bellwardenLite(),false,false));
         playerPremiumSword=new Mesh(CinematicArtKit.sword().vertices);
         Log.i(TAG,"PLAYER_PREMIUM_READY triangles="+heroSculpt.triangleCount+
             " medium_triangles="+DetailArtKit.bellwarden().triangleCount);
