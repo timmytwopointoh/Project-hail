@@ -109,6 +109,69 @@ public final class HumanVariantCLI {
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
+
+    /** Cropped software projections of the REAL mesh. Never call these Android captures. */
+    private static void renderHand(ArtKit.Model mesh,int view,int side,Path file)
+            throws Exception{
+        final int width=640,height=720;
+        final float[] direction=camera(view);
+        final float cx=side*.554f,cz=.115f,cy=.705f,zoom=1260f;
+        final float origin=cx*direction[2]-cz*direction[0];
+        BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=image.createGraphics();
+        g.setColor(new Color(215,216,218));
+        g.fillRect(0,0,width,height);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                           RenderingHints.VALUE_ANTIALIAS_ON);
+        ArrayList<Face> faces=new ArrayList<>();
+        float[] v=mesh.vertices;
+        for(int i=0;i<v.length;i+=27){
+            boolean inHand=true;
+            for(int k=0;k<3;k++){
+                int j=i+k*9;
+                if(v[j+1]<.465f||v[j+1]>.975f||
+                   v[j]*side<.395f||v[j]*side>.795f){
+                    inHand=false;break;
+                }
+            }
+            if(!inHand)continue;
+            float nx=(v[i+3]+v[i+12]+v[i+21])/3f;
+            float ny=(v[i+4]+v[i+13]+v[i+22])/3f;
+            float nz=(v[i+5]+v[i+14]+v[i+23])/3f;
+            float toward=nx*direction[0]+nz*direction[2];
+            if(toward<-.02f)continue;
+            int[] xx=new int[3],yy=new int[3];
+            double depth=0;
+            float red=0,green=0,blue=0;
+            for(int k=0;k<3;k++){
+                int j=i+k*9;
+                float horizontal=v[j]*direction[2]-v[j+2]*direction[0];
+                xx[k]=Math.round(width*.5f+(horizontal-origin)*zoom);
+                yy[k]=Math.round(height*.5f-(v[j+1]-cy)*zoom);
+                depth+=v[j]*direction[0]+v[j+2]*direction[2];
+                red+=v[j+6];green+=v[j+7];blue+=v[j+8];
+            }
+            float light=Math.max(.44f,Math.min(1.14f,
+                .72f+.22f*ny+.25f*toward));
+            faces.add(new Face(xx,yy,depth/3,
+                new Color(Math.max(0,Math.min(255,Math.round(255f*red*light/3))),
+                          Math.max(0,Math.min(255,Math.round(255f*green*light/3))),
+                          Math.max(0,Math.min(255,Math.round(255f*blue*light/3))))));
+        }
+        faces.sort(Comparator.comparingDouble(a->a.depth));
+        for(Face face:faces){
+            g.setColor(face.color);
+            g.fillPolygon(new Polygon(face.px,face.py,3));
+        }
+        g.setColor(new Color(45,50,55));
+        g.drawString((side<0?"LEFT":"RIGHT")+" HAND / "+
+                     VIEWS[view].toUpperCase(Locale.US),14,28);
+        g.drawString("REAL MESH - OFFLINE CROPPED PROJECTION, NOT ANDROID",
+                     14,height-21);
+        g.dispose();
+        ImageIO.write(image,"png",file.toFile());
+    }
+
     public static void main(String[] args) throws Exception{
         if(args.length!=2)throw new IllegalArgumentException("args: <12 comma-separated controls> <output-folder>");
         String[] values=args[0].split(",");
@@ -116,10 +179,14 @@ public final class HumanVariantCLI {
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model mesh=ContinuousHuman.build(true,p);
+        ArtKit.Model mesh=ContinuousHuman.build(false,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
         for(int view=0;view<VIEWS.length;view++)
             render(mesh,view,dir.resolve(VIEWS[view]+".png"));
+        for(int side:new int[]{-1,1})
+            for(int view:new int[]{0,1,3})
+                renderHand(mesh,view,side,dir.resolve(
+                    (side<0?"left":"right")+"_hand_"+VIEWS[view]+".png"));
         StringBuilder views=new StringBuilder();
         for(String view:VIEWS){
             if(views.length()>0)views.append(',');
@@ -127,7 +194,7 @@ public final class HumanVariantCLI {
         }
         String json="{\"model\":\"original_fused_human\",\"triangles\":"+
             mesh.triangleCount+",\"reviewed\":false,\"photo_realistic\":false,"+
-            "\"offline_preview\":true,\"camera_views\":["+views+"]}";
+            "\"offline_preview\":true,\"hand_closeups_per_side\":3,\"camera_views\":["+views+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");
         System.out.println("VEILBOUND_HUMAN_VARIANT_PASS triangles="+mesh.triangleCount+
             " offline_camera_views="+VIEWS.length);
