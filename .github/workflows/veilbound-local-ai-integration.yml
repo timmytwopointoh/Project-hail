@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-# Explicitly bounded one-worker integration gate. No GitHub API token, model
+# Rerun the bounded one-worker integration gate after correcting model-retry and
+# proposal policy regressions. No GitHub API token, model
 # API key, or writes/merges, and no reliance on the character team's branch.
 jobs:
   real-studio-worker:
