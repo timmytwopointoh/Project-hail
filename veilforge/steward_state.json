@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "engine": "VEILFORGE",
+  "claimant": "Timothy Harris",
+  "github_account": "timmytwopointoh",
+  "repository": "timmytwopointoh/Project-hail",
+  "operating_mode": "plan_only",
+  "autonomous_execution_enabled": false,
+  "auto_merge": false,
+  "production_promote": false,
+  "max_active_worker_and_emulator_jobs": 10,
+  "max_emulator_jobs": 4,
+  "max_expensive_inference_runs_per_day": 0,
+  "allow_source_modification": false,
+  "persistent_model_claim": false,
+  "source_of_truth": [
+    "veilforge/VEILFORGE_CHARTER.md",
+    "veilforge/ENGINE_MASTER_PLAN.json",
+    "veilforge/queue_backlog.json",
+    "docs/ownership/RIGHTS_AND_PROVENANCE.md"
+  ],
+  "next_priority": "Establish signed source provenance and audit 10-slot worker+emulator queue before activating any expensive recurring inference",
+  "handoff": {
+    "last_verified_provenance_run": null,
+    "last_verified_mixed_queue_run": null,
+    "known_limitations": [
+      "GitHub Actions schedule requires default-branch workflow",
+      "No independent proof of copyright ownership or authorship",
+      "No continuous background ChatGPT session",
+      "Third-party model licenses are under review"
+    ]
+  }
+}
