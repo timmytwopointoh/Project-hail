@@ -49,6 +49,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/BellwardenAnatomy.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M24BodyRetarget.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanSkeleton.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
