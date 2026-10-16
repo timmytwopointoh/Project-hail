@@ -1008,7 +1008,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * no extra triangles added to Vesper GLB. Procedural mobile-budget
      * animation and breathing glow, only when Vesper is selected.
      */
+    private boolean vesperAuraLogged=false;
     private void drawVesperAura(float x,float y,float z,float seconds){
+        if(!vesperAuraLogged){
+            vesperAuraLogged=true;
+            Log.i("VESPER_GLTF","AURA_DRAW_ACTIVE motes=12 source=shared_octahedron");
+        }
         GLES20.glUniform1f(uSurfaceQuality,0f);
         GLES20.glUniform1f(uHeroShading,0f);
         GLES20.glUniform1f(uSkinMode,0f);
