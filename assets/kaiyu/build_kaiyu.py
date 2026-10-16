@@ -100,11 +100,11 @@ def leaf(center,length,width,rot,mat,parent,depth=.010):
  for i in range(9):
   t=i/8.;axis=np.array([math.cos(rot),0,math.sin(rot)]);perp=np.array([-math.sin(rot),0,math.cos(rot)])
   p=np.array([x,y,z])+axis*(length*t)
-  w=width*math.sin(math.pi*t)**.8
+  w=width*(.03+.97*math.sin(math.pi*t)**.8)
   for q in (-1,1):
    pp=p+q*perp*w+np.array([0,-depth*math.sin(math.pi*t),0]);pts.append(pp)
  for i in range(8):
-  a=2*i;faces.extend([(a,a+2,a+1),(a+1,a+2,a+3),(a+1,a+2,a),(a+3,a+2,a+1)])
+  a=2*i;faces.extend([(a,a+2,a+1),(a+1,a+2,a+3)])
  emit(trimesh.Trimesh(vertices=pts,faces=faces,process=False),mat,parent)
 # Body, hands and structural shapes: chibi stylized, rounded rather than photorealistic
 ell((0,.005,-.035),(.20,.125,.235),'skin','Torso',28,20)
