@@ -424,6 +424,8 @@ assert all(x['bufferView']<len(jx['bufferViews']) for x in jx['accessors'] if 'b
 print('GLB',len(model),'meshes',len(jx.get('meshes',[])),'nodes',len(jx['nodes']), 'animation channels',len(channels), 'triangles',sum(len(m.faces) for ms in GROUP.values() for m in ms))
 # Use VTK to create tri-view preview from local source mesh (not claimed a gameplay screenshot).
 try:
+ if os.environ.get('KAIYU_ENABLE_VTK_PREVIEW','')!='1':
+  raise RuntimeError('headless preview disabled; use VQ inspection views')
  import vtk
  from vtk.util.numpy_support import numpy_to_vtk
  from PIL import Image as PILImage
