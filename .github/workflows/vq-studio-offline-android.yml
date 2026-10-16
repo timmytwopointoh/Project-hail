@@ -2,7 +2,7 @@ name: VQ Studio OFFLINE - Android APK and device repository test
 on:
   push:
     branches: ['app/vq-studio-offline-repository-20261016']
-    paths: ['vq-studio/app/**','.github/workflows/vq-studio-offline-android.yml']
+    paths: ['vq-studio/app/**','vq-studio/scripts/**','.github/workflows/vq-studio-offline-android.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -47,43 +47,9 @@ jobs:
           disk-size: 4096M
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -eu
-            mkdir -p inspection_output/vq-offline
-            adb install -r vq-studio/app/build/outputs/apk/debug/app-debug.apk
-            adb shell svc wifi disable || true
-            adb shell svc data disable || true
-            adb shell am start -W -n com.trioncompasitor.vqstudio/.OfflineActivity
-            sleep 4
-            adb shell pidof com.trioncompasitor.vqstudio
-            adb shell uiautomator dump /sdcard/offline-vq-ui.xml >/dev/null 2>&1
-            adb exec-out cat /sdcard/offline-vq-ui.xml > inspection_output/vq-offline/ui-before.xml
-            grep -q 'Create locally' inspection_output/vq-offline/ui-before.xml
-            python3 - <<'PY'
-            import re,xml.etree.ElementTree as ET
-            p="inspection_output/vq-offline/ui-before.xml"
-            xml=ET.parse(p)
-            for n in xml.iter("node"):
-                if "Create locally" in n.attrib.get("text",""):
-                    a,b,c,d=map(int,re.findall(r"\d+",n.attrib["bounds"]))
-                    open("inspection_output/vq-offline/click.txt","w").write(f"{(a+c)//2} {(b+d)//2}\n")
-                    break
-            else:raise SystemExit("Create button missing")
-            PY
-            x="$(cut -d ' ' -f1 inspection_output/vq-offline/click.txt)"
-            y="$(cut -d ' ' -f2 inspection_output/vq-offline/click.txt)"
-            adb shell input tap "$x" "$y"
-            sleep 6
-            adb exec-out screencap -p > inspection_output/vq-offline/real-offline-model.png
-            test "$(wc -c < inspection_output/vq-offline/real-offline-model.png)" -gt 7000
-            adb shell run-as com.trioncompasitor.vqstudio ls files/model_repository > inspection_output/vq-offline/local-revisions.txt
-            grep -q '\-r1.obj' inspection_output/vq-offline/local-revisions.txt
-            grep -q '\-r2.obj' inspection_output/vq-offline/local-revisions.txt
-            adb shell run-as com.trioncompasitor.vqstudio ls databases > inspection_output/vq-offline/local-db.txt
-            grep -q 'vq_models.sqlite' inspection_output/vq-offline/local-db.txt
-            echo "VQ_OFFLINE_GENERATED_TWO_REAL_OBJ_REVISIONS_NO_NETWORK_PASS"
+          script: bash vq-studio/scripts/test_offline_emulator.sh
       - name: Name phone-installable APK
-        if: success()
+        if: always()
         run: cp vq-studio/app/build/outputs/apk/debug/app-debug.apk VQ-Studio-OFFLINE-v0.2-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()
