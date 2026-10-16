@@ -16,6 +16,12 @@ on:
         description: '16-character run correlation ID'
         required: true
         type: string
+      scale_adjust:
+        description: 'Bounded reviewed geometry correction'
+        required: true
+        type: choice
+        default: original
+        options: ['original', 'smaller', 'larger']
 permissions:
   contents: read
 jobs:
