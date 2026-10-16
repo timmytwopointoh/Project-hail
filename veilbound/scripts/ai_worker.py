@@ -23,8 +23,8 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 # Native renderer/HUD require dedicated cross-system acceptance tests before AI edit.
 ROLES = {
     "combat": ["WorldState.java"],
-    "animation": ["CombatMotion.java", "CharacterRig.java"],
-    "models": ["CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
+    "models": ["ShapeEngine.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "MaterialTextures.java", "SurfaceAtlas.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
