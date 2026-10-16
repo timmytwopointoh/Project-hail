@@ -32,10 +32,9 @@ jobs:
       - name: Test real meshes, adversarial UVs and M31/M32 compatibility
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_distortion.py' -v
-          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_seams.py' -v
-          python3 -m unittest discover -s veilforge/tests -p 'test_vq_uv_atlas.py' -v
-          python3 -m compileall -q veilforge/vq_uv_distortion.py
+          python3 -m pip install --quiet pillow==11.3.0
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
       - name: Produce hashed report from real generated source geometry
         run: |
           set -euo pipefail
