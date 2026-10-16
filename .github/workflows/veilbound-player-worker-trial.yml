@@ -1,7 +1,7 @@
-name: VEILBOUND - M11 Player AI Worker Trial
+name: VEILBOUND - M12 Player AI Worker Trial
 on:
   push:
-    branches: ['feature/veilbound-m11-player-worker-test']
+    branches: ['feature/veilbound-m12-hero-realism-device-test']
     paths: ['veilbound/PLAYER_WORKER_TEST.md']
 permissions:
   contents: read
@@ -38,12 +38,12 @@ jobs:
           python3 veilbound/scripts/local_ai_pilot.py \
             --role "${{ matrix.role }}" \
             --backlog veilbound/player_worker_backlog.json \
-            --out "inspection_output/m11-${{ matrix.role }}"
+            --out "inspection_output/m12-${{ matrix.role }}"
       - name: Archive full model proposal and trusted test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: veilbound-m11-${{ matrix.role }}-proposal
+          name: veilbound-m12-${{ matrix.role }}-proposal
           path: inspection_output/m11-${{ matrix.role }}/
           if-no-files-found: warn
           retention-days: 14
