@@ -134,17 +134,22 @@ public final class ContinuousHuman {
                 int anatomicalFinger=side>0?finger:3-finger;
                 float spread=(finger-1.5f)*.067f;
                 float fx=handCenter+spread;
-                float jointY=.667f;
                 float tipY=tips[anatomicalFinger];
-                // Two joined phalange segments with slightly slimmer distal
-                // tissue. The knuckle transition stays organic, but the
-                // four tips are separated by actual open-air SDF gaps.
-                f.bone(fx,.795f,.087f,fx,jointY,.093f,
+                // Three articulated anatomical sections per finger, with
+                // decreasing girth and a shallow natural forward curl.
+                // Preserve open air between tips and the existing hand SDF
+                // probes at y=.614: detail must not recreate a mitten.
+                float middleY=.708f, distalY=.627f;
+                f.bone(fx,.795f,.087f,fx,middleY,.093f,
                        .024f,.025f,2);
-                f.bone(fx,jointY,.093f,fx,tipY,.100f,
+                f.bone(fx,middleY,.093f,fx,distalY,.101f,
                        .021f,.022f,2);
+                f.bone(fx,distalY,.101f,fx,tipY,.106f,
+                       .019f,.020f,2);
+                // Knuckle pads are fused, not separate visible beads.
                 f.add(fx,.790f,.078f,.027f,.034f,.026f);
-                f.add(fx,jointY,.093f,.022f,.024f,.022f);
+                f.add(fx,middleY,.093f,.023f,.022f,.022f);
+                f.add(fx,distalY,.101f,.020f,.018f,.020f);
             }
             // Opposable thumb has a separate angled metacarpal and phalanx.
             // Its base joins the palm, while its tip bends away from the
