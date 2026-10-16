@@ -1,10 +1,10 @@
 """Real geometry VQ-compatible 14-angle offline review; NOT Android screenshots."""
-import math, json, hashlib
+import math, json, hashlib, os
 import numpy as np,trimesh, vtk
 from vtk.util.numpy_support import numpy_to_vtk
 from PIL import Image,ImageDraw
 from pathlib import Path
-BASE=Path('/mnt/data');P=BASE/'kaiyu_skinned_m2.glb'; OUT=BASE/'kaiyu_vq_m2';OUT.mkdir(exist_ok=True)
+BASE=Path(os.environ.get('KAIYU_OUT','/mnt/data'));P=BASE/'kaiyu_skinned_m2.glb'; OUT=BASE/'kaiyu_vq_m2';OUT.mkdir(exist_ok=True)
 s=trimesh.load(P,force='scene',process=False)
 ren=vtk.vtkRenderer();ren.SetBackground(.12,.082,.124)
 rw=vtk.vtkRenderWindow();rw.SetOffScreenRendering(1);rw.SetSize(400,510);rw.SetMultiSamples(4);rw.AddRenderer(ren)
