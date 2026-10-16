@@ -3,25 +3,26 @@ package game.ashenveil.veilbound;
 import java.util.Arrays;
 
 /**
- * Five-bone rigid armor rig extracted from existing hand-authored mesh triangles.
+ * Hero seven-part rigid armor rig extracted from existing hand-authored mesh triangles.
  * Each segment keeps its normals and painted materials. The original merged
  * meshes remain untouched for Model Atelier inspection and imported OBJ work.
- * Cloth and helmet remain attached to the torso rather than stretching.
+ * The Bellwarden helmet and mantle have independent pivots; foes remain unchanged.
  */
 public final class CharacterRig {
     private CharacterRig() {}
     public static final class Parts {
-        public final ArtKit.Model torso, leftArm, rightArm, leftLeg, rightLeg, mantle;
+        public final ArtKit.Model torso, leftArm, rightArm, leftLeg, rightLeg, mantle, helmet;
         public final float shoulderX,shoulderY,hipX,hipY;
         Parts(ArtKit.Model[] models,float sx,float sy,float hx,float hy){
             torso=models[0];leftArm=models[1];rightArm=models[2];
-            leftLeg=models[3];rightLeg=models[4];mantle=models[5];
+            leftLeg=models[3];rightLeg=models[4];mantle=models[5];helmet=models[6];
             shoulderX=sx;shoulderY=sy;hipX=hx;hipY=hy;
         }
         public int vertices(){
             return (torso.vertices.length+leftArm.vertices.length+rightArm.vertices.length
                 +leftLeg.vertices.length+rightLeg.vertices.length+
-                (mantle==null?0:mantle.vertices.length))/9;
+                (mantle==null?0:mantle.vertices.length)+
+                (helmet==null?0:helmet.vertices.length))/9;
         }
     }
     private static final class Accumulator {
@@ -46,8 +47,8 @@ public final class CharacterRig {
         final float armTop=boss?3.34f:(revenant?2.06f:2.14f);
         final float legTop=boss?1.16f:(revenant?.82f:.77f);
         final float legEdge=boss?.26f:(revenant?.13f:.15f);
-        Accumulator[] a=new Accumulator[6];
-        for(int i=0;i<6;i++)a[i]=new Accumulator();
+        Accumulator[] a=new Accumulator[7];
+        for(int i=0;i<7;i++)a[i]=new Accumulator();
         float[] src=model.vertices;
         if(src.length%27!=0)throw new IllegalArgumentException("Non-triangular source");
         for(int i=0;i<src.length;i+=27){
@@ -56,7 +57,9 @@ public final class CharacterRig {
             float z=(src[i+2]+src[i+11]+src[i+20])/3f;
             int part=0;float px=0,py=0,pz=0;
             float paintedRed=(src[i+6]+src[i+15]+src[i+24])/3f;
-            if(!boss&&!revenant&&z<-.42f&&y>.12f&&y<2.05f
+            if(!boss&&!revenant&&y>2.12f&&Math.abs(x)<.55f){
+                part=6;py=2.22f;
+            }else if(!boss&&!revenant&&z<-.42f&&y>.12f&&y<2.05f
                     &&paintedRed<.38f){
                 // Distinct cloth island with shoulder-level hinge, not welded
                 // to the entire rigid torso. Enemy rigs remain unchanged.
@@ -68,8 +71,8 @@ public final class CharacterRig {
             }
             a[part].add(src,i,px,py,pz);
         }
-        ArtKit.Model[] out=new ArtKit.Model[6];
-        for(int i=0;i<6;i++)out[i]=a[i].finish();
+        ArtKit.Model[] out=new ArtKit.Model[7];
+        for(int i=0;i<7;i++)out[i]=a[i].finish();
         return new Parts(out,shoulderX,shoulderY,hipX,hipY);
     }
 }
