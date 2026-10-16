@@ -238,6 +238,73 @@ public final class CinematicArtKit {
         f.engraving(chest,.024f,.88f,.71f,.45f);
         f.rod(0,1.41f,.55f,0,1.28f,.55f,.034f,10,.90f,.71f,.44f);
         f.ellipsoid(0,1.26f,.58f,.07f,.06f,.045f,14,8,.91f,.77f,.51f);
+        // M11 player-only upgrade: overlapping forged collar, mail neck,
+        // bevelled fan tassets and scale-by-scale surface break-up.
+        // Distinct contours survive the distant third-person camera.
+        for(int side=-1;side<=1;side+=2){
+            // Layered burnished throat plate and forged torc collar.
+            f.ellipsoid(side*.23f,1.97f,.14f,.28f,.12f,.31f,22,9,
+                        .29f,.35f,.41f);
+            f.rod(side*.17f,2.035f,.40f,side*.48f,1.97f,.25f,
+                  .025f,9,.77f,.68f,.49f);
+            // Interlocking breastplate side ribs / riveted underlay.
+            for(int rib=0;rib<5;rib++){
+                float yy=1.24f+rib*.123f;
+                float xx=side*(.34f+rib*.022f);
+                f.ellipsoid(xx,yy,.31f,.135f,.061f,.10f,15,7,
+                            .32f+rib*.018f,.39f+rib*.012f,.46f+rib*.01f);
+                f.ellipsoid(xx+side*.073f,yy,.391f,.016f,.015f,.019f,
+                            10,5,.79f,.67f,.48f);
+            }
+            // Overlapping hip flaps cascade toward the upper thighs.
+            for(int t=0;t<4;t++){
+                float tx=side*(.40f+t*.09f);
+                f.ellipsoid(tx,.84f-t*.095f,.15f,.135f,.19f,.103f,
+                            18,11,.29f+t*.025f,.36f+t*.027f,.41f+t*.029f);
+                f.rod(tx-side*.068f,.72f-t*.095f,.225f,
+                      tx+side*.065f,.72f-t*.095f,.22f,
+                      .017f,8,.70f,.60f,.40f);
+            }
+            // Anatomically rounded sabaton and floating knee trim.
+            f.ellipsoid(side*.26f,.16f,.40f,.25f,.13f,.43f,27,13,
+                        .36f,.42f,.46f);
+            for(int ring=0;ring<4;ring++){
+                float zz=.53f+ring*.066f;
+                f.ellipsoid(side*.26f,.19f,zz,.24f-ring*.022f,.045f,.09f,
+                            20,7,.43f,.49f,.54f);
+            }
+            f.ellipsoid(side*.26f,.73f,.34f,.285f,.17f,.26f,26,12,
+                        .65f,.65f,.59f);
+            f.rod(side*.12f,.75f,.49f,side*.41f,.75f,.48f,
+                  .018f,8,.83f,.71f,.47f);
+            // Raised pauldron ridge and amber plated rivet heads.
+            float shoulder=side*.76f;
+            for(int plate=0;plate<4;plate++){
+                f.ellipsoid(shoulder+side*.14f,1.92f-plate*.105f,
+                            -.045f+plate*.05f,.47f-plate*.025f,.085f,.40f,
+                            24,10,.35f+plate*.055f,.45f+plate*.05f,
+                            .52f+plate*.04f);
+                f.ellipsoid(shoulder+side*.37f,1.91f-plate*.103f,.23f,
+                            .027f,.027f,.030f,11,7,.82f,.69f,.46f);
+            }
+        }
+        // Ventilated visor slits and raised bronze brow create believable
+        // negative space rather than a smooth featureless helmet sphere.
+        for(int slit=0;slit<7;slit++){
+            float sx=(slit-3f)*.085f;
+            float y=2.24f+(slit%2)*.014f;
+            f.rod(sx,y,.437f,sx,y+.087f,.425f,.016f,8,.10f,.13f,.16f);
+            f.ellipsoid(sx,2.34f,.419f,.026f,.022f,.029f,
+                        11,6,.78f,.68f,.47f);
+        }
+        // Angular cheek guards and raised center seam carry the silhouette
+        // into gameplay without increasing global lighting costs.
+        f.rod(-.37f,2.35f,.23f,-.25f,2.11f,.36f,.046f,12,
+              .49f,.57f,.61f);
+        f.rod(.37f,2.35f,.23f,.25f,2.11f,.36f,.046f,12,
+              .49f,.57f,.61f);
+        f.rod(0,2.80f,.06f,0,2.95f,-.05f,.055f,11,
+              .76f,.65f,.46f);
         // Scalloped leather lamellar scales over hips.
         for(int side=-1;side<=1;side+=2){
             for(int i=0;i<7;i++){
