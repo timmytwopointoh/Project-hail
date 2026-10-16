@@ -8,6 +8,7 @@ on:
       # Only game/runtime and emulator analysis changes need a costly full APK run.
       # Manager task plans and docs are covered by fast parallel QA instead.
       - 'veilbound/app/**'
+      - 'veilbound/tests/**'
       - 'veilbound/build.gradle'
       - 'veilbound/settings.gradle'
       - 'veilbound/scripts/emulator_test.py'
