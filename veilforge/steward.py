@@ -16,6 +16,9 @@ def produce(state_path:Path,roadmap_path:Path,backlog_path:Path,out:Path) -> dic
     backlog=json.loads(backlog_path.read_text(encoding="utf-8"))
     if (state.get("schema_version")!=1 or state.get("engine")!="VEILFORGE"
         or state.get("claimant")!="Timothy Harris"
+        or state.get("display_name")!="VEYLQUORIN"
+        or state.get("short_name")!="VQ"
+        or state.get("legacy_engine_id")!="VEILFORGE"
         or state.get("operating_mode")!="plan_only"
         or state.get("autonomous_execution_enabled") is not False
         or state.get("auto_merge") is not False
@@ -40,6 +43,7 @@ def produce(state_path:Path,roadmap_path:Path,backlog_path:Path,out:Path) -> dic
     selected=pending[:CAP]
     report={
         "schema_version":1,"engine":"VEILFORGE",
+        "display_name":state["display_name"],"short_name":state["short_name"],
         "claimant":state["claimant"],
         "observed_at_utc":datetime.now(timezone.utc).isoformat(),
         "operating_mode":"plan_only","executed_workers":0,
@@ -56,7 +60,7 @@ def produce(state_path:Path,roadmap_path:Path,backlog_path:Path,out:Path) -> dic
     out.mkdir(parents=True,exist_ok=True)
     (out/"handoff.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     (out/"handoff.md").write_text(
-        "# VEILFORGE persistent planning checkpoint\n\n"+
+        "# VEYLQUORIN (VQ) persistent planning checkpoint\n\n"+
         "Claimant: "+state["claimant"]+"\n\n"+
         "Observed UTC: "+report["observed_at_utc"]+"\n\n"+
         "Manual approval required; no model, worker, emulator or merge was started.\n\n"+
@@ -74,7 +78,7 @@ def main() -> None:
     p.add_argument("--out",type=Path,required=True)
     a=p.parse_args()
     result=produce(a.state,a.roadmap,a.backlog,a.out)
-    print("VEILFORGE_RESTART_CHECKPOINT",result["queue_pending_total"],
+    print("VQ_RESTART_CHECKPOINT",result["queue_pending_total"],
           "pending; zero agents and emulators executed")
 
 
