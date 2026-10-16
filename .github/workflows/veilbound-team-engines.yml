@@ -6,6 +6,7 @@ on:
       - 'veilbound/tools/**'
       - 'veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java'
       - 'veilbound/engines/**'
+      - 'veilbound/scripts/team_engine_check.py'
       - '.github/workflows/veilbound-team-engines.yml'
   workflow_dispatch:
 permissions:
