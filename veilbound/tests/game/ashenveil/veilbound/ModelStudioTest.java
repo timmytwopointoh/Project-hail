@@ -32,6 +32,12 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==12,"Sculpted hand asset must have its own game viewer");
+        s.focusDetail();
+        ok(s.snapshot().zoom<1.85f,"Hand sculpt focus should enable close study");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"Sculpted hands four-angle inspection");
+        s.nextItem(-1);
         ok(s.snapshot().item==11,"Human studio selection");
         s.focusDetail();
         ModelStudio.Snapshot hand=s.snapshot();
