@@ -65,6 +65,16 @@ def audit(root,out=None):
         issues.append("General screenshot gate does not reject splash screens")
     if 'background_ok=score["renderer_background_confirmed"]' not in m30:
         issues.append("M30 screenshot gate does not reuse strict common validation")
+    # M34-08: the factory uses one persistent, fail-closed ADB logcat
+    # subscriber. A compatibility-only one-off dump may remain on failure.
+    if ("from vq_logcat_stream import LogcatStream" not in capture
+            or 'with LogcatStream(output/"device_logcat.txt"' not in capture
+            or "monitor.mark()" not in capture
+            or "monitor=monitor,since=cursor" not in capture):
+        issues.append("Factory Android capture lost bounded logcat subscription")
+    frame_wait=capture.split("def wait_frame(",1)[-1].split("\ndef capture(",1)[0]
+    if 'adb("logcat"' in frame_wait:
+        issues.append("Frame polling rereads full Android logcat buffer")
     if "VIEWS=[" not in capture or "ROLES={" not in capture:
         issues.append("Existing source camera and asset roles missing")
     # The high-detail six-team producer is independent of screenshot QA

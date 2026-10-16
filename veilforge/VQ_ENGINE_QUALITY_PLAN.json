@@ -394,9 +394,9 @@
     }
   ],
   "current_iteration": {
-    "milestone": "M34-02..M34-05",
-    "branch": "feature/veilforge-m34-efficient-emulator-qa",
-    "technical_gate": "Four real Android emulator jobs, full capture/splash protection, independent LOD+semantic review and self-audited workflow must pass; no measured runtime claims until comparable Actions timings.",
+    "milestone": "M34-08",
+    "branch": "feature/veilforge-m34-bounded-logcat-stream",
+    "technical_gate": "One append-only logcat process per factory Android role, strict fresh frame cursors, sticky GL error preservation, full 14-view capture, four real Android 15 jobs and independent visual reviewers must pass.",
     "game_release_approved": false
   },
   "operational_efficiency_map": "veilforge/VQ_M34_EFFICIENCY_MAP.json",

@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+from vq_logcat_stream import LogcatStream
 
 ANDROID_PACKAGE="game.veilforge.probe"
 ACTIVITY=ANDROID_PACKAGE+"/.ViewerActivity"
@@ -82,7 +83,7 @@ def metrics(image):
             "renderer_background_confirmed":renderer_background_confirmed(image),
             "dimensions":list(image.size)}
 
-def capture_visible_frame(path, *, attempts=8, interval=.75):
+def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
     """Wait for the *presented* Android frame, not just the GL draw callback.
 
     A FRAME_OK log is emitted before the emulator compositor necessarily
@@ -94,8 +95,12 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
         raise ValueError("At least one real screenshot attempt is required")
     last = None
     for attempt in range(1, attempts + 1):
+        if monitor is not None:
+            monitor.assert_healthy()
         pic = screenshot(path)
         last = metrics(pic)
+        if monitor is not None:
+            monitor.assert_healthy()
         if last.get("modal_overlay_fraction",0) >= .70:
             # Save visual proof of a false-positive foreground (e.g. Android
             # Quickstep launcher ANR overlay), then tap its "Wait" row.
@@ -115,10 +120,14 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
         # Persistent renderer errors are not compositor settling problems.
-        log = adb("logcat", "-d", "-s", "VEILFORGE_PROBE:I", "*:S", timeout=15)
-        if any(marker in log for marker in ("GL_ERROR", "LOAD_FAIL", "ASSET_NOT_FOUND")):
-            raise RuntimeError("Android GL renderer failed while awaiting screenshot: "
-                               + log[-1800:])
+        if monitor is None:
+            # Standalone compatibility; factory capture uses one subscriber.
+            log = adb("logcat", "-d", "-s", "VEILFORGE_PROBE:I", "*:S", timeout=15)
+            if any(marker in log for marker in ("GL_ERROR", "LOAD_FAIL", "ASSET_NOT_FOUND")):
+                raise RuntimeError("Android GL renderer failed while awaiting screenshot: "
+                                   + log[-1800:])
+        else:
+            monitor.assert_healthy()
         if attempt < attempts:
             time.sleep(interval)
     raise RuntimeError(f"Blank, launcher/splash, system UI, or near-empty GLES frame after {attempts} "
@@ -131,22 +140,19 @@ def change_fraction(a,b):
     diff=ImageChops.difference(a,b)
     return sum(1 for px in diff.getdata() if max(px)>=12)/(240*135)
 
-def wait_frame(asset,yaw,pitch,timeout=15):
-    marker=f"FRAME_OK asset={asset} "
-    target=f" yaw={yaw} pitch={pitch}"
-    end=time.monotonic()+timeout
-    while time.monotonic()<end:
-        data=adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S",timeout=15)
-        for line in data.splitlines():
-            if "GLTF_LOADED actual_scene=true" in line and (
-                    "models=10 nodes=11" not in line):
-                raise RuntimeError("Renderer reloaded duplicate meshes or imported wrong pack: "+line)
-        if marker in data and any(marker in line and target in line for line in data.splitlines()):
-            return data
-        if "LOAD_FAIL" in data or "GL_ERROR" in data or "ASSET_NOT_FOUND" in data:
-            raise RuntimeError("Actual GLES viewer failed: "+data[-1800:])
-        time.sleep(.35)
-    raise RuntimeError(f"Timed out waiting for GLES frame asset={asset} view={yaw}/{pitch}")
+def wait_frame(asset, yaw, pitch, *, monitor, since, timeout=15):
+    """Require a NEW GLES draw event after this specific camera launch."""
+    marker = f"FRAME_OK asset={asset} "
+    target = f" yaw={yaw} pitch={pitch}"
+    try:
+        return monitor.wait_for(
+            lambda line: marker in line and target in line,
+            since=since, timeout=timeout)
+    except TimeoutError as error:
+        raise RuntimeError(
+            f"Timed out waiting for GLES frame asset={asset} view={yaw}/{pitch}"
+        ) from error
+
 
 def capture(role,apk,output,expected_apk_sha,source_sha):
     if role not in ROLES:raise ValueError("Unknown worker role")
@@ -160,30 +166,32 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
     packages=adb("shell","pm","path",ANDROID_PACKAGE)
     if "package:" not in packages:raise RuntimeError("APK not installed")
     adb("logcat","-c")
-    collected=[]
-    for asset in ROLES[role]:
-        base=output/asset;base.mkdir(parents=True,exist_ok=True)
-        shots=[];measurements=[]
-        for index,(yaw,pitch) in enumerate(VIEWS):
-            adb("shell","am","start","--activity-single-top",
-                "-n",ACTIVITY,"--es","asset",asset,
-                "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
-            log=wait_frame(asset,yaw,pitch)
-            dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
-            pic,result,attempts=capture_visible_frame(dest)
-            result.update({"index":index,"yaw":yaw,"pitch":pitch,
-                            "capture_attempts":attempts,
-                            "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
-                            "image":str(dest.relative_to(output))})
-            shots.append(pic);measurements.append(result)
-        changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
-        del shots
-        if max(changes)<.0006:
-            raise RuntimeError(f"Camera did not visibly orbit {asset}: max delta={max(changes)}")
-        collected.append({"asset":asset,"views":measurements,"max_orbit_change":max(changes),
-                          "min_foreground_fraction":min(x["foreground_fraction"] for x in measurements)})
-    log=adb("logcat","-d","-s","VEILFORGE_PROBE:I","*:S")
-    (output/"device_logcat.txt").write_text(log,encoding="utf-8")
+    with LogcatStream(output/"device_logcat.txt", reject_wrong_pack=True) as monitor:
+        collected=[]
+        for asset in ROLES[role]:
+            base=output/asset;base.mkdir(parents=True,exist_ok=True)
+            shots=[];measurements=[]
+            for index,(yaw,pitch) in enumerate(VIEWS):
+                cursor=monitor.mark()
+                adb("shell","am","start","--activity-single-top",
+                    "-n",ACTIVITY,"--es","asset",asset,
+                    "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
+                wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
+                dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
+                pic,result,attempts=capture_visible_frame(dest,monitor=monitor)
+                result.update({"index":index,"yaw":yaw,"pitch":pitch,
+                                "capture_attempts":attempts,
+                                "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
+                                "image":str(dest.relative_to(output))})
+                shots.append(pic);measurements.append(result)
+            changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
+            del shots
+            if max(changes)<.0006:
+                raise RuntimeError(f"Camera did not visibly orbit {asset}: max delta={max(changes)}")
+            collected.append({"asset":asset,"views":measurements,"max_orbit_change":max(changes),
+                              "min_foreground_fraction":min(x["foreground_fraction"] for x in measurements)})
+        monitor.assert_healthy()
+    log=(output/"device_logcat.txt").read_text(encoding="utf-8")
     if "GLTF_LOADED actual_scene=true" not in log or "GLES_READY renderer=" not in log:
         raise RuntimeError("No real GLES geometry-import/GPU evidence")
     texture_markers=re.findall(r"MATERIAL_MAPS_LOADED basecolor=(\d+) metallic_roughness=(\d+) unique_gpu_textures=(\d+)",log)

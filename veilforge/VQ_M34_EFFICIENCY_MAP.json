@@ -36,28 +36,28 @@
       "id": "M34-02",
       "priority": "P0",
       "name": "Use all four independent emulator runners without a three-worker queue",
-      "status": "implemented_pending_ci",
+      "status": "verified",
       "acceptance": "Matrix has exactly four roles, max-parallel four, immutable artifact from one builder."
     },
     {
       "id": "M34-03",
       "priority": "P0",
       "name": "Unify duplicate advanced-review job setup and downloads",
-      "status": "implemented_pending_ci",
+      "status": "verified",
       "acceptance": "Both independent review algorithms run even if either fails, one image download and pip install, preserve historical artifact identities."
     },
     {
       "id": "M34-04",
       "priority": "P0",
       "name": "Reject Android launch screens in ALL emulator screenshots",
-      "status": "implemented_pending_ci",
+      "status": "verified",
       "acceptance": "Explicit GLES sky background + nonempty geometry + system modal rejection, genuine 14 angles."
     },
     {
       "id": "M34-05",
       "priority": "P0",
       "name": "Enforce fail-closed evidence without weakening artistic gates",
-      "status": "implemented_pending_ci",
+      "status": "verified",
       "acceptance": "Missing emulator, launcher capture, wrong SHA, missing view, failed visual reviewer always fails evidence gate."
     },
     {
@@ -79,8 +79,9 @@
       "id": "M34-08",
       "priority": "P1",
       "name": "Bound incremental logcat streaming and capture retries",
-      "status": "planned",
-      "acceptance": "One process or bounded append-only log cursor per device, no repeated entire log buffer retrieval, no missed GPU error/frame markers."
+      "status": "partial",
+      "acceptance": "One process or bounded append-only log cursor per device, no repeated entire log buffer retrieval, no missed GPU error/frame markers.",
+      "implementation_note": "Persistent factory emulator logcat subscriber with startup handshake, per-view cursor, durable append-only evidence, bounded RAM and sticky GL errors; independent unit tests added. Four-role real Android CI must still validate the new streaming path. M30 legacy logcat path remains for later SDK consolidation."
     },
     {
       "id": "M34-09",
@@ -120,5 +121,5 @@
   ],
   "claims_limit": "Parallelism reduces a three-plus-one emulator wave to one wave when runners are available. Do not claim a specific wall-time or cost improvement until comparable real Actions jobs prove it.",
   "definition_of_done": "All P0/P1 gates have independent green CI evidence, compatible Android captures remain genuine and the changes have not removed model/visual/hardware release gates. Exact photorealism and physical-device acceptance remain outside this optimization track.",
-  "base_run_status": "Initial CI found missing Pillow dependencies in both manager jobs and an older mock missing new captured-frame field; corrected in this milestone before rerun."
+  "base_run_status": "Factory Actions run 38916145322 passed 18 jobs with 125 tests and four genuine Android 15 emulator roles; high-detail run 38916145745 also passed. M34-08 new streaming change requires independent CI; no speedup or physical-device claims."
 }
