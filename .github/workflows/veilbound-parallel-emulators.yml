@@ -40,8 +40,10 @@ permissions:
 # Optional compatibility mode retains Android 13/14/15 checks for release QA.
 # Runners may queue on GitHub account limits; no extra API or secret is required.
 concurrency:
+  # Supersede outdated candidate farms: all emulators run the latest SAME
+  # branch commit and never burn hosted VM time on superseded game versions.
   group: veilbound-emulator-farm-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   emulator-director:
     name: Plan isolated emulator instances
