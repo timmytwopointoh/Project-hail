@@ -3,7 +3,7 @@ name: VEILFORGE - Ownership Provenance and Persistent Steward
 on:
   push:
     branches:
-      - 'feature/veilforge-ownership-provenance-20261016'
+      - 'legal/veilforge-owner-20261016'
     paths:
       - 'LICENSE'
       - 'docs/ownership/**'
