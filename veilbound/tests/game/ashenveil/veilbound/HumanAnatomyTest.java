@@ -17,8 +17,9 @@ public final class HumanAnatomyTest {
         }
         yes(hi-lo>2.55f&&hi-lo<3.0f,"Unrealistic human height");
         yes(skin>2000&&shorts>80,"Missing skin or modest shorts");
-        yes(ModelStudio.ITEMS[ModelStudio.ITEMS.length-2].startsWith("HUMAN BASE"),
+        yes(ModelStudio.ITEMS[11].startsWith("HUMAN BASE"),
             "Human is not selectable as distinct Atelier viewer model");
+        yes(ModelStudio.ITEMS[12].startsWith("M23 HAND"),"Sculpted hands preview missing");
         yes("IMPORTED OBJ".equals(ModelStudio.ITEMS[ModelStudio.ITEMS.length-1]),
             "Existing OBJ import was displaced");
         System.out.println("VEILBOUND_HUMAN_BASE_PASS tris="+a.triangleCount+
