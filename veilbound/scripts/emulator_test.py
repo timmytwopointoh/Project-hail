@@ -194,10 +194,22 @@ def main():
         # A GL frame can be delayed by first-time high-detail mesh uploads.
         # Retry *real ADB swipes* with image evidence; never force the camera
         # state or mark orbit as tested without an observed scene change.
-        for orbit_attempt in range(3):
-            adb("shell","input","swipe",int(w*.54),int(h*.46),
-                int(w*.78),int(h*.40),650,timeout=35)
-            time.sleep(1.1 + orbit_attempt*.5)
+        # Pixel-4 SwiftShader can miss quick generic ADB swipes while a
+        # dense first-time GL mesh is uploading. After fast attempts, use
+        # longer alternate touchscreen gestures, but NEVER invent success.
+        orbit_probes=[
+            (.54,.46,.78,.40,650),
+            (.54,.46,.78,.40,850),
+            (.48,.42,.80,.38,1100),
+            (.43,.38,.80,.48,1350),
+            (.58,.49,.28,.42,1600),
+            (.37,.52,.72,.41,1500)
+        ]
+        for orbit_attempt,(ax,ay,bx,by,duration) in enumerate(orbit_probes):
+            adb("shell","input","touchscreen","swipe",
+                int(w*ax),int(h*ay),int(w*bx),int(h*by),
+                duration,timeout=35)
+            time.sleep(1.5 + min(1.3,orbit_attempt*.35))
             turned=shot("01_atelier_orbit.png")
             with Image.open(OUT/"01_atelier_hero.png") as before, Image.open(OUT/"01_atelier_orbit.png") as after:
                 diff=ImageChops.difference(before.convert("RGB").resize((160,90)),
@@ -205,6 +217,7 @@ def main():
                 delta=sum(ImageStat.Stat(diff).mean)/3
                 atelier["orbit_pixel_delta"]=round(delta,3)
                 atelier["orbit_attempts"]=orbit_attempt+1
+                atelier["orbit_pixel_delta"]=round(delta,3)
                 atelier["orbit"]=delta>0.5
             if atelier["orbit"]:
                 break
