@@ -71,6 +71,26 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual("studio", plan["tasks"][0]["worker"])
         self.assertEqual("VB-STUDIO-ORBIT", plan["tasks"][0]["id"])
 
+    def test_actual_moto_g_atelier_material_and_light_failure_goes_to_studio(self):
+        em, vi = self.fresh()
+        em["status"] = "failed"
+        em["error"] = ("AssertionError(\"Studio model/material/light settings did not change: "
+                       "{'open': True, 'orbit': True, 'asset_switch': False, "
+                       "'lighting': False}\")")
+        plan = qa.create_plan(em, vi, commit="b" * 40)
+        self.assertEqual("blocked", plan["release_gate"])
+        self.assertEqual("VB-STUDIO-CONTROLS", plan["tasks"][0]["id"])
+        self.assertEqual("studio", plan["tasks"][0]["worker"])
+        self.assertIn("real ADB taps", plan["tasks"][0]["required_test"])
+
+    def test_studio_boot_failure_goes_to_studio_without_faking_success(self):
+        em, vi = self.fresh()
+        em["status"] = "failed"
+        em["error"] = "Atelier GL high-poly / atlas initialization never completed"
+        plan = qa.create_plan(em, vi)
+        self.assertEqual("studio", plan["tasks"][0]["worker"])
+        self.assertEqual("VB-STUDIO-ENTER", plan["tasks"][0]["id"])
+
     def test_invalid_json_returns_none_and_report_is_renderable(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "bad.json"
