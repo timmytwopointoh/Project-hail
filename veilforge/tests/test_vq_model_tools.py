@@ -98,6 +98,29 @@ class VQModelToolsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             inspect(self.obj,self.root/"budget",render_faces=10001)
 
+    def test_integrated_queue_reviewer_checks_all_14_frame_hashes(self):
+        from factory import build_asset
+        from preview import build_views
+        import importlib.util
+        directory=self.root/"veylquorin-asset"
+        catalog=Path(__file__).resolve().parents[1]/"catalog.json"
+        manifest=build_asset(catalog,"ancient_tree",directory)
+        build_views(catalog,"ancient_tree",directory/"previews")
+        result=inspect(directory/"ancient_tree.obj",
+                       directory/"vq_model_inspection",
+                       gltf=directory/"ancient_tree.gltf")
+        self.assertTrue(result["technical_geometry_smoke_passed"])
+        modpath=Path(__file__).resolve().parents[1]/"queue.py"
+        spec=importlib.util.spec_from_file_location("vq_legacy_queue",modpath)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        job={"kind":"asset","asset":"ancient_tree"}
+        self.assertEqual(module.evidence_ok(job,directory,"a"*40,""),[])
+        artifact=directory/"vq_model_inspection/views/orbit_00_yaw_000.png"
+        artifact.write_bytes(b"modified")
+        self.assertTrue(any("source orbit image missing or modified" in s
+                            for s in module.evidence_ok(job,directory,"a"*40,"")))
+
 
 if __name__=="__main__":
     unittest.main()
