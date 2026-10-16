@@ -365,6 +365,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         // Retains game as stable testing grounds; no gameplay character swap.
         ArtKit.Model poseSource=HumanAnatomy.buildM24Candidate(true);
         HumanSkeleton poseRig=HumanSkeleton.bind(poseSource);
+        M24BodyRetarget.alignBindJoints(poseRig);
         float[] testAngles=new float[HumanSkeleton.JOINTS];
         testAngles[5]=-.18f;testAngles[6]=.26f;testAngles[7]=-.10f;
         testAngles[8]=.18f;testAngles[9]=-.26f;testAngles[10]=.10f;
