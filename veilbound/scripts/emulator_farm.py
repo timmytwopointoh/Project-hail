@@ -28,7 +28,11 @@ def make_matrix(count):
             "min_required": count,
             "note": "Each emulator runs separately on its own Ubuntu runner and checks one immutable APK."}
 
-def summarize(root, expected):
+def summarize(root, expected, *, expected_sha=None):
+    if expected_sha is not None and (not isinstance(expected_sha, str)
+                                     or len(expected_sha) != 40
+                                     or any(c not in '0123456789abcdef' for c in expected_sha.lower())):
+        raise ValueError('Invalid expected source commit SHA')
     root = Path(root)
     if not 1 <= expected <= MAX_EMULATORS:
         raise ValueError("Invalid number of expected emulator reports")
@@ -51,10 +55,46 @@ def summarize(root, expected):
                 row["result"] = "malformed"
         else:
             row["result"] = "missing"
-        row["passed"] = (row["result"] == "passed" and row["quality_present"]
-                         and row.get("screenshot_count", 0) >= 10)
-        checked.append(row)
+        if quality_file.is_file():
+            try:
+                quality = json.loads(quality_file.read_text(encoding="utf-8"))
+                row["quality_result"] = quality.get("emulator_test")
+                row["quality_screenshots"] = len(quality.get("screenshots", []))
+            except (ValueError, OSError, TypeError, AttributeError):
+                row["quality_result"] = "malformed"
+        else:
+            row["quality_result"] = "missing"
         tasks_file = folder / "task_plan.json"
+        if tasks_file.is_file():
+            try:
+                plan = json.loads(tasks_file.read_text(encoding="utf-8"))
+                row["qa_release_gate"] = plan.get("release_gate")
+                row["source_commit"] = plan.get("source_commit")
+                row["qa_emulator_result"] = plan.get("emulator_status")
+            except (ValueError, OSError, AttributeError):
+                row["qa_release_gate"] = "malformed"
+        if expected_sha is None:
+            # Legacy fixture format is useful for unit tests, but live CI
+            # passes a commit and requires all independently produced evidence.
+            row["passed"] = (row["result"] == "passed" and row["quality_present"]
+                             and row.get("screenshot_count", 0) >= 10)
+        else:
+            rows = report.get("screenshots", []) if report_file.is_file() and row["result"] == "passed" else []
+            paths = [entry.get("path") for entry in rows if isinstance(entry, dict)]
+            present = len(paths) >= 10 and all(
+                isinstance(name, str) and (folder / name).is_file()
+                and name.endswith(".png") and "/" not in name and ".." not in name
+                for name in paths)
+            row["verified_images_present"] = present
+            row["source_matches"] = row.get("source_commit") == expected_sha
+            row["passed"] = (row["result"] == "passed" and
+                             row["quality_result"] == "passed" and
+                             row.get("quality_screenshots", 0) >= 10 and
+                             present and row["source_matches"] and
+                             row.get("qa_release_gate") != "blocked" and
+                             row.get("qa_emulator_result") == "passed" and
+                             row.get("qa_release_gate") in ("clear", "needs-review"))
+        checked.append(row)
         if tasks_file.is_file():
             try:
                 tasks = json.loads(tasks_file.read_text(encoding="utf-8")).get("tasks", [])
@@ -95,6 +135,8 @@ def main():
     parser.add_argument("--count", type=int)
     parser.add_argument("--github-output", type=Path)
     parser.add_argument("--summarize", type=Path)
+    parser.add_argument('--expected-sha', default=None,
+                        help='Full immutable APK source SHA (required for strict real CI)')
     parser.add_argument("--out", type=Path,
                         default=Path("inspection_output/emulator-farm"))
     args = parser.parse_args()
@@ -107,7 +149,7 @@ def main():
                 file.write("matrix=" + json.dumps(result["matrix"], separators=(",", ":")) + "\n")
                 file.write("count=" + str(result["count"]) + "\n")
     else:
-        result = summarize(args.summarize, args.count)
+        result = summarize(args.summarize, args.count, expected_sha=args.expected_sha)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "emulator_farm_report.json").write_text(json.dumps(result, indent=2) + "\n")
     text = ["# VEILBOUND parallel Android emulator farm", ""]
