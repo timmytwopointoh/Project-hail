@@ -334,6 +334,33 @@ def main():
         hand_frame=shot("01_human_five_finger_closeup.png")
         report["screenshots"].append(hand_frame)
         atelier["human_hand_focus_capture"]=True
+        # M23: verify the *actual in-game imported modeling pipeline* rather
+        # than treating offline Java projections as Android screenshots.
+        touch(w*.65,h*.865)  # HUMAN BASE -> M23 HAND SCULPT
+        time.sleep(1.3)
+        asset_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                      timeout=20).decode("utf-8","replace")
+        if "item=12" not in asset_log or "M23_HAND_ASSET_ATTACHED" not in asset_log:
+            raise AssertionError("M23 sculpted hands not present in Android Model Atelier")
+        atelier["m23_sculpted_hands"]={"four_angle_inspection":True,
+                                      "digit_claim_requires_visual_review":True}
+        previous=OUT/"01_m23_hand_sculpt_front.png"
+        report["screenshots"].append(shot(previous.name))
+        for angle in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)  # Actual model review camera control
+            time.sleep(1.2)
+            name="01_m23_hand_sculpt_"+angle+".png"
+            report["screenshots"].append(shot(name))
+            with Image.open(previous) as aa,Image.open(OUT/name) as bb:
+                delta=ImageStat.Stat(ImageChops.difference(
+                    aa.convert("RGB").resize((180,105)),
+                    bb.convert("RGB").resize((180,105)))).mean
+            if sum(delta)/3<.15:
+                raise AssertionError("M23 "+angle+" hand inspection view did not change")
+            previous=OUT/name
+        touch(w*.65,h*.265)  # M23 standalone right-hand closeup
+        time.sleep(1.25)
+        report["screenshots"].append(shot("01_m23_hand_sculpt_closeup.png"))
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as

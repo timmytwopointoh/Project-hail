@@ -85,7 +85,8 @@ public final class ContinuousHuman {
         for(float v:g)if(!Float.isFinite(v)||v<.83f||v>1.17f)
             throw new IllegalArgumentException("Human proportion outside reviewed range");
     }
-    private static Field anatomy(float[] g){
+    private static Field anatomy(float[] g){return anatomy(g,true);}
+    private static Field anatomy(float[] g,boolean includeDigits){
         Field f=new Field();
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
@@ -125,6 +126,7 @@ public final class ContinuousHuman {
             // thumb: exactly five digits per hand. Individual fingertip
             // lengths follow little/ring/middle/index proportions; the webbing
             // stays fused into the palm but tips do NOT join one another.
+            if(includeDigits){
             final float[] tips={.576f,.517f,.493f,.538f}; // little, ring, middle, index
             float handCenter=side*.554f*g[0];
             for(int finger=0;finger<4;finger++){
@@ -139,17 +141,21 @@ public final class ContinuousHuman {
                 // decreasing girth and a shallow natural forward curl.
                 // Preserve open air between tips and the existing hand SDF
                 // probes at y=.614: detail must not recreate a mitten.
+                // Subtle joint flexion sculpted into real capsules.
                 float middleY=.708f, distalY=.627f;
-                f.bone(fx,.795f,.087f,fx,middleY,.093f,
+                float middleZ=.096f, distalZ=.108f, tipZ=.119f;
+                float midX=fx+side*.002f, tipX=fx+side*.004f;
+                f.bone(fx,.795f,.087f,midX,middleY,middleZ,
                        .024f,.025f,2);
-                f.bone(fx,middleY,.093f,fx,distalY,.101f,
+                f.bone(midX,middleY,middleZ,midX,distalY,distalZ,
                        .021f,.022f,2);
-                f.bone(fx,distalY,.101f,fx,tipY,.106f,
-                       .019f,.020f,2);
-                // Knuckle pads are fused, not separate visible beads.
+                f.bone(midX,distalY,distalZ,tipX,tipY,tipZ,
+                       .018f,.019f,2);
+                // Rounded fingertips and tapered knuckles, fused per digit.
                 f.add(fx,.790f,.078f,.027f,.034f,.026f);
-                f.add(fx,middleY,.093f,.023f,.022f,.022f);
-                f.add(fx,distalY,.101f,.020f,.018f,.020f);
+                f.add(midX,middleY,middleZ,.023f,.022f,.022f);
+                f.add(midX,distalY,distalZ,.020f,.018f,.020f);
+                f.add(tipX,tipY,tipZ,.018f,.019f,.019f);
             }
             // Opposable thumb has a separate angled metacarpal and phalanx.
             // Its base joins the palm, while its tip bends away from the
@@ -157,9 +163,16 @@ public final class ContinuousHuman {
             f.bone(handCenter+side*.073f,.852f,.102f,
                    handCenter+side*.122f,.768f,.119f,
                    .032f,.031f,2);
+            // A distinct thumb phalanx bend improves the side silhouette.
             f.bone(handCenter+side*.122f,.768f,.119f,
-                   handCenter+side*.183f,.689f,.151f,
-                   .027f,.027f,2);
+                   handCenter+side*.158f,.725f,.148f,
+                   .028f,.028f,2);
+            f.bone(handCenter+side*.158f,.725f,.148f,
+                   handCenter+side*.183f,.689f,.170f,
+                   .024f,.025f,2);
+            f.add(handCenter+side*.183f,.689f,.170f,
+                  .024f,.025f,.026f);
+            } // End legacy SDF digits. Sculpted ones use HumanHandSculpt.
             // Joined pelvis/thigh/hips to calf, ankle and broad human foot.
             float hx=side*.207f*g[4];
             f.add(hx,1.045f,-.018f,.175f*g[5],.204f,.159f);
@@ -281,8 +294,18 @@ public final class ContinuousHuman {
     }
     public static ArtKit.Model build(boolean lite){return build(lite,BASE);}
     public static ArtKit.Model build(boolean lite,float[] controls){
+        return build(lite,controls,true);
+    }
+    /** Palm/wrist mesh without the M21 cylinders; M23 loft digits attach here. */
+    static ArtKit.Model buildWithoutDigits(boolean lite){
+        return buildWithoutDigits(lite,BASE);
+    }
+    static ArtKit.Model buildWithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,boolean includeDigits){
         validate(controls);
-        Field field=anatomy(controls);
+        Field field=anatomy(controls,includeDigits);
         float h=lite?.062f:.039f;
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),

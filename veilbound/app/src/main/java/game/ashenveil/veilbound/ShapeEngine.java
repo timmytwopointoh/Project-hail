@@ -86,6 +86,69 @@ public final class ShapeEngine {
         }
         return f.finish();
     }
+    /** Point-normal from the true longitudinal and circular loft tangents. */
+    private static float[] loftNormal(Ring[] rings,int row,int k,int sides){
+        int before=Math.max(0,row-1),after=Math.min(rings.length-1,row+1);
+        float[] a=point(rings[before],k,sides,0f);
+        float[] b=point(rings[after],k,sides,0f);
+        float[] low=point(rings[row],k-1,sides,0f);
+        float[] high=point(rings[row],k+1,sides,0f);
+        float ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2];
+        float vx=high[0]-low[0],vy=high[1]-low[1],vz=high[2]-low[2];
+        float nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+        float length=(float)Math.sqrt(nx*nx+ny*ny+nz*nz);
+        if(length<1e-8f)return new float[]{1,0,0};
+        return new float[]{nx/length,ny/length,nz/length};
+    }
+    private static void smoothTri(Forge f,float[] a,float[] b,float[] c,
+                                  float[] na,float[] nb,float[] nc,Palette tint){
+        float ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2];
+        float vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+        float x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;
+        if(x*x+y*y+z*z<1e-14f)return;
+        f.vertex(a,na[0],na[1],na[2],tint);
+        f.vertex(b,nb[0],nb[1],nb[2],tint);
+        f.vertex(c,nc[0],nc[1],nc[2],tint);
+    }
+    /**
+     * M23 skin sculpt: shaded smooth along radial/longitudinal tangents,
+     * exact caps on both ends, same cross-section vocabulary as loft().
+     * This is geometry with physical digits, not a shader trick. Existing
+     * armor loft() callers retain their deliberate hard-edged shading.
+     */
+    public static ArtKit.Model loftSmoothCapped(Ring[] rings,int sides,Palette tint){
+        if(rings==null||rings.length<2||rings.length>64||sides<8||sides>64||
+           tint==null)throw new IllegalArgumentException("Skin loft budget");
+        for(int i=1;i<rings.length;i++)
+            if(rings[i].y<=rings[i-1].y+1e-4f)
+                throw new IllegalArgumentException("Skin loft rings unordered");
+        Forge f=new Forge();
+        for(int row=0;row<rings.length-1;row++){
+            for(int k=0;k<sides;k++){
+                float[] a=point(rings[row],k,sides,0f);
+                float[] b=point(rings[row+1],k,sides,0f);
+                float[] c=point(rings[row+1],k+1,sides,0f);
+                float[] d=point(rings[row],k+1,sides,0f);
+                float[] na=loftNormal(rings,row,k,sides);
+                float[] nb=loftNormal(rings,row+1,k,sides);
+                float[] nc=loftNormal(rings,row+1,k+1,sides);
+                float[] nd=loftNormal(rings,row,k+1,sides);
+                smoothTri(f,a,b,c,na,nb,nc,tint);
+                smoothTri(f,a,c,d,na,nc,nd,tint);
+            }
+        }
+        Ring first=rings[0],last=rings[rings.length-1];
+        float[] bottom={first.cx,first.y,first.cz};
+        float[] top={last.cx,last.y,last.cz};
+        for(int k=0;k<sides;k++){
+            // Outward normals of terminal caps are -Y then +Y.
+            f.triangle(bottom,point(first,k,sides,0f),
+                        point(first,k+1,sides,0f),tint);
+            f.triangle(top,point(last,k+1,sides,0f),
+                        point(last,k,sides,0f),tint);
+        }
+        return f.finish();
+    }
     /**
      * Open hard-surface shoulder defense. Builds only the forward curved
      * shell, leaving mail and the upper-arm joint visible underneath instead

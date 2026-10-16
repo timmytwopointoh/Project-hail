@@ -10,7 +10,21 @@ package game.ashenveil.veilbound;
  */
 public final class HumanAnatomy {
     private HumanAnatomy(){}
+    /** Keep the proven M20 continuous-surface baseline unmodified. */
     public static ArtKit.Model build(boolean lite){
         return ContinuousHuman.build(lite);
+    }
+    /**
+     * M23 review-only integration, selected in the Android Model Atelier.
+     * Explicit opt-in until real front/side/3/4 device views and topology
+     * inspection approve the replacement. The armored game is untouched.
+     */
+    public static ArtKit.Model buildWithSculptedHands(boolean lite){
+        return buildWithSculptedHands(lite,ContinuousHuman.BASE);
+    }
+    public static ArtKit.Model buildWithSculptedHands(boolean lite,float[] controls){
+        ContinuousHuman.validate(controls);
+        return ShapeEngine.combine(ContinuousHuman.buildWithoutDigits(lite,controls),
+                                   HumanHandSculpt.build(lite,controls[0]));
     }
 }

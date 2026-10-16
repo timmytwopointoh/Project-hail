@@ -49,6 +49,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/BellwardenAnatomy.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanSkeleton.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
@@ -70,6 +71,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/ForgedPlateTest.java \
             veilbound/tests/game/ashenveil/veilbound/ArticulatedJointTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanAnatomyTest.java \
+            veilbound/tests/game/ashenveil/veilbound/HumanHandSculptTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
@@ -94,6 +96,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ForgedPlateTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ArticulatedJointTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanAnatomyTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandSculptTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest
