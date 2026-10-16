@@ -69,3 +69,7 @@ The \`veilforge/topology.py\` worker creates a separate \`*_repaired.obj\` candi
 **Topology gate:** read \`before\` and \`after\` mesh edge metrics, source-vs-output hashes, capped triangles and skipped loops. A successful CI run proves reproducible export and tests, not good human anatomy, physical manifoldness at every geometric tolerance, photorealism, or handset performance.
 
 Progress towards source-quality retopology and PBR/skin shader upgrades is tracked independently of the M1 Android release.
+
+### M2 acceptance gates
+
+The manager-of-managers now publishes separate **CI evidence gates** and **topology quality acceptance**. A green workflow does not silently classify outstanding nonmanifold edges or open human skin as approved: `unresolved_topology` includes the exact before/after counts and asset name. Back-to-back cloth triangles are removed from exported armor and studio mesh, and those mixed-material glTF exports are explicitly two-sided so the cape remains visible from either side. The Android source never changes.

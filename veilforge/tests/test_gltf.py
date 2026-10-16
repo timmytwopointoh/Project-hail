@@ -35,8 +35,9 @@ class GltfTest(unittest.TestCase):
             root=Path(tmp)
             mesh=root/"shape.obj"
             mesh.write_text("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n")
-            result=gltf_export.export(mesh,root/"asset.gltf",profile="stone")
+            result=gltf_export.export(mesh,root/"asset.gltf",profile="stone",double_sided=True)
             self.assertEqual(result["materials"][0]["pbrMetallicRoughness"]["metallicFactor"],0)
             self.assertEqual(result["accessors"][4]["count"],3)
+            self.assertTrue(result["materials"][0]["doubleSided"])
 if __name__=="__main__":
     unittest.main()

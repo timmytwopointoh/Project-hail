@@ -62,7 +62,7 @@ def _packed_metallic_roughness(material_dir: Path, dest: Path):
         pixels[i*3:i*3+3]=bytes((255,r,m))
     write_png(dest,w,h,3,pixels)
 
-def export(src: Path, dest: Path, *, material_dir=None, profile="skin"):
+def export(src: Path, dest: Path, *, material_dir=None, profile="skin", double_sided=False):
     v,tex,norm,faces=read_obj(src)
     dest.parent.mkdir(parents=True,exist_ok=True)
     positions=[];normals=[];uvs=[];colors=[];indices=[]
@@ -128,7 +128,7 @@ def export(src: Path, dest: Path, *, material_dir=None, profile="skin"):
     if profile not in factors:
         raise ValueError("Unsupported PBR profile")
     metallic,roughness=factors[profile]
-    mat={"name":profile,"doubleSided":False,
+    mat={"name":profile,"doubleSided":bool(double_sided),
          "pbrMetallicRoughness":{"baseColorFactor":[1,1,1,1],
              "metallicFactor":metallic,"roughnessFactor":roughness}}
     images=[]
@@ -179,8 +179,9 @@ def main():
     p.add_argument("--out",type=Path,required=True)
     p.add_argument("--material-dir",type=Path)
     p.add_argument("--profile",default="skin",choices=["skin","steel","stone","leather","cloth"])
+    p.add_argument("--double-sided",action="store_true",help="Retain open cape/cloth visibility when removing duplicated back faces")
     a=p.parse_args()
-    manifest=export(a.obj,a.out,material_dir=a.material_dir,profile=a.profile)
+    manifest=export(a.obj,a.out,material_dir=a.material_dir,profile=a.profile,double_sided=a.double_sided)
     print("VEILFORGE_GLTF_PASS",a.out,manifest["extras"]["triangles"],"triangles")
 if __name__=="__main__":
     main()

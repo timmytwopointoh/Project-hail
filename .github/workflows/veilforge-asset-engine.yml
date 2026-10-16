@@ -102,7 +102,7 @@ jobs:
               python3 veilforge/engine.py inspect --obj "${OUT}/${MODEL}_repaired.obj" \
                 --out "${OUT}/${MODEL}_mesh_quality.json"
               python3 veilforge/gltf_export.py --obj "${OUT}/${MODEL}_repaired.obj" \
-                --out "${OUT}/${MODEL}_repaired.gltf" --profile steel
+                --out "${OUT}/${MODEL}_repaired.gltf" --profile steel --double-sided
             done
           elif [ "${ROLE}" = world ]; then
             python3 veilforge/engine.py inspect --obj "${OUT}/carved_cenotaph.obj" \
@@ -121,7 +121,7 @@ jobs:
             python3 veilforge/engine.py inspect --obj "${OUT}/bellwarden_studio_preview_repaired.obj" \
               --out "${OUT}/mesh_quality.json"
             python3 veilforge/gltf_export.py --obj "${OUT}/bellwarden_studio_preview_repaired.obj" \
-              --out "${OUT}/bellwarden_studio_preview_repaired.gltf" --profile steel
+              --out "${OUT}/bellwarden_studio_preview_repaired.gltf" --profile steel --double-sided
           elif [ "${ROLE}" = materials ]; then
             python3 veilforge/engine.py material --type stone --size 512 --out "${OUT}/stone"
             python3 veilforge/engine.py material --type steel --size 512 --out "${OUT}/steel"

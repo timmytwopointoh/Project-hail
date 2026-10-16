@@ -139,10 +139,10 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
             directed=set(boundary)
             for ring in candidates:
                 if len(ring)<3 or len(ring)>max_hole_vertices:
-                    skipped.append({"edges":len(ring),"reason":"size"});continue
+                    skipped.append({"edges":len(ring),"center":[round(sum(p[k] for p in ring)/len(ring),4) for k in range(3)],"reason":"size"});continue
                 diameter,perimeter,nonplanarity=_loop_metrics(ring)
                 if diameter>max_hole_diameter or nonplanarity>max_hole_nonplanarity:
-                    skipped.append({"edges":len(ring),"diameter":round(diameter,5),
+                    skipped.append({"edges":len(ring),"center":[round(sum(p[k] for p in ring)/len(ring),4) for k in range(3)],"diameter":round(diameter,5),
                         "nonplanarity":round(nonplanarity,5),"reason":"geometry"});continue
                 # Construct fan in the winding opposite to the boundary edges.
                 if (ring[0],ring[1]) not in directed:

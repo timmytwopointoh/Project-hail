@@ -53,21 +53,81 @@ def review(collected: Path, out: Path):
                 issues.append(f"{audit}: >2% degenerates")
         except (ValueError,OSError):
             issues.append(f"{audit}: invalid QA data")
+    # M2 topology review is deliberately stricter than "job completed". Closed
+    # bodies must have no open edges; deliberately open cloth/architecture may.
+    # All models must still have zero nonmanifold edge multiplicity before being
+    # declared topology-ready. None is auto-approved.
+    topology_files=sorted(collected.rglob("*_topology_report.json"))
+    topology=[]
+    unresolved=[]
+    for file in topology_files:
+        try:
+            row=json.loads(file.read_text())
+            before,after=row["before"],row["after"]
+            for key in ("boundary_edges","nonmanifold_edges","degenerate_triangles","triangles"):
+                if not isinstance(before.get(key),int) or not isinstance(after.get(key),int):
+                    raise ValueError("Missing numeric topology evidence")
+            if not row.get("topology_improved",False):
+                issues.append(f"{file}: topology counts regressed")
+            if not row.get("candidate"):
+                issues.append(f"{file}: missing repaired-candidate field")
+            shape=file.stem.replace("_repaired_topology_report","")
+            record={
+                "asset":shape,"role":file.parent.name,
+                "input_triangles":before["triangles"],
+                "output_triangles":after["triangles"],
+                "before_boundary":before["boundary_edges"],
+                "after_boundary":after["boundary_edges"],
+                "before_nonmanifold":before["nonmanifold_edges"],
+                "after_nonmanifold":after["nonmanifold_edges"],
+                "removed_duplicate_faces":row.get("coincident_faces_removed",0),
+                "inserted_small_hole_faces":row.get("small_hole_triangles_inserted",0)
+            }
+            topology.append(record)
+            defects=[]
+            if after["nonmanifold_edges"]>0:
+                defects.append("remaining nonmanifold edges")
+            if after["degenerate_triangles"]>0:
+                defects.append("remaining degenerate faces")
+            if "human" in shape and after["boundary_edges"]>0:
+                defects.append("remaining open body boundary edges")
+            if defects:
+                unresolved.append({"asset":shape,"role":file.parent.name,
+                    "defects":defects,"after_boundary":after["boundary_edges"],
+                    "after_nonmanifold":after["nonmanifold_edges"]})
+        except (OSError,KeyError,ValueError,TypeError) as error:
+            issues.append(f"{file}: invalid topology review: {error}")
+    if len(topology_files)!=5:
+        issues.append(f"Expected five independent M2 topology reports, got {len(topology_files)}")
     out.mkdir(parents=True,exist_ok=True)
     result={
-        "schema_version":1,"engine":"VEILFORGE","sources":expected,
+        "schema_version":2,"engine":"VEILFORGE","sources":expected,
         "roles_with_reports":sorted(evidence),"mesh_reports":len(audits),
         "gates_passed":not issues, "issues":issues,
+        "topology_quality_passed":not issues and not unresolved,
+        "topology_reports":topology,
+        "unresolved_topology":unresolved,
         "asset_automatically_promoted":False,
         "photorealism_verified":False,
         "human_visual_signoff":False,
         "recommendation":"Inspect source geometry, topology, all 14 previews, skin/steel/stone materials, and phone screenshots before approving."
     }
     (out/"forge_review.json").write_text(json.dumps(result,indent=2)+"\n")
-    md=["# VEILFORGE M1 — Asset production review","",
-        f"Evidence received: {len(evidence)}/6 independent roles, {len(audits)} mesh audits.",
-        "","**No automatic game integration or approval.**",
-        "","Failures:"] + (["- "+msg for msg in issues] if issues else ["- No missing CI artifacts. Visual quality remains unapproved."])
+    md=["# VEILFORGE M2 — Asset production and topology review","",
+        f"Production evidence: {len(evidence)}/6 roles, {len(audits)} canonical mesh audits, {len(topology)} topology comparisons.",
+        "",
+        f"CI structural evidence: {'PASS' if not issues else 'FAIL'}",
+        f"Source topology quality: {'PASS' if not unresolved and not issues else 'PENDING / UNRESOLVED'}",
+        "","**No automatic game integration, photorealism signoff, or visual approval.**",
+        "","| Asset | Boundary before -> after | Nonmanifold before -> after |",
+        "|---|---:|---:|"] + [
+          f"| {m['asset']} | {m['before_boundary']} -> {m['after_boundary']} | {m['before_nonmanifold']} -> {m['after_nonmanifold']} |"
+          for m in topology
+        ] + ["","Remaining geometry defects:"] +
+        ([f"- {x['asset']}: {', '.join(x['defects'])} (boundaries {x['after_boundary']}, nonmanifold {x['after_nonmanifold']})" for x in unresolved]
+         if unresolved else ["- None detected by these discrete edge counters. Visual approval still pending."]) +
+        ["","CI evidence failures:"] +
+        (["- "+msg for msg in issues] if issues else ["- None"])
     (out/"forge_review.md").write_text("\n".join(md)+"\n")
     return result
 
