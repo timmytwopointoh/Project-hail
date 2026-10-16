@@ -51,7 +51,8 @@ class LocalAITests(unittest.TestCase):
 
     def test_text_only_will_not_claim_to_have_seen_images(self):
         body = ai.make_request("Telemetry only")
-        self.assertNotIn("format", {k: v for k, v in body.items() if v is None})
+        self.assertIsNone(body["format"])
+        self.assertNotIn("images", body)
 
     def test_limits_and_bad_model_names(self):
         for prompt in ("", "x" * 28001):
