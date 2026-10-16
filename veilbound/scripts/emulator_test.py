@@ -361,6 +361,44 @@ def main():
         touch(w*.65,h*.265)  # M23 standalone right-hand closeup
         time.sleep(1.25)
         report["screenshots"].append(shot("01_m23_hand_sculpt_closeup.png"))
+        # M24 testing grounds: the full-body deformation preview is an
+        # isolated pose mesh, never an override for playable Knight history.
+        touch(w*.65,h*.865)  # hand asset 12 -> M24 deformation study 13
+        time.sleep(1.3)
+        pose_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                     timeout=20).decode("utf-8","replace")
+        if "item=13" not in pose_log or "M24_POSE_PREVIEW_READY" not in pose_log:
+            raise AssertionError("VEILFORGE M24 deforming human was not loaded in game")
+        report["screenshots"].append(shot("01_m24_pose_front.png"))
+        # True animation evidence: same camera, moving *mesh pixels*,
+        # not orbiting the camera or changing the model label.
+        movement=[]
+        for attempt in range(3):
+            time.sleep(.21+.12*attempt)
+            name="01_m24_pose_motion_"+str(attempt)+".png"
+            report["screenshots"].append(shot(name))
+            with Image.open(OUT/"01_m24_pose_front.png") as aa,Image.open(OUT/name) as bb:
+                crop=(int(w*.38),int(h*.255),int(w*.62),int(h*.78))
+                delta=ImageStat.Stat(ImageChops.difference(
+                    aa.convert("RGB").crop(crop).resize((160,210)),
+                    bb.convert("RGB").crop(crop).resize((160,210)))).mean
+            movement.append(round(sum(delta)/3,3))
+            if movement[-1]>.55:break
+        if max(movement)<.55:
+            raise AssertionError("VEILFORGE M24 pose appears frozen in Android: "+
+                                 repr(movement))
+        touch(w*.5,h*.758)
+        time.sleep(1.15)
+        posed=shot("01_m24_pose_side.png")
+        report["screenshots"].append(posed)
+        with Image.open(OUT/"01_m24_pose_front.png") as aa,Image.open(OUT/"01_m24_pose_side.png") as bb:
+            delta=ImageStat.Stat(ImageChops.difference(
+                aa.convert("RGB").resize((180,105)),
+                bb.convert("RGB").resize((180,105)))).mean
+        if sum(delta)/3<.15:
+            raise AssertionError("M24 human pose orientation failed to update in native game")
+        atelier["m24_deformation_preview"]={"loaded":True,"side_view":True,
+                                             "human_visual_approval_required":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as

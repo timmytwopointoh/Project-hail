@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "description": "Specialist asset backlog: 12 bounded review-only proposals; six CI producer jobs run independently. No auto-merge.",
+  "tasks": [
+    {
+      "role": "models",
+      "priority": "P0",
+      "id": "VF-001",
+      "goal": "Inspect M22 five digits per hand, anatomical proportions, knuckle transitions, and connected human silhouette without changing gameplay."
+    },
+    {
+      "role": "models",
+      "priority": "P1",
+      "id": "VF-002",
+      "goal": "Improve facial contours, ears, jaw and eyelids with source geometry and 14-angle evidence."
+    },
+    {
+      "role": "models",
+      "priority": "P2",
+      "id": "VF-003",
+      "goal": "Design density and topology target suitable for sculpt source, retopology, mobile LODs and later glTF export."
+    },
+    {
+      "role": "materials",
+      "priority": "P1",
+      "id": "VF-004",
+      "goal": "Design physically based skin roughness, subsurface-friendly albedo, pores and micro-normal atlas."
+    },
+    {
+      "role": "materials",
+      "priority": "P2",
+      "id": "VF-005",
+      "goal": "Produce layered stone, patinated steel, leather and cloth material source tests."
+    },
+    {
+      "role": "animation",
+      "priority": "P1",
+      "id": "VF-006",
+      "goal": "Validate deformation under shoulder, elbow, wrist and finger bends, with five-digit hands."
+    },
+    {
+      "role": "animation",
+      "priority": "P2",
+      "id": "VF-007",
+      "goal": "Plan strand and cloth dynamics as separate attachable simulation assets; hair can be deferred."
+    },
+    {
+      "role": "world",
+      "priority": "P1",
+      "id": "VF-008",
+      "goal": "Improve architectural silhouette with worn edge bevels, modular ruins and material variation."
+    },
+    {
+      "role": "world",
+      "priority": "P2",
+      "id": "VF-009",
+      "goal": "Plan rocks, flora and terrain scatter assets with deterministic seeds, LOD, and draw budgets."
+    },
+    {
+      "role": "studio",
+      "priority": "P0",
+      "id": "VF-010",
+      "goal": "Collect 14-angle real-mesh previews, consistent lighting and dimension reports for review."
+    },
+    {
+      "role": "studio",
+      "priority": "P1",
+      "id": "VF-011",
+      "goal": "Compare 14-angle mesh views and Android Model Atelier screenshots without claiming equal render quality."
+    },
+    {
+      "role": "studio",
+      "priority": "P2",
+      "id": "VF-012",
+      "goal": "Plan Blender/glTF export pipeline with texture space, skin weights and asset metadata, preserving originals."
+    }
+  ]
+}

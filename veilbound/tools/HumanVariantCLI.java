@@ -43,7 +43,7 @@ public final class HumanVariantCLI {
     private static void obj(ArtKit.Model mesh,Path file) throws Exception{
         float[] v=mesh.vertices;
         try(BufferedWriter w=Files.newBufferedWriter(file,StandardCharsets.UTF_8)){
-            w.write("# VEILBOUND M23 human + hand sculpt, review pending\n");
+            w.write("# VEILBOUND M24 whole-body candidate + hand sculpt, review pending\n");
             for(int i=0;i<v.length;i+=9)
                 w.write("v "+f(v[i])+" "+f(v[i+1])+" "+f(v[i+2])+" "+
                     f(v[i+6])+" "+f(v[i+7])+" "+f(v[i+8])+"\n");
@@ -105,7 +105,7 @@ public final class HumanVariantCLI {
         }
         g.setColor(new Color(45,50,55));
         g.drawString(VIEWS[view].toUpperCase(Locale.US)+"  |  ACTUAL 3D MESH",14,28);
-        g.drawString("M23 COMPOSITE - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
+        g.drawString("M24 FULL BODY - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
@@ -115,7 +115,7 @@ public final class HumanVariantCLI {
             throws Exception{
         final int width=640,height=720;
         final float[] direction=camera(view);
-        final float cx=side*.554f,cz=.115f,cy=.705f,zoom=1260f;
+        final float cx=side*.554f,cz=.115f,cy=1.235f,zoom=1160f;
         final float origin=cx*direction[2]-cz*direction[0];
         BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
         Graphics2D g=image.createGraphics();
@@ -129,7 +129,7 @@ public final class HumanVariantCLI {
             boolean inHand=true;
             for(int k=0;k<3;k++){
                 int j=i+k*9;
-                if(v[j+1]<.465f||v[j+1]>.975f||
+                if(v[j+1]<.970f||v[j+1]>1.58f||
                    v[j]*side<.395f||v[j]*side>.795f){
                     inHand=false;break;
                 }
@@ -179,7 +179,7 @@ public final class HumanVariantCLI {
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model mesh=HumanAnatomy.buildWithSculptedHands(false,p);
+        ArtKit.Model mesh=HumanAnatomy.buildM24Candidate(false,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
         obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
         for(int view=0;view<VIEWS.length;view++)
@@ -193,7 +193,7 @@ public final class HumanVariantCLI {
             if(views.length()>0)views.append(',');
             views.append('"').append(view).append('"');
         }
-        String json="{\"model\":\"m23_sculpted_human_candidate\",\"triangles\":"+
+        String json="{\"model\":\"m24_veilforge_full_body_candidate\",\"triangles\":"+
             mesh.triangleCount+",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":true,\"hand_closeups_per_side\":3,\"camera_views\":["+views+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");

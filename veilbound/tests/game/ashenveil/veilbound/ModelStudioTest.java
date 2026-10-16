@@ -32,6 +32,10 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==13,"Deformation test must be inspectable in Testing Grounds");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"Deformation test view switching");
+        s.nextItem(-1);
         ok(s.snapshot().item==12,"Sculpted hand asset must have its own game viewer");
         s.focusDetail();
         ok(s.snapshot().zoom<1.85f,"Hand sculpt focus should enable close study");

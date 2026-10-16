@@ -85,8 +85,12 @@ public final class ContinuousHuman {
         for(float v:g)if(!Float.isFinite(v)||v<.83f||v>1.17f)
             throw new IllegalArgumentException("Human proportion outside reviewed range");
     }
-    private static Field anatomy(float[] g){return anatomy(g,true);}
+    private static Field anatomy(float[] g){return anatomy(g,true,false);}
     private static Field anatomy(float[] g,boolean includeDigits){
+        return anatomy(g,includeDigits,false);
+    }
+    private static Field anatomy(float[] g,boolean includeDigits,boolean m24){
+
         Field f=new Field();
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
@@ -190,7 +194,52 @@ public final class ContinuousHuman {
                       .025f,.032f,.067f);
             }
         }
+        if(m24)refineWholeBody(f,g);
         return f;
+    }
+    /**
+     * An opt-in, *real geometry* full-body study. Modest overlapping soft
+     * tissue masses are sculpted in the same continuous signed distance
+     * field as the body, not drawn as disconnected ornament or skin textures.
+     * Hair and all historical baseline geometry remain unchanged.
+     * Future retopology, texture painting and joint-weight review still needed.
+     */
+    private static void refineWholeBody(Field f,float[] g){
+        // Thoracic / abdominal form: serratus, upper oblique and erector
+        // spinae soften the formerly featureless barrel-shaped torso.
+        for(int side:new int[]{-1,1}){
+            f.add(side*.268f,1.630f,.092f,.092f*g[3],.134f,.085f);
+            f.add(side*.224f,1.430f,.106f,.080f*g[2],.164f,.092f);
+            f.add(side*.157f,1.563f,-.173f,.095f,.198f,.082f);
+            f.add(side*.193f,1.292f,-.158f,.114f,.170f,.102f);
+            // Gluteus-to-pelvis transition and upper thigh muscle sweep.
+            f.add(side*.196f*g[4],.976f,-.140f,.154f,.155f,.115f);
+            f.add(side*.206f,.836f,.085f,.129f*g[5],.174f,.132f);
+            f.add(side*.192f,.752f,-.095f,.118f*g[5],.160f,.114f);
+            // Patella and upper calf heads blend into the actual leg mesh.
+            f.add(side*.216f,.650f,.128f,.082f,.073f,.055f);
+            f.add(side*.251f,.461f,-.064f,.076f*g[8],.134f,.093f);
+            f.add(side*.180f,.422f,-.077f,.066f*g[8],.131f,.086f);
+            // Achilles and heel-to-midfoot volumes for proper side profile.
+            f.add(side*.218f,.148f,-.062f,.074f,.086f,.090f);
+            f.add(side*.213f,.079f,.300f,.119f*g[11],.059f,.156f*g[11]);
+            // Deltoid transition, biceps, triceps and brachioradialis.
+            float x=side*.445f*g[0];
+            f.add(x,1.735f,.107f,.120f*g[1],.146f,.103f);
+            f.add(side*.513f*g[0],1.567f,.088f,.088f*g[1],.151f,.078f);
+            f.add(side*.515f*g[0],1.532f,-.084f,.099f*g[1],.165f,.088f);
+            f.add(side*.557f*g[0],1.240f,.085f,.080f*g[10],.158f,.068f);
+            f.add(side*.548f*g[0],1.196f,-.059f,.082f*g[10],.169f,.075f);
+            // Upper cheekbone, jaw musculature and brow: modest volumes,
+            // deliberately no artificial bead eyes, no hair modification.
+            f.add(side*.097f,2.410f,.138f,.068f,.044f,.052f);
+            f.add(side*.121f,2.308f,.103f,.067f*g[7],.075f,.066f);
+            f.add(side*.081f,2.474f,.130f,.057f,.035f,.036f);
+            f.add(side*.040f,2.275f,.179f,.035f,.023f,.031f);
+        }
+        f.add(0,1.461f,.184f,.114f,.153f,.039f); // subtle rectus contour
+        f.add(0,1.840f,-.183f,.128f,.118f,.083f); // scapular bridge
+        f.add(0,2.280f,.190f,.061f,.018f,.027f); // lower-lip soft tissue
     }
     /**
      * Pure distance-field probes for anatomical acceptance. Four fingertip
@@ -301,11 +350,19 @@ public final class ContinuousHuman {
         return buildWithoutDigits(lite,BASE);
     }
     static ArtKit.Model buildWithoutDigits(boolean lite,float[] controls){
-        return build(lite,controls,false);
+        return build(lite,controls,false,false);
+    }
+    /** M24 study with sculpted torso, limbs, head, hips and feet. */
+    static ArtKit.Model buildM24WithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false,true);
     }
     private static ArtKit.Model build(boolean lite,float[] controls,boolean includeDigits){
+        return build(lite,controls,includeDigits,false);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,
+                                      boolean includeDigits,boolean refined){
         validate(controls);
-        Field field=anatomy(controls,includeDigits);
+        Field field=anatomy(controls,includeDigits,refined);
         float h=lite?.062f:.039f;
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
