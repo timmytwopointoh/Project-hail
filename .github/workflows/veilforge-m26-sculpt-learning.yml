@@ -53,7 +53,7 @@ jobs:
             "$SRC/ArtKit.java" "$SRC/ShapeEngine.java" \
             "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
             "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
-            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" "$SRC/HumanSkeleton.java" \
             "$SRC/HumanAnatomy.java" "$TEST/M26SculptLearningTest.java"
           java -cp /tmp/veilforge-m26 game.ashenveil.veilbound.M26SculptLearningTest
       - uses: actions/upload-artifact@v4
@@ -92,7 +92,7 @@ jobs:
             "$SRC/ShapeEngine.java" "$SRC/ContinuousHuman.java" \
             "$SRC/HumanHandSculpt.java" "$SRC/M25FaceSculpt.java" \
             "$SRC/M25SkinPolish.java" "$SRC/M24BodyRetarget.java" \
-            "$SRC/M26SculptDials.java" "$SRC/HumanAnatomy.java" \
+            "$SRC/M26SculptDials.java" "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
             veilbound/tools/HumanVariantCLI.java
       - name: Generate bounded sculpt experiments from grounded M24/M25 lessons
         env:
