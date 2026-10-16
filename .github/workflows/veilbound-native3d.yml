@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - 'feature/veilbound-*'
+      - 'feature/veilforge-m26-sculpt-learning-curriculum'
       - main
     paths:
       # Only game/runtime and emulator analysis changes need a costly full APK run.
@@ -49,6 +50,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/BellwardenAnatomy.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M26SculptDials.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25SkinPolish.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M24BodyRetarget.java \
@@ -81,6 +83,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/M24AnimationLabTest.java \
             veilbound/tests/game/ashenveil/veilbound/M25RefinementTest.java \
             veilbound/tests/game/ashenveil/veilbound/M25AttachmentAuditTest.java \
+            veilbound/tests/game/ashenveil/veilbound/M26SculptLearningTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
@@ -111,6 +114,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M24AnimationLabTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M25RefinementTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M25AttachmentAuditTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M26SculptLearningTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest
