@@ -19,8 +19,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: veilbound-${{ github.ref }}
-  cancel-in-progress: false
+  # Isolate the player-test branch from older long-running emulator releases.
+  group: veilbound-m11-hero-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
