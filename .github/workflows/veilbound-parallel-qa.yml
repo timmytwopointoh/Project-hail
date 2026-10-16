@@ -49,6 +49,7 @@ jobs:
         if: matrix.role == 'integrity'
         run: |
           bash -n veilbound/scripts/install_local_ai.sh
+          bash -n veilbound/scripts/emulator_shard_test.sh
           python3 -m py_compile veilbound/scripts/local_ai.py veilbound/scripts/ai_worker.py
       - name: Verify coding and promotion pipeline without an external AI
         if: matrix.role == 'integrity'
