@@ -23,6 +23,7 @@ public final class MainActivity extends Activity {
   private final ExecutorService io=Executors.newSingleThreadExecutor();
   private volatile boolean active=false,autoLoad=true;
   private volatile String loadedSnapshotKey="";
+  private volatile long lastAnonymousPollMs=0;
   private TextView status,history,meshLabel,small;
   private ModelViewport viewport;
   private volatile String requestId="",runId="";
@@ -187,10 +188,54 @@ public final class MainActivity extends Activity {
       });
     }
   }
+  private boolean authenticatedStatus(){
+    try{
+      android.os.Bundle args=new android.os.Bundle();
+      String requested=requestId,wanted=runId;
+      args.putString("request_id",requested);
+      args.putString("run_id",wanted);
+      android.os.Bundle out=getContentResolver().call(
+         Uri.parse("content://com.trioncompasitor.assistant.vq.snapshots"),
+         "status",null,args);
+      if(out==null)return false;
+      String state=out.getString("state","");
+      if("available".equals(state)){
+        String matchingRun=out.getString("run_id","");
+        if(!VQProtocol.validRunId(matchingRun))return false;
+        final String headline=out.getString("headline","");
+        final String description=out.getString("progress","");
+        runOnUiThread(()->{
+          if(!active||!requested.equals(requestId))return;
+          if(!matchingRun.equals(runId)){runId=matchingRun;loadedSnapshotKey="";}
+          getPreferences(0).edit().putString("run_id",matchingRun).apply();
+          status.setText(headline);history.setText(description);
+        });
+        if(autoLoad)loadVerifiedRevision(requested,matchingRun);
+        return true;
+      }
+      if("no_job".equals(state)){
+        runOnUiThread(()->{
+          if(!active)return;
+          status.setText(out.getString("headline","Trion is connected"));
+          history.setText(out.getString("progress","No current VQ job"));
+        });
+        return true;
+      }
+      return false;
+    }catch(Exception e){
+      // Trion not installed, token not connected, or bridge temporarily offline.
+      // Public status remains a degraded, rate-limited fallback.
+      return false;
+    }
+  }
   private void refresh(){
     if(!active)return;
     io.execute(()->{
       try{
+        if(authenticatedStatus())return;
+        long now=System.currentTimeMillis();
+        if(now-lastAnonymousPollMs<180000L)return;
+        lastAnonymousPollMs=now;
         String base="https://api.github.com/repos/"+VQProtocol.REPO+"/actions/";
         JSONObject payload=new JSONObject(get(base+"workflows/"+VQProtocol.WORKFLOW+"/runs?branch="+
           URLEncoder.encode(VQProtocol.BRANCH,"UTF-8")+"&per_page=12"));
