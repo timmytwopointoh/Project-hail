@@ -26,12 +26,24 @@ public final class ContinuousHuman {
     private static final float[] HAIR={.15f,.118f,.108f};
     private static final float[] SHORTS={.205f,.200f,.195f};
     private static final class Blob{
-        final float x,y,z,rx,ry,rz;
+        final float x,y,z,tx,ty,tz,rx,ry,rz;
         Blob(float x,float y,float z,float rx,float ry,float rz){
-            this.x=x;this.y=y;this.z=z;this.rx=rx;this.ry=ry;this.rz=rz;
+            this(x,y,z,x,y,z,rx,ry,rz);
+        }
+        Blob(float x,float y,float z,float tx,float ty,float tz,
+             float rx,float ry,float rz){
+            this.x=x;this.y=y;this.z=z;
+            this.tx=tx;this.ty=ty;this.tz=tz;
+            this.rx=rx;this.ry=ry;this.rz=rz;
         }
         float distance(float px,float py,float pz){
-            float a=(px-x)/rx,b=(py-y)/ry,c=(pz-z)/rz;
+            float ax=tx-x,ay=ty-y,az=tz-z;
+            float length=ax*ax+ay*ay+az*az;
+            float t=length<1e-9f?0f:
+                    ((px-x)*ax+(py-y)*ay+(pz-z)*az)/length;
+            t=Math.max(0f,Math.min(1f,t));
+            float a=(px-x-ax*t)/rx,b=(py-y-ay*t)/ry,
+                  c=(pz-z-az*t)/rz;
             return ((float)Math.sqrt(a*a+b*b+c*c)-1f)
                    *Math.min(rx,Math.min(ry,rz));
         }
@@ -43,11 +55,11 @@ public final class ContinuousHuman {
         }
         void bone(float x0,float y0,float z0,float x1,float y1,float z1,
                   float radiusX,float radiusZ,int divisions){
-            for(int i=0;i<=divisions;i++){
-                float t=i/(float)divisions;
-                add(x0+(x1-x0)*t,y0+(y1-y0)*t,z0+(z1-z0)*t,
-                    radiusX,radiusX*1.10f,radiusZ);
-            }
+            // ONE continuous analytic elliptical capsule rather than
+            // spaced disconnected rings/blobs (particularly fingertips).
+            // This is both watertight and cheaper than dozens of SDF bulbs.
+            shapes.add(new Blob(x0,y0,z0,x1,y1,z1,
+                                radiusX,radiusX*1.10f,radiusZ));
         }
         float sample(float x,float y,float z){
             float d=99f;
