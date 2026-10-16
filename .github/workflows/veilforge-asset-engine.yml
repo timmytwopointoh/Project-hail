@@ -1,0 +1,148 @@
+name: VEILFORGE - High Detail Asset Production
+on:
+  push:
+    branches: ['feature/veilforge-*']
+    paths:
+      - 'veilforge/**'
+      - '.github/workflows/veilforge-asset-engine.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-${{ github.ref }}
+  cancel-in-progress: true
+
+# Six genuinely isolated production jobs; the existing 50-slot anatomy search
+# is preserved separately. Outputs are review-only. No auto-merge/production
+# code mutation, no injected shell instructions, no API keys or signing secrets.
+jobs:
+  manager-plan-and-unit-tests:
+    name: Hierarchical manager and source QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test offline core and bounded manager
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 veilforge/manager.py plan --max-workers 12 \
+            --out inspection_output/forge-manager
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-manager-plan
+          path: inspection_output/forge-manager/
+          if-no-files-found: error
+          retention-days: 14
+
+  specialist-production:
+    name: Asset team / ${{ matrix.role }}
+    needs: manager-plan-and-unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        role: [human, models, animation, materials, world, studio]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile existing battle-free production geometry interfaces
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/forge-java"
+          javac -d "${RUNNER_TEMP}/forge-java" \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/{ArtKit,DetailArtKit,CinematicArtKit,ShapeEngine,BellwardenAnatomy,HumanAnatomy,HumanSkeleton,ContinuousHuman,MaterialMapping,HeroPose,CombatMotion,CharacterRig,WorldState,ModelStudio,EnvironmentKit,SurfaceAtlas,MaterialTextures,ObjMeshLoader,BootAssets}.java \
+            veilbound/tools/TeamEngineCLI.java veilforge/ForgeHumanCLI.java
+      - name: Generate and inspect original high-detail assets
+        env:
+          ROLE: ${{ matrix.role }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/forge/${ROLE}"
+          mkdir -p "${OUT}"
+          if [ "${ROLE}" = human ]; then
+            java -Xmx1700m -Djava.awt.headless=true -cp "${RUNNER_TEMP}/forge-java" \
+              game.ashenveil.veilbound.ForgeHumanCLI "${OUT}"
+            python3 veilforge/engine.py inspect --obj "${OUT}/human_source.obj" \
+              --out "${OUT}/mesh_quality.json"
+            python3 veilforge/engine.py material --type skin --size 512 \
+              --out "${OUT}/skin-material"
+          else
+            java -Xmx1500m -Djava.awt.headless=true -cp "${RUNNER_TEMP}/forge-java" \
+              game.ashenveil.veilbound.TeamEngineCLI "${ROLE}" "${OUT}"
+            python3 veilbound/scripts/team_engine_check.py --team "${ROLE}" --out "${OUT}"
+          fi
+          if [ "${ROLE}" = models ]; then
+            for MODEL in bellwarden_full_anatomy bellwarden_unarmored_human_base; do
+              python3 veilforge/engine.py inspect --obj "${OUT}/${MODEL}.obj" \
+                --out "${OUT}/${MODEL}_mesh_quality.json"
+            done
+          elif [ "${ROLE}" = world ]; then
+            python3 veilforge/engine.py inspect --obj "${OUT}/carved_cenotaph.obj" \
+              --out "${OUT}/mesh_quality.json"
+          elif [ "${ROLE}" = studio ]; then
+            python3 veilforge/engine.py inspect --obj "${OUT}/bellwarden_studio_preview.obj" \
+              --out "${OUT}/mesh_quality.json"
+          elif [ "${ROLE}" = materials ]; then
+            python3 veilforge/engine.py material --type stone --size 512 --out "${OUT}/stone"
+            python3 veilforge/engine.py material --type steel --size 512 --out "${OUT}/steel"
+            python3 veilforge/engine.py material --type leather --size 256 --out "${OUT}/leather"
+            python3 veilforge/engine.py material --type cloth --size 256 --out "${OUT}/cloth"
+          fi
+          echo "VEILFORGE_WORKER_DONE role=${ROLE}"
+      - name: Upload isolated production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-${{ matrix.role }}
+          path: inspection_output/forge/
+          if-no-files-found: warn
+          retention-days: 14
+
+  manager-of-managers-review:
+    name: Review all six independent asset teams
+    needs: [manager-plan-and-unit-tests, specialist-production]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-*
+          path: inspection_output/forge-collected
+      - name: Aggregate report; fail closed if evidence is missing
+        run: |
+          set -euo pipefail
+          python3 veilforge/manager.py review \
+            --collected inspection_output/forge-collected \
+            --out inspection_output/forge-review
+          cat inspection_output/forge-review/forge_review.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Always preserve actual reviewer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-final-review
+          path: inspection_output/forge-review/
+          if-no-files-found: warn
+          retention-days: 14
