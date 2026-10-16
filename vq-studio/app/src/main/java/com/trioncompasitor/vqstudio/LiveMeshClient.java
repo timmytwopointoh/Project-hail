@@ -38,7 +38,7 @@ public final class LiveMeshClient {
     }
     /** Explicit, debug-only, paired emulator data-path check. */
     public static Snapshot pairedTestFixture(Context app,int revision)throws Exception{
-        if(!BuildConfig.DEBUG)throw new SecurityException("Paired test not available in production");
+        if((app.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0)throw new SecurityException("Paired test not available in production");
         if(revision!=1&&revision!=2)throw new IOException("Unknown test revision");
         Bundle args=new Bundle();
         args.putInt("revision",revision);
