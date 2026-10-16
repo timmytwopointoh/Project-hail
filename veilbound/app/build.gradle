@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 10
-        versionName '0.10.0-realism-foundation'
+        versionCode 11
+        versionName '0.11.0-player-visual-workers'
     }
     buildTypes {
         debug { minifyEnabled false }
