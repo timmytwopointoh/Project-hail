@@ -23,6 +23,13 @@ public final class LiveMeshClient {
         public String identity(){return requestId+":"+runId+":"+sequence+":"+sha;}
     }
     public static Snapshot latest(Context app,String requestId,String runId)throws Exception{
+        return latest(app,requestId,runId,null);
+    }
+    /** The already-loaded hash is checked before opening or parsing an OBJ.
+     * Unchanged revisions use a tiny metadata response, not another mesh copy.
+     */
+    public static Snapshot latest(Context app,String requestId,String runId,
+                                  String alreadyLoaded)throws Exception{
         if(!VQProtocol.validRequestId(requestId)||!VQProtocol.validRunId(runId))
             throw new IOException("No verified model run to follow yet");
         Bundle request=new Bundle();
@@ -32,6 +39,13 @@ public final class LiveMeshClient {
         try{response=app.getContentResolver().call(CompanionRoute.provider(app),"latest",null,request);}
         catch(IllegalArgumentException e){throw new IOException(
            "Install the VQ-enabled Trion companion and connect GitHub",e);}
+        if(response!=null&&"available".equals(response.getString("state",""))){
+            String sha=response.getString("sha256","");
+            int sequence=response.getInt("sequence",0);
+            String identity=requestId+":"+runId+":"+sequence+":"+sha;
+            if(sha.matches("[a-f0-9]{64}")&&sequence>=1&&sequence<=2
+               &&identity.equals(alreadyLoaded))return null;
+        }
         return readVerifiedResponse(app,requestId,runId,response);
     }
     /** Explicit, debug-only, paired emulator data-path check. */
