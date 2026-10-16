@@ -20,7 +20,8 @@ public final class CharacterRig {
         }
         public int vertices(){
             return (torso.vertices.length+leftArm.vertices.length+rightArm.vertices.length
-                +leftLeg.vertices.length+rightLeg.vertices.length+mantle.vertices.length)/9;
+                +leftLeg.vertices.length+rightLeg.vertices.length+
+                (mantle==null?0:mantle.vertices.length))/9;
         }
     }
     private static final class Accumulator {
@@ -33,7 +34,7 @@ public final class CharacterRig {
             }
             used+=27;
         }
-        ArtKit.Model finish(){return new ArtKit.Model(Arrays.copyOf(data,used));}
+        ArtKit.Model finish(){return used==0?null:new ArtKit.Model(Arrays.copyOf(data,used));}
     }
     public static Parts split(ArtKit.Model model,boolean boss,boolean revenant){
         final float shoulderX=boss?1.05f:(revenant?.55f:.66f);
