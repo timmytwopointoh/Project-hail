@@ -122,17 +122,19 @@ def validate_proposal(proposal, allowed, read_source):
         # New content can contain old content; remove the old occurrence once
         # to inspect genuinely added fragments for dangerous new capabilities.
         additions = new.replace(old, "", 1)
-        if BAD_NAN_COMPARISON.search(additions):
+        # Compare normalized tokens directly. This catches both operand orders,
+        # any whitespace, and bugs emitted by the small local coding model.
+        compact_java = "".join(new.split())
+        if any(bad in compact_java for bad in (
+                "==Float.NaN", "!=Float.NaN",
+                "Float.NaN==", "Float.NaN!=",
+                "==Double.NaN", "!=Double.NaN",
+                "Double.NaN==", "Double.NaN!=")):
             raise ValueError(
-                "Invalid Java NaN comparison: == or != Float.NaN never "
-                "detects NaN. Use Float.isNaN(x) instead.")
+                "Invalid Java NaN comparison: == or != never detect NaN. "
+                "Use Float.isNaN(x) or Double.isNaN(x).")
         if FORBIDDEN_JAVA_ADDITIONS.search(additions):
             raise ValueError("AI proposal introduces prohibited Java capabilities")
-        if re.search(r"(?:==|!=)\\s*(?:(?:Float|Double)\\s*\\.\\s*NaN)\\b|"
-                     r"(?:Float|Double)\\s*\\.\\s*NaN\\s*(?:==|!=)", additions):
-            raise ValueError(
-                "Java NaN comparisons using == or != never detect NaN; "
-                "use Float.isNaN(x) or Double.isNaN(x) instead")
         total_inserted += len(new)
         if total_inserted > MAX_TOTAL_INSERTED:
             raise ValueError("AI proposal exceeds total change budget")
