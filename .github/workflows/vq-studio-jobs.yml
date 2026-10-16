@@ -71,22 +71,10 @@ jobs:
           VQ_SCALE: ${{ inputs.scale_adjust }}
         run: |
           set -euo pipefail
-          mkdir -p inspection_output/vq-studio
-          python3 - <<'PY'
-          import json,os
-          from pathlib import Path
-          path=Path("veilforge/catalog.json")
-          data=json.loads(path.read_text())
-          ratio={"original":1.0,"smaller":0.85,"larger":1.15}[os.environ["VQ_SCALE"]]
-          selected=[x for x in data["assets"] if x["id"]==os.environ["ASSET"]]
-          assert len(selected)==1
-          item=selected[0]
-          item["scale"]=round(float(item.get("scale",1.0))*ratio,6)
-          assert 0.25<=item["scale"]<=3.0
-          out=Path("inspection_output/vq-studio/corrected_catalog.json")
-          out.write_text(json.dumps(data,indent=2)+"\n")
-          print("VQ_CORRECTION",item["id"],"scale",item["scale"])
-          PY
+          python3 vq-studio/corrections.py \
+            --catalog veilforge/catalog.json --id "$ASSET" \
+            --adjustment "$VQ_SCALE" \
+            --out inspection_output/vq-studio/corrected_catalog.json
       - name: Render adjusted real OBJ and glTF source
         env:
           ASSET: ${{ inputs.catalog_model }}
