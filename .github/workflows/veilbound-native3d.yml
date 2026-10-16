@@ -49,6 +49,8 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/BellwardenAnatomy.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M25SkinPolish.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M24BodyRetarget.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M24AnimationLab.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java \
@@ -77,6 +79,8 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/M24FullBodyTest.java \
             veilbound/tests/game/ashenveil/veilbound/M24BodyRetargetTest.java \
             veilbound/tests/game/ashenveil/veilbound/M24AnimationLabTest.java \
+            veilbound/tests/game/ashenveil/veilbound/M25RefinementTest.java \
+            veilbound/tests/game/ashenveil/veilbound/M25AttachmentAuditTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
@@ -105,6 +109,8 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M24FullBodyTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M24BodyRetargetTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M24AnimationLabTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M25RefinementTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M25AttachmentAuditTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest
@@ -148,6 +154,9 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           script: bash veilbound/scripts/emulator_test.sh
+      - name: Install screenshot analyzer dependency
+        if: always()
+        run: python3 -m pip install --disable-pip-version-check --quiet Pillow
       - name: Analyze screenshots, renderer logs and resource budget
         if: always()
         run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound

@@ -16,6 +16,7 @@ on:
       - 'feature/veilbound-m21-five-digit-hands'
       - 'feature/veilbound-m23-extreme-refinement'
       - 'feature/veilbound-m24-veilforge-full-body'
+      - 'feature/veilbound-m25-facial-surface-material-alignment'
       - 'feature/veilbound-m14-synchronized-emulator-workers'
     paths:
       - '.github/workflows/veilbound-parallel-emulators.yml'

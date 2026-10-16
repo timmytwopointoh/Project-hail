@@ -145,12 +145,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         "float flesh=step(.53,vColor.r)*step(.28,vColor.g)*(1.-step(.54,vColor.g))*"+
         "step(.22,vColor.b)*(1.-step(.39,vColor.b));"+
         "if(uSkinMode>.5){"+
-        "float tone=.975+.045*grit(floor(vLocal*71.));"+
-        "if(flesh>.5){"+
-        "metallic=0.;rough=.90;ao=1.;"+
-        "base=vColor*uTint*vec3(1.03,.985,.95)*tone;"+
+        // Smooth continuous low-amplitude tone, not hard noise tiles.
+        // Anatomical pigments keep their original vertex colors. Dark
+        // embedded pupils gain a controlled corneal highlight only; hair
+        // and modest shorts stay matte without spending extra atlas budget.
+        "float tone=.994+.011*sin(vLocal.x*29.+vLocal.y*17.+vLocal.z*9.);"+
+        "float face=step(2.38,vLocal.y);"+
+        "float iris=face*step(.185,vLocal.z)*(1.-step(.345,vColor.r));"+
+        "float sclera=face*step(.185,vLocal.z)*step(.735,vColor.r);"+
+        "metallic=0.;ao=1.;rough=mix(.79,.70,face*flesh);"+
+        "rough=mix(rough,.46,iris);rough=mix(rough,.56,sclera);"+
+        "base=vColor*uTint*vec3(1.025,.989,.971)*tone;"+
         "n=normalize(vNormal);"+
-        "}else{metallic=0.;rough=.90;}"+
         "}"+
         "}"+
         "float ndl=max(dot(n,light),0.);"+
@@ -360,11 +366,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(studioWarden!=null)return;
         long start=System.nanoTime();
         studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
-        studioHuman=new Mesh(HumanAnatomy.buildM24Candidate(false).vertices);
-        studioHumanLite=new Mesh(HumanAnatomy.buildM24Candidate(true).vertices);
+        studioHuman=new Mesh(HumanAnatomy.buildM25Candidate(false).vertices);
+        studioHumanLite=new Mesh(HumanAnatomy.buildM25Candidate(true).vertices);
         // Rig stress pose is one-time CPU deformation during lab loading.
         // Retains game as stable testing grounds; no gameplay character swap.
-        ArtKit.Model poseSource=HumanAnatomy.buildM24Candidate(true);
+        ArtKit.Model poseSource=HumanAnatomy.buildM25Candidate(true);
         HumanSkeleton poseRig=HumanSkeleton.bind(poseSource);
         M24BodyRetarget.alignBindJoints(poseRig);
         studioHumanPoseFrames=new Mesh[M24AnimationLab.FRAMES];
@@ -377,6 +383,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
               " animated_frames="+studioHumanPoseFrames.length);
         studioHandSculpt=new Mesh(HumanHandSculpt.buildStandalone(false).vertices);
         Log.i("VEILBOUND_STUDIO","M23_HAND_ASSET_ATTACHED triangles="+studioHandSculpt.count/3);
+        Log.i("VEILBOUND_STUDIO","M25_FACE_AND_SKIN_READY triangles="+
+              (studioHuman.count/3));
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
         studioBoss=new Mesh(CinematicArtKit.ashKnight().vertices);
         studioSword=new Mesh(CinematicArtKit.sword().vertices);
@@ -456,7 +464,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float horizontal=m.zoom*(float)Math.cos(pitch);
         float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
             m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
-            m.item==10?1.07f:m.item==12?1.52f:2.12f))+m.panY;
+            m.item==10?1.07f:m.item==12?1.52f:m.item==14?3.42f:2.12f))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -516,6 +524,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 10:chosen=environmentRoots;break;
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
+            case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 13:
                 // Real vertex-animated testing-ground body, cached frames.
                 // Wire inspection freezes frame 0; no per-frame GPU rebuild.
@@ -537,7 +546,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;

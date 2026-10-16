@@ -1,0 +1,246 @@
+name: VEILFORGE M25 - Face, Skin and Attachment Refinement
+on:
+  push:
+    branches:
+      - feature/veilbound-m25-facial-surface-material-alignment
+    paths:
+      - .github/workflows/veilbound-m25-veilforge-refinement.yml
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/M25SkinPolish.java
+      - veilbound/tests/game/ashenveil/veilbound/M25RefinementTest.java
+      - veilbound/tests/game/ashenveil/veilbound/M25AttachmentAuditTest.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/M24AnimationLab.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java
+      - veilbound/tools/HumanVariantCLI.java
+      - veilbound/tests/game/ashenveil/veilbound/M24FullBodyTest.java
+      - veilforge/**
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-m25-full-body-${{ github.ref }}
+  cancel-in-progress: true
+
+# One bounded hour: 10 anatomical managers x five numeric candidate slots.
+# Scores organize human review; CI NEVER writes source, selects gameplay hero,
+# removes the historic knight, or automatically approves a visual result.
+jobs:
+  guard-and-engine-tests:
+    name: Preserve baseline and validate VEILFORGE
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: VEILFORGE topology, PBR, glTF + manager unit tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
+      - name: Compile and check actual M25 human/rig, five-digit hands
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m25-classes
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m25-classes \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/HumanAnatomy.java" "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" "$SRC/M24BodyRetarget.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/M24AnimationLab.java" \
+            "$SRC/ObjMeshLoader.java" "$SRC/ModelStudio.java" \
+            "$TEST/HumanHandsTest.java" "$TEST/HumanHandSculptTest.java" \
+            "$TEST/M24FullBodyTest.java" "$TEST/M24BodyRetargetTest.java" \
+            "$TEST/M24AnimationLabTest.java" \
+            "$TEST/M25RefinementTest.java" "$TEST/M25AttachmentAuditTest.java"
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.HumanHandsTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.HumanHandSculptTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.M24FullBodyTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.M24BodyRetargetTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.M24AnimationLabTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.M25RefinementTest
+          java -cp /tmp/m25-classes game.ashenveil.veilbound.M25AttachmentAuditTest
+          test -f docs/veilbound/M25_FACE_SURFACE_ALIGNMENT.md
+
+  anatomy-managers:
+    needs: guard-and-engine-tests
+    name: M25 anatomy manager / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        team: [front_silhouette, side_silhouette, head_cranium, jaw_profile,
+               shoulders, torso, pelvis, hands_forearms, thighs_calves, feet]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile true M24 whole-body exporter
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m25-export
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          javac -d /tmp/m25-export \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/MaterialMapping.java" "$SRC/ContinuousHuman.java" \
+            "$SRC/HumanHandSculpt.java" "$SRC/ShapeEngine.java" \
+            "$SRC/HumanAnatomy.java" "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" "$SRC/M24BodyRetarget.java" \
+            "$SRC/HumanSkeleton.java" veilbound/tools/HumanVariantCLI.java
+      - name: Five bounded candidates, actual M25 OBJ and 14-angle renders
+        env:
+          TEAM: ${{ matrix.team }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/m25/${TEAM}"
+          mkdir -p "$OUT"
+          for SLOT in 0 1 2 3 4; do
+            python3 veilbound/scripts/human_mutation_worker.py \
+              --team "$TEAM" --slot "$SLOT" --out "$OUT"
+          done
+          PARAMS="$(python3 veilbound/scripts/human_mutation_worker.py \
+            --team "$TEAM" --select --out "$OUT" | tail -n 1)"
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m25-export \
+            game.ashenveil.veilbound.HumanVariantCLI "$PARAMS" "$OUT/selected"
+          python3 veilforge/engine.py inspect \
+            --obj "$OUT/selected/human_candidate.obj" \
+            --out "$OUT/selected/veilforge_mesh_quality.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path("inspection_output/m25")/os.environ["TEAM"]
+          review=json.loads((root/"manager_review.json").read_text())
+          mesh=json.loads((root/"selected"/"mesh_evidence.json").read_text())
+          assert review["workers_reviewed"]==5 and review["micro_edits_evaluated"]==320
+          assert review["accepted_for_game"] is False
+          assert mesh["model"]=="m25_refined_face_skin_candidate"
+          assert not mesh["reviewed"] and not mesh["photo_realistic"]
+          assert len(mesh["camera_views"])==14
+          assert len(list((root/"selected").glob("*_hand_*.png")))==6
+          for angle in ("front","side","three_quarter"):
+              assert (root/"selected"/("face_"+angle+".png")).stat().st_size>1500
+          assert (root/"selected"/"human_candidate.obj").stat().st_size>15000
+          assert (root/"selected"/"m23_sculpted_hands.obj").stat().st_size>15000
+          print("M25_MANUAL_REVIEW_REQUIRED",os.environ["TEAM"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m25-anatomy-${{ matrix.team }}
+          path: inspection_output/m25/${{ matrix.team }}/
+          retention-days: 14
+          if-no-files-found: warn
+
+  veilforge-asset-bridge:
+    name: VEILFORGE topology, material and glTF bridge
+    needs: anatomy-managers
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m25-anatomy-torso
+          path: inspection_output/m25-source
+      - name: Reproducibly repair candidate ONLY (never touch game)
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/veilforge-m25
+          SRC=inspection_output/m25-source/selected/human_candidate.obj
+          OUT=inspection_output/veilforge-m25
+          test -s "$SRC"
+          python3 veilforge/topology.py --obj "$SRC" \
+            --out "$OUT/m25_topology_candidate.obj" --mode human
+          python3 veilforge/engine.py material --type skin --size 256 \
+            --out "$OUT/skin"
+          python3 veilforge/gltf_export.py --obj "$OUT/m25_topology_candidate.obj" \
+            --out "$OUT/m25_skin_candidate.gltf" --material-dir "$OUT/skin" --profile skin
+          python3 veilforge/engine.py inspect --obj "$OUT/m25_topology_candidate.obj" \
+            --out "$OUT/repaired_mesh_quality.json"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("inspection_output/veilforge-m25")
+          r=json.loads((root/"m25_topology_candidate_topology_report.json").read_text())
+          gltf=json.loads((root/"m25_skin_candidate.gltf").read_text())
+          assert r["manual_visual_review_required"] and not r["ready_for_game"]
+          assert gltf["extras"]["manually_approved"] is False
+          assert gltf["asset"]["version"]=="2.0"
+          assert (root/"m25_skin_candidate.bin").stat().st_size>0
+          print("VEILFORGE_M25_SOURCE_BRIDGE_PASS_TO_REVIEW topology_approved=false")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m25-veilforge-sculpt-gltf-materials
+          path: inspection_output/veilforge-m25/
+          retention-days: 14
+          if-no-files-found: warn
+
+  anatomy-director-review:
+    name: Require independent manager audit and human visual approval
+    needs: [anatomy-managers,veilforge-asset-bridge]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m25-anatomy-*
+          path: inspection_output/m25-collected
+      - name: Audit ten regions and forbid score-only promotion
+        run: |
+          set -euo pipefail
+          python3 veilbound/scripts/human_wave_manager.py inspection_output/m25-collected
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          ranking=Path("inspection_output/wave-ranking")
+          result=json.loads((ranking/"wave_leaderboard.json").read_text())
+          assert result["number_of_independent_worker_slots"]==50
+          assert result["parameter_mutations_evaluated"]==3200
+          assert result["accepted_for_game"] is False
+          review={"iteration":"M25-01","engine":"VEILFORGE",
+                  "game_role":"TESTING_GROUNDS_ONLY",
+                  "history_piece":"BELLWARDEN ORIGINAL PRESERVED",
+                  "source_provenance":"feature/veilforge-asset-engine-v1@b08a4ada",
+                  "full_body_regions":10,"candidate_slots":50,
+                  "auto_promoted":False,"hair_budget":0,
+                  "reference":"Bellwarden Base Body Test; human manual likeness approval pending",
+                  "anatomical_visual_review":"PENDING",
+                  "android_15_verified":"SEPARATE FARM RESULT REQUIRED",
+                  "animation_quality":"REFERENCE POSE ONLY - NOT PRODUCTION RIG",
+                  "next":"Review 14 real mesh views, closeups, topology, pose and Android screenshots"}
+          (ranking/"m25_review_journal.json").write_text(json.dumps(review,indent=2)+"\n")
+          print(json.dumps(review,indent=2))
+          PY
+          cat inspection_output/wave-ranking/manager_human_review.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m25-manual-full-body-review-required
+          path: inspection_output/wave-ranking/
+          retention-days: 14
+          if-no-files-found: warn

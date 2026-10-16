@@ -50,6 +50,7 @@ public final class ContinuousHuman {
     }
     private static final class Field{
         final ArrayList<Blob> shapes=new ArrayList<>();
+        boolean smoothSurface;
         void add(float x,float y,float z,float rx,float ry,float rz){
             shapes.add(new Blob(x,y,z,rx,ry,rz));
         }
@@ -68,7 +69,11 @@ public final class ContinuousHuman {
                 // .025 smoothing blended adjacent .04-wide digits into a
                 // mitten. Keep soft transitions at elbow/shoulder/palm.
                 float k=(y<.765f&&y>.46f&&Math.abs(x)>.40f)
-                    ?.0035f:.025f;
+                    ?.0035f:(smoothSurface
+                       // Whole-body only. Facial detail has a tighter union
+                       // radius; toes stay clearly distinct.
+                       ?(y>2.18f?.016f:y<.24f?.015f:.036f)
+                       :.025f);
                 float v=b.distance(x,y,z);
                 if(d==99f){d=v;continue;}
                 // Smooth minimum applied in signed-distance space. Fuses
@@ -85,13 +90,17 @@ public final class ContinuousHuman {
         for(float v:g)if(!Float.isFinite(v)||v<.83f||v>1.17f)
             throw new IllegalArgumentException("Human proportion outside reviewed range");
     }
-    private static Field anatomy(float[] g){return anatomy(g,true,false);}
+    private static Field anatomy(float[] g){return anatomy(g,true,false,false);}
     private static Field anatomy(float[] g,boolean includeDigits){
-        return anatomy(g,includeDigits,false);
+        return anatomy(g,includeDigits,false,false);
     }
     private static Field anatomy(float[] g,boolean includeDigits,boolean m24){
-
+        return anatomy(g,includeDigits,m24,false);
+    }
+    private static Field anatomy(float[] g,boolean includeDigits,
+                                 boolean m24,boolean m25){
         Field f=new Field();
+        f.smoothSurface=m25;
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
         f.add(0,1.095f,-.01f,.294f*g[4],.229f,.206f);
@@ -108,13 +117,15 @@ public final class ContinuousHuman {
         // nasal bridge and lip mass all fused into the original skin surface.
         f.add(0,2.075f,0,.106f,.185f,.106f);
         f.add(0,2.392f,.014f,.177f*g[6],.234f,.167f);
-        f.add(0,2.260f,.062f,.132f*g[7],.108f,.126f);
+        f.add(0,2.260f,.059f,(m25?.122f:.132f)*g[7],.108f,m25?.116f:.126f);
         f.add(0,2.506f,-.022f,.164f*g[6],.129f,.153f);
-        f.add(0,2.347f,.177f,.044f*g[9],.095f,.065f*g[9]);
+        f.add(0,2.347f,m25?.167f:.177f,(m25?.039f:.044f)*g[9],
+              m25?.081f:.095f,(m25?.062f:.065f)*g[9]);
         f.add(0,2.259f,.171f,.064f,.021f,.036f);
         for(int side:new int[]{-1,1}){
-            f.add(side*.122f,2.376f,.11f,.073f,.075f,.074f);
-            f.add(side*.177f*g[6],2.393f,-.015f,.038f,.066f,.038f);
+            f.add(side*.120f,2.376f,.11f,m25?.063f:.073f,.075f,m25?.061f:.074f);
+            f.add(side*.174f*g[6],2.393f,-.015f,m25?.030f:.038f,
+                  m25?.051f:.066f,m25?.030f:.038f);
             // Clavicle joins shoulder before deltoid. No floating arm barrel.
             float sx=side*.445f*g[0];
             f.add(side*.325f,1.90f,-.002f,.156f,.109f,.146f);
@@ -194,7 +205,7 @@ public final class ContinuousHuman {
                       .025f,.032f,.067f);
             }
         }
-        if(m24)refineWholeBody(f,g);
+        if(m24)refineWholeBody(f,g,m25);
         return f;
     }
     /**
@@ -204,7 +215,7 @@ public final class ContinuousHuman {
      * Hair and all historical baseline geometry remain unchanged.
      * Future retopology, texture painting and joint-weight review still needed.
      */
-    private static void refineWholeBody(Field f,float[] g){
+    private static void refineWholeBody(Field f,float[] g,boolean facePolish){
         // Thoracic / abdominal form: serratus, upper oblique and erector
         // spinae soften the formerly featureless barrel-shaped torso.
         for(int side:new int[]{-1,1}){
@@ -232,9 +243,12 @@ public final class ContinuousHuman {
             f.add(side*.548f*g[0],1.196f,-.059f,.082f*g[10],.169f,.075f);
             // Upper cheekbone, jaw musculature and brow: modest volumes,
             // deliberately no artificial bead eyes, no hair modification.
-            f.add(side*.097f,2.410f,.138f,.068f,.044f,.052f);
-            f.add(side*.121f,2.308f,.103f,.067f*g[7],.075f,.066f);
-            f.add(side*.081f,2.474f,.130f,.057f,.035f,.036f);
+            f.add(side*.097f,2.410f,.138f,facePolish?.053f:.068f,
+                  .044f,facePolish?.043f:.052f);
+            f.add(side*.118f,2.308f,.103f,(facePolish?.056f:.067f)*g[7],
+                  .075f,facePolish?.057f:.066f);
+            f.add(side*.081f,2.474f,.130f,facePolish?.048f:.057f,
+                  .035f,facePolish?.028f:.036f);
             f.add(side*.040f,2.275f,.179f,.035f,.023f,.031f);
         }
         f.add(0,1.461f,.184f,.114f,.153f,.039f); // subtle rectus contour
@@ -361,9 +375,18 @@ public final class ContinuousHuman {
     }
     private static ArtKit.Model build(boolean lite,float[] controls,
                                       boolean includeDigits,boolean refined){
+        return build(lite,controls,includeDigits,refined,false);
+    }
+    /** Smoothened M25 is opt-in; never modifies the M20 or M24 baseline. */
+    static ArtKit.Model buildM25WithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false,true,true);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,
+                                      boolean includeDigits,boolean refined,
+                                      boolean smoothSkin){
         validate(controls);
-        Field field=anatomy(controls,includeDigits,refined);
-        float h=lite?.062f:.039f;
+        Field field=anatomy(controls,includeDigits,refined,smoothSkin);
+        float h=smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
             nz=2+(int)Math.ceil(1.14f/h);
