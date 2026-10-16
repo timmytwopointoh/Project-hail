@@ -232,13 +232,13 @@ public final class ContinuousHuman {
         for(int z=1;z<nz-2;z++)for(int y=1;y<ny-2;y++)for(int x=1;x<nx-2;x++){
             boolean inside=false,outside=false;
             for(int k=0;k<8;k++){
-                int[] c=CORNERS[k],xx=x+c[0],yy=y+c[1],zz=z+c[2];
+                int[] c=CORNERS[k];int xx=x+c[0],yy=y+c[1],zz=z+c[2];
                 signed[k]=node(v,xx,yy,zz,nx,ny);
                 if(signed[k]<0)inside=true;else outside=true;
             }
             if(!inside||!outside)continue;
             for(int k=0;k<8;k++){
-                int[] c=CORNERS[k],xx=x+c[0],yy=y+c[1],zz=z+c[2];
+                int[] c=CORNERS[k];int xx=x+c[0],yy=y+c[1],zz=z+c[2];
                 pos[k][0]=x0+xx*h;pos[k][1]=y0+yy*h;pos[k][2]=z0+zz*h;
                 grad[k][0]=node(v,xx+1,yy,zz,nx,ny)-
                            node(v,xx-1,yy,zz,nx,ny);
