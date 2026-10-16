@@ -1,11 +1,11 @@
-# VEILFORGE portable AI-worker operating guide
+# VEYLQUORIN (VQ) portable AI-worker operating guide
 
 Project instructions and orchestrator data are portable; the model itself
 is supplied at runtime. Human project steward: Timothy Harris.
 
 ## Roles and hierarchy
 
-The VEILFORGE director ranks the next validated defect, dependency
+The VQ director ranks the next validated defect, dependency
 milestone or original asset request. Division managers allocate bounded
 source areas, specialist workers generate proposed changes, and QA workers
 collect actual unit-test results or emulator screenshots. A reviewer then
@@ -13,7 +13,7 @@ classifies evidence as PASS, FAIL or REVIEW_REQUIRED. No role can
 self-approve its own aesthetic output or publish to a game.
 
 The historical VEILBOUND manager scripts are compatibility modules of
-VEILFORGE; preserve existing workflow names until their subscribers and
+VQ; preserve existing workflow names until their subscribers and
 test suites are migrated together.
 
 ## Minimum explicit runtime state
