@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "description": "M18 anatomical humanoid: user selected one continuous skinned base body. Preserve legacy armored player and all original gameplay. No AI patches promoted automatically. Original adult male character target from provided visual reference, not licensed game geometry.",
+  "tasks": [
+    {
+      "id": "M18-MESH",
+      "role": "models",
+      "priority": "P0",
+      "goal": "Improve HumanAnatomy.java toward a single continuous, anatomically believable body surface. Current independent loft parts are provisional. Prioritize shoulder/neck transitions, ribcage, hand-to-wrist junction, knee-to-calf continuity and sensible topology. Preserve modest shorts; never add armor. Keep all HumanAnatomyTest and HumanSkeletonTest green."
+    },
+    {
+      "id": "M18-RIG",
+      "role": "animation",
+      "priority": "P0",
+      "goal": "Improve HeroPose.java and CharacterRig.java cautiously for real full-body hip weight shifts, elbow/knee contact, ground-planting. M18 HumanSkeleton.java is an isolated CPU test rig; do not switch current playable Bellwarden hero without full emulator approval."
+    },
+    {
+      "id": "M18-SKIN",
+      "role": "materials",
+      "priority": "P0",
+      "goal": "Develop original believable matte skin material mapping with warm undertones and nonmetallic roughness without changing steel, leather, cloth and stone. Do not treat current single-vertex RGB as photorealistic."
+    },
+    {
+      "id": "M18-VIEWER",
+      "role": "studio",
+      "priority": "P0",
+      "goal": "Improve human inspection: human slot 11, character zoom framing and clear front/side/back orbit with unmodified final Imported OBJ slot."
+    },
+    {
+      "id": "M18-WORLD",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Keep an independent design-only plan for 250 streamed regions; do not change existing arena until base human and combat improvements verified."
+    },
+    {
+      "id": "M18-COMBAT",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Combat improvement planning: timed telegraph anticipation, hip drive, forward stepping slash, thrust, overhead, dodge recovery and AI cooldown. Do not merge gameplay changes in the anatomy lab branch."
+    }
+  ]
+}
