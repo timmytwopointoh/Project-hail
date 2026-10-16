@@ -1,6 +1,7 @@
 # VEILFORGE / VEILBOUND rights and provenance policy
 
-**Named project steward and rights claimant:** Timothy Harris.\n**Associated account:** [timmytwopointoh](https://github.com/timmytwopointoh).
+**Named project steward and rights claimant:** Timothy Harris.
+**Associated account:** [timmytwopointoh](https://github.com/timmytwopointoh).
 **Repository:** [timmytwopointoh/Project-hail](https://github.com/timmytwopointoh/Project-hail).
 **Scope:** Original VEILFORGE asset engine, VEILBOUND worker hierarchy and emulator CI,
 the shared ten-slot pipeline, original human-authored source files, project-specific
@@ -21,8 +22,7 @@ an independent proof of the historical creation time or personal authorship.
 The proof record will contain: account/repository identity, triggering actor,
 commit SHA, GitHub run URL, actual recorded UTC and Eastern timestamps, SHA-256
 file hashes, aggregate manifest SHA-256, rights-claim limitations, and third-party
-review status. It **does not** contain a private legal name, address, signature,
-government ID, or secrets.
+review status. It names Timothy Harris publicly as the self-reported claimant, but does not contain signatures, addresses, government IDs, passwords, or other private records.
 
 ## Ownership assertion (qualified)
 
