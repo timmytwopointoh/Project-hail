@@ -21,6 +21,7 @@ import javax.imageio.ImageIO;
  * Camera labels are truthful; images render generated geometry, not AI art.
  */
 public final class HumanVariantCLI {
+    private static String studyLabel="M25";
     private static final String[] VIEWS={
         "front","side","back","three_quarter",
         "orbit_030","orbit_060","orbit_120","orbit_150","orbit_210",
@@ -43,7 +44,8 @@ public final class HumanVariantCLI {
     private static void obj(ArtKit.Model mesh,Path file) throws Exception{
         float[] v=mesh.vertices;
         try(BufferedWriter w=Files.newBufferedWriter(file,StandardCharsets.UTF_8)){
-            w.write("# VEILBOUND M25 face/surface whole-body candidate, review pending\n");
+            w.write("# VEILBOUND "+studyLabel+
+                    " face/surface whole-body candidate, review pending\n");
             for(int i=0;i<v.length;i+=9)
                 w.write("v "+f(v[i])+" "+f(v[i+1])+" "+f(v[i+2])+" "+
                     f(v[i+6])+" "+f(v[i+7])+" "+f(v[i+8])+"\n");
@@ -105,7 +107,7 @@ public final class HumanVariantCLI {
         }
         g.setColor(new Color(45,50,55));
         g.drawString(VIEWS[view].toUpperCase(Locale.US)+"  |  ACTUAL 3D MESH",14,28);
-        g.drawString("M25 FACE + SKIN - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
+        g.drawString(studyLabel+" FACE + SKIN - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
@@ -221,7 +223,7 @@ public final class HumanVariantCLI {
         for(Face face:faces){g.setColor(face.color);
                              g.fillPolygon(new Polygon(face.px,face.py,3));}
         g.setColor(new Color(45,50,55));
-        g.drawString("M25 FACE "+VIEWS[view].toUpperCase(Locale.US)+
+        g.drawString(studyLabel+" FACE "+VIEWS[view].toUpperCase(Locale.US)+
                      " | REAL 3D MESH",14,28);
         g.drawString("OFFLINE CAMERA PROJECTION; NOT AN ANDROID SCREENSHOT",
                      14,height-21);
@@ -237,6 +239,7 @@ public final class HumanVariantCLI {
         if(args.length==4&&(!hasDials||!meshOnly))
             throw new IllegalArgumentException("Unexpected M26 CLI options");
         float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
+        studyLabel=hasDials?"M26":"M25";
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
