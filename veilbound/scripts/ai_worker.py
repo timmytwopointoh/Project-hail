@@ -24,7 +24,7 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 ROLES = {
     "combat": ["WorldState.java"],
     "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
-    "models": ["ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "models": ["ShapeEngine.java", "HumanAnatomy.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "MaterialTextures.java", "SurfaceAtlas.java", "MaterialMapping.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
@@ -78,7 +78,7 @@ def run_java_checks(replacement):
         classes.mkdir()
         pure = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
                 "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "MaterialMapping", "BootAssets"]
+                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "MaterialMapping", "BootAssets"]
         suites = ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay",
                   "EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
                   "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader",
