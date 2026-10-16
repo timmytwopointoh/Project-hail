@@ -13,7 +13,7 @@ ORIGINAL = "package game.ashenveil.veilbound;\npublic final class CharacterRig {
 
 
 def proposal(old="public final class CharacterRig {}",
-             new="public final class CharacterRig { /* detail */ }",
+             new="public final class CharacterRig { private static final int LIMIT = 1; }",
              path=PATH_OK, edits=None):
     return {"summary": "Introduce a small audited rig refinement",
             "edits": edits if edits is not None else [
@@ -27,7 +27,7 @@ class ProposalGuardTests(unittest.TestCase):
 
     def test_one_real_scoped_replacement(self):
         result = self.validate(proposal())
-        self.assertIn("/* detail */", result[PATH_OK])
+        self.assertIn("LIMIT = 1", result[PATH_OK])
         self.assertIn("package game", result[PATH_OK])
 
     def test_noop_empty_and_unmatched_rejected(self):
