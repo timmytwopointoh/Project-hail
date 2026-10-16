@@ -28,35 +28,57 @@ def diagnostic_state():
 def touch(x,y):
     adb("shell","input","tap",int(x),int(y),timeout=25)
 
-def dismiss_android_overlay():
-    """Dismiss only known Android first-launch tutorial / launcher ANR dialogs.
+def system_overlay_button(xml):
+    """Return only an OS-owned dismiss control, never a game UI control.
 
-    Never bypass in-game menus or modify game state programmatically.
+    Android 13/14/15 immersive-cling text varies in capitalization:
+    Android 14 labels its button 'GOT IT', not 'Got it'.
     """
     import xml.etree.ElementTree as ET
+    root = ET.fromstring(xml)
+    nodes = [n for n in root.iter("node") if n.get("package") == "android"]
+    texts = {n.get("text", "").strip().casefold() for n in nodes}
+    immersive = ("viewing full screen" in texts or
+                 any(n.get("resource-id", "").startswith("android:id/immersive_cling")
+                     for n in nodes))
+    frozen = any("isn't responding" in t or "not responding" in t for t in texts)
+    if not immersive and not frozen:
+        return None, False
+    names = {"got it"} if immersive else {"wait"}
+    candidates = [n for n in nodes
+                  if n.get("text", "").strip().casefold() in names
+                  or (immersive and n.get("resource-id") == "android:id/ok")]
+    for node in candidates:
+        m = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
+                         node.get("bounds", ""))
+        if m:
+            x1, y1, x2, y2 = map(int, m.groups())
+            if x2 > x1 and y2 > y1:
+                return ((x1+x2)//2, (y1+y2)//2), True
+    return None, True
+
+
+def dismiss_android_overlay():
+    """Remove only confirmed Android dialogs and prove they are gone."""
     for attempt in range(5):
         try:
-            adb("shell","uiautomator","dump","/sdcard/veilbound-system.xml",timeout=28)
-            xml=adb("exec-out","cat","/sdcard/veilbound-system.xml",timeout=18)
-            (OUT/"system_ui.xml").write_bytes(xml)
-            root=ET.fromstring(xml)
-            nodes=list(root.iter("node"))
-            text=" ".join(n.get("text","") for n in nodes)
-            button=None
-            if "Viewing full screen" in text:
-                button=next((n for n in nodes if n.get("text","")=="Got it"),None)
-            elif ("isn't responding" in text or "not responding" in text):
-                button=next((n for n in nodes if n.get("text","")=="Wait"),None)
-            if button is None:
+            adb("shell", "uiautomator", "dump",
+                "/sdcard/veilbound-system.xml", timeout=28)
+            xml = adb("exec-out", "cat",
+                      "/sdcard/veilbound-system.xml", timeout=18)
+            (OUT / "system_ui.xml").write_bytes(xml)
+            button, present = system_overlay_button(xml)
+            if not present:
                 return
-            m=re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",button.get("bounds",""))
-            if m is None:return
-            x1,y1,x2,y2=map(int,m.groups())
-            touch((x1+x2)//2,(y1+y2)//2)
-            time.sleep(1.1)
-        except (subprocess.SubprocessError,ValueError,ET.ParseError) as exc:
-            (OUT/"system_overlay_warning.txt").write_text(str(exc))
+            if button is None:
+                raise AssertionError(
+                    "Known Android system overlay has no safe dismiss button")
+            touch(*button)
+            time.sleep(0.85)
+        except (subprocess.SubprocessError, ValueError) as exc:
+            (OUT / "system_overlay_warning.txt").write_text(str(exc))
             return
+    raise AssertionError("Android system overlay persisted after 5 safe dismiss attempts")
 
 def shot(name):
     # Large mesh/texture uploads can coincide with a transient Android
