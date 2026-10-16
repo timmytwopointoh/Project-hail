@@ -48,6 +48,28 @@ public final class HumanAnatomy {
         M26SculptDials.validate(dials);
         return M26SculptDials.apply(buildM25Candidate(lite,controls),dials);
     }
+    /**
+     * M28 anatomy candidate: body, skull and 5-digit hands are real geometry.
+     * Connected skin orbital recesses precede explicitly shaped eyelid rims;
+     * M26's conservative shoulder/chest/ankle corrections remain applied.
+     * M25 and M26 candidates are preserved as independently selectable tests.
+     */
+    public static ArtKit.Model buildM28Candidate(boolean lite){
+        float[] learned={.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f};
+        return buildM28Candidate(lite,ContinuousHuman.BASE,learned);
+    }
+    public static ArtKit.Model buildM28Candidate(boolean lite,float[] controls,
+                                                   float[] learned){
+        ContinuousHuman.validate(controls);
+        M26SculptDials.validate(learned);
+        ArtKit.Model continuous=M28SkinContinuity.refine(
+            ContinuousHuman.buildM25WithoutDigits(lite,controls));
+        ArtKit.Model composite=ShapeEngine.combine(
+            continuous,HumanHandSculpt.build(lite,controls[0]),
+            M28FaceSculpt.build(lite));
+        ArtKit.Model retarget=M24BodyRetarget.transform(composite);
+        return M26SculptDials.apply(M25SkinPolish.apply(retarget),learned);
+    }
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
