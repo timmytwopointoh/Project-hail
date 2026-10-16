@@ -399,6 +399,36 @@ def main():
             raise AssertionError("M24 human pose orientation failed to update in native game")
         atelier["m24_deformation_preview"]={"loaded":True,"side_view":True,
                                              "human_visual_approval_required":True}
+        # M25 angle and face detail proof: actual OpenGL screenshots in the
+        # same Android APK. The viewer cycles FRONT/SIDE/BACK/3/4. Never
+        # replace these with concept art or offline renderer images.
+        touch(w*.65,h*.865)  # M24 motion study -> M25 face inspection
+        time.sleep(1.3)
+        face_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                     timeout=20).decode("utf-8","replace")
+        if "item=14" not in face_log or "M25_FACE_AND_SKIN_READY" not in face_log:
+            raise AssertionError("M25 eyes/face viewer was not loaded in Android game")
+        front=OUT/"01_m25_face_front.png"
+        report["screenshots"].append(shot(front.name))
+        prior=front
+        for angle in ("side","back","three_quarter"):
+            touch(w*.50,h*.758)
+            time.sleep(1.0)
+            name="01_m25_face_"+angle+".png"
+            report["screenshots"].append(shot(name))
+            with Image.open(prior) as aa,Image.open(OUT/name) as bb:
+                delta=ImageStat.Stat(ImageChops.difference(
+                    aa.convert("RGB").resize((180,105)),
+                    bb.convert("RGB").resize((180,105)))).mean
+            if sum(delta)/3<.12:
+                raise AssertionError("M25 facial orbit did not change for "+angle)
+            prior=OUT/name
+        touch(w*.65,h*.265)  # Face lens detail focus
+        time.sleep(.9)
+        report["screenshots"].append(shot("01_m25_face_closeup.png"))
+        atelier["m25_facial_refinement"]={"viewer":14,"real_angles":4,
+            "sclera_iris_geometry_expected":True,
+            "visual_approval_required":True,"skin_pbr_unverified":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
