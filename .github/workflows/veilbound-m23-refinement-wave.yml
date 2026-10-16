@@ -9,6 +9,8 @@ on:
       - veilbound/scripts/human_wave_manager.py
       - veilbound/tools/HumanVariantCLI.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java
       - veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java
   workflow_dispatch:
 permissions:
@@ -41,8 +43,14 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/SurfaceAtlas.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
-            veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
+            veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ObjMeshLoader.java \
+            veilbound/tests/game/ashenveil/veilbound/HumanHandSculptTest.java
           java -cp /tmp/m23-human game.ashenveil.veilbound.HumanHandsTest
+          java -cp /tmp/m23-human game.ashenveil.veilbound.HumanHandSculptTest
       - name: Prohibit automatic promotion and confirm evidence policy
         run: |
           set -euo pipefail
@@ -82,6 +90,9 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/SurfaceAtlas.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/HumanHandSculpt.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java \
             veilbound/tools/HumanVariantCLI.java
       - name: Produce five candidate proposals and all 20 real mesh previews
         env:
@@ -119,6 +130,7 @@ jobs:
                   name=f"{side}_hand_{view}.png"
                   assert (root/"selected"/name).stat().st_size>1500, name
           assert (root/"selected"/"human_candidate.obj").stat().st_size>15000
+          assert (root/"selected"/"m23_sculpted_hands.obj").stat().st_size>15000
           print("M23_CANDIDATE_ARTIFACTS_PASS",os.environ["TEAM"],
                 "five_slots=5 orbit_views=14 hand_closeups=6 review_only=true")
           PY
