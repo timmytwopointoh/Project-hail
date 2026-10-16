@@ -7,14 +7,48 @@ then runs the regular Java test/patch gate. Never writes to GitHub.
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from ai_worker import ROLES, draft_code
+from ai_worker import JAVA, ROLES, draft_code
 from team_manager import TEAM_DIVISION, review_division, review_team, verify_child
 from worker_manager import load_object, plan
+
+
+ROOT = HERE.parents[1]
+
+
+def verify_studio_finite_gestures(out):
+    """Trusted *additional* behavioral gate for the narrow NaN-camera pilot."""
+    candidate = (Path(out) / "proposed" / JAVA / "ModelStudio.java")
+    trusted_test = (ROOT / "veilbound/tests/game/ashenveil/veilbound" /
+                    "StudioFiniteGestureAcceptanceTest.java")
+    if not candidate.is_file() or not trusted_test.is_file():
+        return False, "Missing Studio replacement source or trusted postcondition test"
+    environment = {key: value for key, value in os.environ.items()
+                   if key in ("PATH", "JAVA_HOME", "HOME", "LANG", "LC_ALL", "TMPDIR")}
+    with tempfile.TemporaryDirectory(prefix="veilbound-studio-postcondition-") as temp:
+        classes = Path(temp) / "classes"
+        classes.mkdir()
+        compiled = subprocess.run(
+            ["javac", "-d", str(classes), str(candidate), str(trusted_test)],
+            cwd=ROOT, text=True, capture_output=True, timeout=90, env=environment)
+        if compiled.returncode:
+            return False, (compiled.stdout + compiled.stderr)[-5000:]
+        executed = subprocess.run(
+            ["java", "-cp", str(classes),
+             "game.ashenveil.veilbound.StudioFiniteGestureAcceptanceTest"],
+            cwd=ROOT, text=True, capture_output=True, timeout=30, env=environment)
+        if executed.returncode:
+            return False, (executed.stdout + executed.stderr)[-5000:]
+        if "VEILBOUND_STUDIO_FINITE_GESTURE_PASS" not in executed.stdout:
+            return False, "Required Studio finite-gesture marker was not emitted"
+    return True, "trusted Studio NaN-gesture regression passed"
 
 
 def pilot(role, out, *, backlog=Path("veilbound/worker_backlog.json")):
@@ -40,6 +74,15 @@ def pilot(role, out, *, backlog=Path("veilbound/worker_backlog.json")):
         os.environ["VEILBOUND_WORKER_SLOT"] = assigned["slot_id"]
         result["actual_ai_inference_attempted"] = True
         result.update(draft_code(role, out))
+        if (assigned["task_id"] == "VB-PILOT-STUDIO-FINITE"
+                and result.get("status") == "proposed_change_passed_java_tests"):
+            passed, evidence = verify_studio_finite_gestures(out)
+            result["behavioral_postcondition"] = {
+                "test": "StudioFiniteGestureAcceptanceTest", "passed": passed,
+                "evidence": evidence[:1800]}
+            if not passed:
+                result["status"] = "proposed_change_failed_postcondition"
+                (out / "validation.txt").write_text(evidence[:5000], encoding="utf-8")
         result["approved_by_division"] = division
         result["approved_by_specialist"] = assigned["team"]
         result["source"] = "hierarchical-local-model-pilot"
@@ -57,5 +100,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--role", choices=list(ROLES), default="animation")
     parser.add_argument("--out", type=Path, default=Path("inspection_output/local-coding-pilot"))
+    parser.add_argument("--backlog", type=Path,
+                        default=Path("veilbound/worker_backlog.json"))
     args = parser.parse_args()
-    raise SystemExit(pilot(args.role, args.out))
+    raise SystemExit(pilot(args.role, args.out, backlog=args.backlog))
