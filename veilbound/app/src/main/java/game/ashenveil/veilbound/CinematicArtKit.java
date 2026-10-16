@@ -192,44 +192,62 @@ public final class CinematicArtKit {
         ArtKit.Model result(){return new ArtKit.Model(Arrays.copyOf(verts,count));}
     }
     private static void bellwardenSculpt(Form f){
-        // A tapered, fluted cuirass overlays the temporary conical torso.
-        f.torsoLoft(0,-.01f,.81f,1.12f,
-            new float[]{.29f,.35f,.42f,.52f,.54f,.47f,.40f},
-            new float[]{.30f,.36f,.39f,.43f,.43f,.34f,.30f},32,
-            .52f,.64f,.70f);
-        f.ellipsoid(0,1.50f,.25f,.45f,.38f,.29f,32,15,.63f,.75f,.80f);
+        // Human-shaped cinched waist and broad ribcage: multiple controlled
+        // rings give the steel cuirass a forged silhouette, not a balloon.
+        f.torsoLoft(0,-.01f,.81f,1.16f,
+            new float[]{.27f,.31f,.35f,.42f,.46f,.43f,.35f,.21f},
+            new float[]{.23f,.28f,.31f,.35f,.36f,.32f,.26f,.16f},28,
+            .43f,.51f,.56f);
+        // Separate shallow breastplate sits ON the ribcage with a center keel.
+        f.torsoLoft(0,.17f,1.26f,.54f,
+            new float[]{.31f,.37f,.40f,.39f,.32f},
+            new float[]{.18f,.22f,.23f,.18f,.11f},26,
+            .56f,.61f,.62f);
+        f.rod(0,1.12f,.49f,0,1.77f,.43f,.026f,9,.74f,.66f,.48f);
         // Laminated asymmetric shoulder armor, with gold ridge filigree.
         for(int side=-1;side<=1;side+=2){
             float x=side*.64f;
-            f.ellipsoid(x,1.80f,-.025f,.40f,.29f,.43f,30,14,
-                        .45f,.57f,.66f);
-            f.ellipsoid(x,1.89f,-.005f,.36f,.18f,.40f,30,11,
-                        .57f,.66f,.70f);
-            f.ellipsoid(x,1.99f,.00f,.29f,.13f,.32f,28,9,
-                        .62f,.70f,.71f);
+            // Narrow hand-forged shoulder caps with stacked directional
+            // lamination; each plate tapers toward the neck and outer arm.
+            f.torsoLoft(x,-.025f,1.67f,.51f,
+                new float[]{.23f,.32f,.33f,.28f,.20f,.035f},
+                new float[]{.26f,.34f,.35f,.32f,.22f,.05f},22,
+                .41f,.49f,.55f);
+            f.ellipsoid(x,1.92f,.10f,.28f,.058f,.31f,20,8,
+                        .57f,.62f,.63f);
             f.rod(x-side*.41f,1.83f,.28f,x,2.08f,.22f,
                   .043f,9,.85f,.68f,.39f);
             f.rod(x,2.08f,.22f,x+side*.42f,1.84f,.10f,
                   .043f,9,.82f,.63f,.38f);
             // Sculpted shin shells: separate rounded knees, tapered ankles.
-            f.ellipsoid(side*.26f,.53f,.17f,.23f,.43f,.27f,22,12,
-                        .39f,.45f,.53f);
-            f.ellipsoid(side*.26f,.75f,.29f,.23f,.17f,.23f,25,10,
-                        .71f,.70f,.58f);
+            f.torsoLoft(side*.26f,.09f,.15f,.62f,
+                new float[]{.16f,.18f,.21f,.21f,.17f,.14f},
+                new float[]{.16f,.20f,.22f,.22f,.19f,.15f},18,
+                .36f,.41f,.48f);
+            f.ellipsoid(side*.26f,.76f,.21f,.20f,.115f,.19f,22,9,
+                        .60f,.62f,.59f);
             f.rod(side*.38f,.22f,.30f,side*.37f,.71f,.36f,
                   .022f,9,.82f,.72f,.54f);
         }
         // Historically inspired armet with a low brow and curved snout visor.
-        f.ellipsoid(0,2.31f,.0f,.42f,.47f,.39f,40,20,.46f,.59f,.66f);
-        f.ellipsoid(0,2.56f,.07f,.405f,.17f,.39f,40,12,.76f,.72f,.57f);
-        f.ellipsoid(0,2.23f,.33f,.33f,.18f,.11f,32,10,.10f,.13f,.19f);
+        f.torsoLoft(0,.0f,2.05f,.75f,
+            new float[]{.24f,.30f,.36f,.35f,.31f,.22f,.045f},
+            new float[]{.24f,.29f,.31f,.30f,.26f,.18f,.045f},24,
+            .43f,.51f,.56f);
+        // Recessed eye slits, metallic brow and a wedge-shaped bevor.
+        f.ellipsoid(0,2.29f,.302f,.29f,.071f,.026f,26,8,
+                    .09f,.12f,.16f);
+        f.rod(-.34f,2.40f,.292f,.34f,2.40f,.292f,.042f,10,
+              .75f,.67f,.49f);
+        f.ellipsoid(0,2.13f,.277f,.225f,.13f,.064f,20,9,
+                    .34f,.41f,.46f);
         // Thin angular orbital bar and gold central fluting.
-        f.rod(-.36f,2.30f,.37f,.36f,2.30f,.37f,.033f,9,.87f,.75f,.52f);
-        f.rod(0,2.78f,.10f,0,2.18f,.43f,.047f,11,.82f,.68f,.44f);
+        f.rod(-.33f,2.36f,.317f,.33f,2.36f,.317f,.023f,8,.80f,.70f,.51f);
+        f.rod(0,2.78f,.10f,0,2.19f,.335f,.028f,9,.81f,.70f,.49f);
         for(int k=0;k<11;k++){
             float a=-PI*.87f+k*PI*.174f;
-            float x=.38f*(float)Math.cos(a),z=.36f*(float)Math.sin(a);
-            f.ellipsoid(x,2.65f,z,.032f,.046f,.032f,10,6,.80f,.72f,.51f);
+            float x=.285f*(float)Math.cos(a),z=.27f*(float)Math.sin(a);
+            f.ellipsoid(x,2.63f,z,.024f,.032f,.024f,9,5,.72f,.67f,.51f);
         }
         // Folded velvet mantle, gold piping and darker embroidered lining.
         f.mantle(1.29f,1.97f,.14f,-.53f,.18f,.23f,.38f);
@@ -272,15 +290,15 @@ public final class CinematicArtKit {
                       .017f,8,.70f,.60f,.40f);
             }
             // Anatomically rounded sabaton and floating knee trim.
-            f.ellipsoid(side*.26f,.16f,.40f,.25f,.13f,.43f,27,13,
-                        .36f,.42f,.46f);
+            f.ellipsoid(side*.26f,.145f,.29f,.18f,.105f,.235f,21,9,
+                        .34f,.39f,.45f);
             for(int ring=0;ring<4;ring++){
-                float zz=.53f+ring*.066f;
-                f.ellipsoid(side*.26f,.19f,zz,.24f-ring*.022f,.045f,.09f,
-                            20,7,.43f,.49f,.54f);
+                float zz=.30f+ring*.051f;
+                f.ellipsoid(side*.26f,.17f,zz,.17f-ring*.016f,.036f,.064f,
+                            16,6,.43f,.49f,.54f);
             }
-            f.ellipsoid(side*.26f,.73f,.34f,.285f,.17f,.26f,26,12,
-                        .65f,.65f,.59f);
+            f.ellipsoid(side*.26f,.73f,.28f,.195f,.095f,.17f,20,9,
+                        .62f,.62f,.58f);
             f.rod(side*.12f,.75f,.49f,side*.41f,.75f,.48f,
                   .018f,8,.83f,.71f,.47f);
             // Raised pauldron ridge and amber plated rivet heads.
@@ -298,18 +316,18 @@ public final class CinematicArtKit {
         // negative space rather than a smooth featureless helmet sphere.
         for(int slit=0;slit<7;slit++){
             float sx=(slit-3f)*.085f;
-            float y=2.24f+(slit%2)*.014f;
-            f.rod(sx,y,.437f,sx,y+.087f,.425f,.016f,8,.10f,.13f,.16f);
-            f.ellipsoid(sx,2.34f,.419f,.026f,.022f,.029f,
+            float y=2.26f+(slit%2)*.014f;
+            f.rod(sx,y,.332f,sx,y+.061f,.322f,.012f,8,.10f,.13f,.16f);
+            f.ellipsoid(sx,2.33f,.320f,.020f,.018f,.022f,
                         11,6,.78f,.68f,.47f);
         }
         // Angular cheek guards and raised center seam carry the silhouette
         // into gameplay without increasing global lighting costs.
-        f.rod(-.37f,2.35f,.23f,-.25f,2.11f,.36f,.046f,12,
+        f.rod(-.30f,2.35f,.20f,-.20f,2.11f,.27f,.031f,10,
               .49f,.57f,.61f);
-        f.rod(.37f,2.35f,.23f,.25f,2.11f,.36f,.046f,12,
+        f.rod(.30f,2.35f,.20f,.20f,2.11f,.27f,.031f,10,
               .49f,.57f,.61f);
-        f.rod(0,2.80f,.06f,0,2.95f,-.05f,.055f,11,
+        f.rod(0,2.80f,.06f,0,2.88f,-.05f,.035f,9,
               .76f,.65f,.46f);
         // Scalloped leather lamellar scales over hips.
         for(int side=-1;side<=1;side+=2){
