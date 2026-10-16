@@ -212,7 +212,7 @@ public final class WardenHud extends View {
         pane(c,14,10,986,102,8);
         frame(c,21,15,979,97);
         text(c,"◀  BACK",35,47,17,GOLD,true,false);
-        text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
+        text(c,"VEILFORGE TESTING GROUNDS",500,39,25,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
         text(c,"IMPORT OBJ",170,158,14,GOLD,true,true);
         text(c,m.ultraMesh?"SCULPT: ULTRA":"SCULPT: LITE",429,158,14,GOLD,true,true);
@@ -237,7 +237,7 @@ public final class WardenHud extends View {
         text(c,m.autoTurn?"⏸ AUTO ORBIT":"▶ AUTO ORBIT",764,565,13,PALE,true,true);
         text(c,"RESET",920,565,14,PALE,true,true);
         // Orientation marker: a calibrated studio model, not a combat arena.
-        text(c,(m.item==11||m.item==12)?
+        text(c,(m.item==11||m.item==12||m.item==13)?
             "TAP TO REVIEW: "+game.studio.reviewViewName()+"  •  FRONT / SIDE / BACK / 3/4":
             "0°  —  90°  —  180°  —  270°",500,456,12,MIST,false,true);
         if(android.os.SystemClock.uptimeMillis()-lastStudioDiagnosticUptime>1150){
@@ -321,7 +321,7 @@ public final class WardenHud extends View {
                     invalidate();return true;
                 }
                 // Human-specific, reproducible 4-angle camera control.
-                if(y>432&&y<481&&x>300&&x<700&&(lab.snapshot().item==11||lab.snapshot().item==12)){
+                if(y>432&&y<481&&x>300&&x<700&&(lab.snapshot().item==11||lab.snapshot().item==12||lab.snapshot().item==13)){
                     lab.nextReviewView();invalidate();return true;
                 }
                 if(y>485&&y<548){
