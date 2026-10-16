@@ -1,14 +1,15 @@
-# VEILFORGE M1 — original high-detail 3D asset engine
+# VEILFORGE M2 — original high-detail 3D asset engine
 
-**Status:** initial reusable **production and inspection pipeline**, not a finished photorealistic DCC or real-time rendering engine. Branch: \`feature/veilforge-asset-engine-v1\`, based on VEILBOUND M22. This directory and its CI workflow are isolated from the existing game and do not replace VEILBOUND, ECHOFORM, or Trion.
+**Status:** reusable **production and inspection pipeline**, not a finished photorealistic DCC or real-time rendering engine. Branch: \`feature/veilforge-asset-engine-v1\`, based on VEILBOUND M22. This directory and its CI workflow are isolated from the existing game and do not replace VEILBOUND, ECHOFORM, or Trion.
 
-## What actually works in M1
+## Verified production capabilities
 
 - Uses the *real* ContinuousHuman M22 mesh (including articulated hand geometry) without changing gameplay source.
 - Exports human geometry as OBJ with normals, UVs and source vertex colors, and renders **14 distinct 3D camera views** plus a contact sheet in an independent Java software diagnostic viewer.
 - Reuses the six original Project-hail production roles. The asset workflow exercises human, models, materials, animation, world and studio in separate GitHub Actions runners; combat is intentionally outside the asset pipeline.
 - Reuses existing hierarchical worker-manager logic to plan up to 12 bounded role-specific proposals in M1, with the existing independent 50-slot anatomy exploration preserved. Slots are tasks/candidates, **not 50 trained autonomous AI models**. All proposals remain review-only.
 - Exports indexed **glTF 2.0 + binary** meshes with normals, UVs, original vertex colors, and PBR material slots; human exports also carry embedded-relative procedural PBR texture references. No skin weights or LOD are claimed yet.
+- Conservatively **repairs isolated exported geometry**: removes coincident front/back duplicate faces (most common source of false nonmanifold armor), and caps ONLY bounded small near-planar hole loops on the human source. Keeps raw OBJ and before/after audit, skips large openings and never modifies Android game code.
 - Audits exported OBJ for missing geometry, bounds, degenerate faces, duplicate faces, UV and normal counts, boundary/nonmanifold topology, and content SHA-256.
 - Bakes deterministic original tiled albedo (sRGB), normal, roughness, metallic, AO and height maps for skin/stone/steel/leather/cloth, 128–2048 px. These are **procedural placeholders for a future photoreal material pipeline**, not scans or finished skin shading.
 - Publishes isolated job artifacts and consolidates six specialist reports in a review-only manager. No game files modified, no automatic asset promotion.
@@ -60,3 +61,11 @@ python3 veilforge/engine.py material --type skin --size 512 --out build/material
 \`\`\`
 
 Open the [VEILFORGE workflow](../../actions/workflows/veilforge-asset-engine.yml), choose \`feature/veilforge-asset-engine-v1\` to run M1 manually. Check the \`veilforge-human\` artifact for the full turnaround and mesh geometry; the review artifact will explicitly report anything missing.
+
+## M2: topology repair and acceptance limitations
+
+The \`veilforge/topology.py\` worker creates a separate \`*_repaired.obj\` candidate and detailed \`*_topology_report.json\`. Source geometry, 14 original diagnostic camera views and all engine source code are left unchanged. For the human, only small simple planar boundary loops (up to twelve vertices and 0.16 model units) are candidates for closure; large, open or non-planar surfaces are referred for manual retopology. Armor and scene assemblies only undergo exact coincident face deduplication: **individual hard-surface pieces and garment hems are not to be welded into one body**. glTF output now refers to the cleaned export geometry, with raw mesh preserved for comparison.
+
+**Topology gate:** read \`before\` and \`after\` mesh edge metrics, source-vs-output hashes, capped triangles and skipped loops. A successful CI run proves reproducible export and tests, not good human anatomy, physical manifoldness at every geometric tolerance, photorealism, or handset performance.
+
+Progress towards source-quality retopology and PBR/skin shader upgrades is tracked independently of the M1 Android release.

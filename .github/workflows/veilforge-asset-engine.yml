@@ -79,11 +79,15 @@ jobs:
             java -Xmx1700m -Djava.awt.headless=true -cp "${RUNNER_TEMP}/forge-java" \
               game.ashenveil.veilbound.ForgeHumanCLI "${OUT}"
             python3 veilforge/engine.py inspect --obj "${OUT}/human_source.obj" \
+              --out "${OUT}/mesh_quality_raw.json"
+            python3 veilforge/topology.py --obj "${OUT}/human_source.obj" \
+              --out "${OUT}/human_repaired.obj" --mode human
+            python3 veilforge/engine.py inspect --obj "${OUT}/human_repaired.obj" \
               --out "${OUT}/mesh_quality.json"
             python3 veilforge/engine.py material --type skin --size 512 \
               --out "${OUT}/skin-material"
-            python3 veilforge/gltf_export.py --obj "${OUT}/human_source.obj" \
-              --out "${OUT}/human_source.gltf" --material-dir "${OUT}/skin-material" --profile skin
+            python3 veilforge/gltf_export.py --obj "${OUT}/human_repaired.obj" \
+              --out "${OUT}/human_repaired.gltf" --material-dir "${OUT}/skin-material" --profile skin
           else
             java -Xmx1500m -Djava.awt.headless=true -cp "${RUNNER_TEMP}/forge-java" \
               game.ashenveil.veilbound.TeamEngineCLI "${ROLE}" "${OUT}"
@@ -92,20 +96,32 @@ jobs:
           if [ "${ROLE}" = models ]; then
             for MODEL in bellwarden_full_anatomy bellwarden_unarmored_human_base; do
               python3 veilforge/engine.py inspect --obj "${OUT}/${MODEL}.obj" \
+                --out "${OUT}/${MODEL}_mesh_quality_raw.json"
+              python3 veilforge/topology.py --obj "${OUT}/${MODEL}.obj" \
+                --out "${OUT}/${MODEL}_repaired.obj" --mode assembly
+              python3 veilforge/engine.py inspect --obj "${OUT}/${MODEL}_repaired.obj" \
                 --out "${OUT}/${MODEL}_mesh_quality.json"
-              python3 veilforge/gltf_export.py --obj "${OUT}/${MODEL}.obj" \
-                --out "${OUT}/${MODEL}.gltf" --profile steel
+              python3 veilforge/gltf_export.py --obj "${OUT}/${MODEL}_repaired.obj" \
+                --out "${OUT}/${MODEL}_repaired.gltf" --profile steel
             done
           elif [ "${ROLE}" = world ]; then
             python3 veilforge/engine.py inspect --obj "${OUT}/carved_cenotaph.obj" \
+              --out "${OUT}/mesh_quality_raw.json"
+            python3 veilforge/topology.py --obj "${OUT}/carved_cenotaph.obj" \
+              --out "${OUT}/carved_cenotaph_repaired.obj" --mode assembly
+            python3 veilforge/engine.py inspect --obj "${OUT}/carved_cenotaph_repaired.obj" \
               --out "${OUT}/mesh_quality.json"
-            python3 veilforge/gltf_export.py --obj "${OUT}/carved_cenotaph.obj" \
-              --out "${OUT}/carved_cenotaph.gltf" --profile stone
+            python3 veilforge/gltf_export.py --obj "${OUT}/carved_cenotaph_repaired.obj" \
+              --out "${OUT}/carved_cenotaph_repaired.gltf" --profile stone
           elif [ "${ROLE}" = studio ]; then
             python3 veilforge/engine.py inspect --obj "${OUT}/bellwarden_studio_preview.obj" \
+              --out "${OUT}/mesh_quality_raw.json"
+            python3 veilforge/topology.py --obj "${OUT}/bellwarden_studio_preview.obj" \
+              --out "${OUT}/bellwarden_studio_preview_repaired.obj" --mode assembly
+            python3 veilforge/engine.py inspect --obj "${OUT}/bellwarden_studio_preview_repaired.obj" \
               --out "${OUT}/mesh_quality.json"
-            python3 veilforge/gltf_export.py --obj "${OUT}/bellwarden_studio_preview.obj" \
-              --out "${OUT}/bellwarden_studio_preview.gltf" --profile steel
+            python3 veilforge/gltf_export.py --obj "${OUT}/bellwarden_studio_preview_repaired.obj" \
+              --out "${OUT}/bellwarden_studio_preview_repaired.gltf" --profile steel
           elif [ "${ROLE}" = materials ]; then
             python3 veilforge/engine.py material --type stone --size 512 --out "${OUT}/stone"
             python3 veilforge/engine.py material --type steel --size 512 --out "${OUT}/steel"
