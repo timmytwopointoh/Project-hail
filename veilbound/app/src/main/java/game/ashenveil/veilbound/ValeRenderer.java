@@ -27,7 +27,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private final float[] projection=new float[16],view=new float[16],vp=new float[16],
                           model=new float[16],mvp=new float[16];
-    private int program,skyProgram,aPos,aNormal,aColor,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
+    private int program,skyProgram,aPos,aNormal,aColor,aNextPos,aNextNormal,uBlend,uMvp,uModel,uTint,uEye,uGlow,uFog,uSurface,uStudioMode,uStudioMaterial,uStudioLight,uStudioKeyColor,uSurfaceQuality,uAlbedoAtlas,uSurfaceAtlas,uHeroShading,uSkinMode;
     private int skyPos,skyClock,skyStudioMode,detailTexture,uDetail;
     private int albedoTexture=0,surfaceTexture=0;
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
@@ -75,10 +75,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private static final String VERTEX=
         "uniform mat4 uMvp; uniform mat4 uModel; attribute vec3 aPos; "+
         "attribute vec3 aNormal; attribute vec3 aColor; "+
+        "attribute vec3 aNextPos; attribute vec3 aNextNormal; uniform float uBlend; "+
         "varying vec3 vNormal; varying vec3 vColor; varying vec3 vWorld; varying vec3 vLocal; "+
-        "void main(){ vec4 w=uModel*vec4(aPos,1.); vWorld=w.xyz; "+
-        "vNormal=normalize(mat3(uModel)*aNormal); vColor=aColor; vLocal=aPos; "+
-        "gl_Position=uMvp*vec4(aPos,1.); }";
+        "void main(){ vec3 pos=mix(aPos,aNextPos,uBlend); "+
+        "vec3 n=normalize(mix(aNormal,aNextNormal,uBlend)); "+
+        "vec4 w=uModel*vec4(pos,1.); vWorld=w.xyz; "+
+        "vNormal=normalize(mat3(uModel)*n); vColor=aColor; vLocal=pos; "+
+        "gl_Position=uMvp*vec4(pos,1.); }";
     private static final String FRAGMENT=
         "precision mediump float; varying vec3 vNormal; varying vec3 vColor; "+
         "varying vec3 vWorld; varying vec3 vLocal; uniform vec3 uTint; uniform vec3 uEye; "+
@@ -224,6 +227,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         aPos=GLES20.glGetAttribLocation(program,"aPos");
         aNormal=GLES20.glGetAttribLocation(program,"aNormal");
         aColor=GLES20.glGetAttribLocation(program,"aColor");
+        aNextPos=GLES20.glGetAttribLocation(program,"aNextPos");
+        aNextNormal=GLES20.glGetAttribLocation(program,"aNextNormal");
+        uBlend=GLES20.glGetUniformLocation(program,"uBlend");
         uMvp=GLES20.glGetUniformLocation(program,"uMvp");
         uModel=GLES20.glGetUniformLocation(program,"uModel");
         uTint=GLES20.glGetUniformLocation(program,"uTint");
@@ -519,6 +525,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform1f(uSurface,0f);
         GLES20.glUniform1f(uStudioMaterial,m.material);
         Mesh chosen;
+        Mesh nextAnimatedFrame=null;
+        float animationAlpha=0f;
         switch(m.item){
             case 0:chosen=m.ultraMesh?studioWarden:wardenModel;break;
             case 1:chosen=m.ultraMesh?studioHushed:hushedModel;break;
@@ -539,8 +547,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                                     m.pose==2?vesperLegUp:
                                     m.pose==3?vesperDance:vesperIdle;
                     if(animated!=null && animated.length>0){
-                        int frame=(int)(qualityClock*(m.pose==3?6f:8f))%animated.length;
+                        float clock=qualityClock*(m.pose==3?6f:8f);
+                        int frame=((int)clock)%animated.length;
                         chosen=animated[frame];
+                        if(animated.length>1){
+                            nextAnimatedFrame=animated[(frame+1)%animated.length];
+                            animationAlpha=clock-(int)clock;
+                        }
                     }
                     // A changing skinned pose invalidates cached wire-frame geometry.
                     studioWireMeshes[m.item]=null;
@@ -554,13 +567,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         else if(m.item==5)Matrix.scaleM(model,0,2.4f,2.4f,2.4f);
         else if(m.item==2)Matrix.scaleM(model,0,1.12f,1.12f,1.12f);
         if(m.material==4){
+            nextAnimatedFrame=null;
             if(studioWireMeshes[m.item]==null)
                 studioWireMeshes[m.item]=edgesOf(chosen);
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
         GLES20.glUniform1f(uSkinMode,m.item==11?1f:0f);
-        draw(chosen,model,1,1,1,.06f);
+        if(nextAnimatedFrame!=null)
+            drawInterpolated(chosen,nextAnimatedFrame,animationAlpha,model,1,1,1,.06f);
+        else draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
         GLES20.glUniform1f(uStudioMaterial,0f);
@@ -754,15 +770,17 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                             float moving,float fatigue,float stagger,float windup){
         if(!foe && vesperPlayable && vesperIdle!=null && vesperWalk!=null){
             Mesh[] frames=moving>.10f?vesperWalk:vesperIdle;
-            int index=((int)Math.floor(tm*(moving>.10f?9f:6f)))%frames.length;
+            float phase=tm*(moving>.10f?9f:6f);
+            int index=((int)Math.floor(phase))%frames.length;
             if(index<0)index+=frames.length;
+            float alpha=phase-(float)Math.floor(phase);
             Matrix.setIdentityM(model,0);
             Matrix.translateM(model,0,x,y,z);
             Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
             GLES20.glUniform1f(uHeroShading,0f);
             GLES20.glUniform1f(uSkinMode,0f);
             GLES20.glUniform1f(uSurfaceQuality,0f);
-            draw(frames[index],model,1,1,1,0);
+            drawInterpolated(frames[index],frames[(index+1)%frames.length],alpha,model,1,1,1,0);
             return;
         }
         float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
@@ -994,6 +1012,12 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniformMatrix4fv(uModel,1,false,transformation,0);
         GLES20.glUniform3f(uTint,red,green,blue);
         GLES20.glUniform1f(uGlow,glow);
+        // Original game meshes remain unchanged; unbound next attributes are constants.
+        GLES20.glUniform1f(uBlend,0f);
+        GLES20.glDisableVertexAttribArray(aNextPos);
+        GLES20.glDisableVertexAttribArray(aNextNormal);
+        GLES20.glVertexAttrib3f(aNextPos,0,0,0);
+        GLES20.glVertexAttrib3f(aNextNormal,0,0,1);
         mesh.data.position(0);GLES20.glEnableVertexAttribArray(aPos);
         GLES20.glVertexAttribPointer(aPos,3,GLES20.GL_FLOAT,false,36,mesh.data);
         mesh.data.position(3);GLES20.glEnableVertexAttribArray(aNormal);
@@ -1005,6 +1029,38 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(aPos);
         GLES20.glDisableVertexAttribArray(aNormal);
         GLES20.glDisableVertexAttribArray(aColor);
+    }
+    /** Hardware-interpolate two skinned sample meshes for continuous secondary motion.
+     * Used for Vesper only; original game characters keep their proven draw path.
+     * Requires the exact same indexed vertex layout and material order.
+     */
+    private void drawInterpolated(Mesh a,Mesh b,float blend,float[] transform,
+                                  float r,float g,float blue,float glow){
+        if(a==null || b==null || a.count!=b.count)return;
+        Matrix.multiplyMM(mvp,0,vp,0,transform,0);
+        GLES20.glUniformMatrix4fv(uMvp,1,false,mvp,0);
+        GLES20.glUniformMatrix4fv(uModel,1,false,transform,0);
+        GLES20.glUniform3f(uTint,r,g,blue);
+        GLES20.glUniform1f(uGlow,glow);
+        GLES20.glUniform1f(uBlend,Math.max(0f,Math.min(1f,blend)));
+        a.data.position(0);GLES20.glEnableVertexAttribArray(aPos);
+        GLES20.glVertexAttribPointer(aPos,3,GLES20.GL_FLOAT,false,36,a.data);
+        a.data.position(3);GLES20.glEnableVertexAttribArray(aNormal);
+        GLES20.glVertexAttribPointer(aNormal,3,GLES20.GL_FLOAT,false,36,a.data);
+        a.data.position(6);GLES20.glEnableVertexAttribArray(aColor);
+        GLES20.glVertexAttribPointer(aColor,3,GLES20.GL_FLOAT,false,36,a.data);
+        b.data.position(0);GLES20.glEnableVertexAttribArray(aNextPos);
+        GLES20.glVertexAttribPointer(aNextPos,3,GLES20.GL_FLOAT,false,36,b.data);
+        b.data.position(3);GLES20.glEnableVertexAttribArray(aNextNormal);
+        GLES20.glVertexAttribPointer(aNextNormal,3,GLES20.GL_FLOAT,false,36,b.data);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,a.count);
+        drawCalls++;
+        GLES20.glDisableVertexAttribArray(aPos);
+        GLES20.glDisableVertexAttribArray(aNormal);
+        GLES20.glDisableVertexAttribArray(aColor);
+        GLES20.glDisableVertexAttribArray(aNextPos);
+        GLES20.glDisableVertexAttribArray(aNextNormal);
+        GLES20.glUniform1f(uBlend,0f);
     }
     private void initDetailTexture(){
         byte[] rgba=prepared==null?MaterialTextures.stoneRgba():prepared.stoneRgba;
