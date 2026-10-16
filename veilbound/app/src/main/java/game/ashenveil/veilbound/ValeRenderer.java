@@ -34,6 +34,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Mesh studioHuman,studioHumanLite,studioHandSculpt;
+    private Mesh studioM26Sculpt,studioM26SculptLite;
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -368,6 +369,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
         studioHuman=new Mesh(HumanAnatomy.buildM25Candidate(false).vertices);
         studioHumanLite=new Mesh(HumanAnatomy.buildM25Candidate(true).vertices);
+        // Manually bounded learning probe. Never promote a worker score to
+        // the controllable actor or mutate the historical armored knight.
+        float[] studyDials={.38f,.34f,.38f,.22f,.38f,.42f,.40f,.32f};
+        studioM26Sculpt=new Mesh(HumanAnatomy.buildM26Candidate(false,studyDials).vertices);
+        studioM26SculptLite=new Mesh(HumanAnatomy.buildM26Candidate(true,studyDials).vertices);
+        Log.i("VEILBOUND_STUDIO","M26_SCULPT_REVIEW_READY triangles="+
+              (studioM26Sculpt.count/3)+" approved=false");
         // Rig stress pose is one-time CPU deformation during lab loading.
         // Retains game as stable testing grounds; no gameplay character swap.
         ArtKit.Model poseSource=HumanAnatomy.buildM25Candidate(true);
@@ -525,6 +533,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 15:chosen=m.ultraMesh?studioM26Sculpt:studioM26SculptLite;break;
             case 13:
                 // Real vertex-animated testing-ground body, cached frames.
                 // Wire inspection freezes frame 0; no per-frame GPU rebuild.
@@ -546,7 +555,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
