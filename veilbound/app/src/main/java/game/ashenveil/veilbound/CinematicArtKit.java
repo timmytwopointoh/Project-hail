@@ -22,7 +22,10 @@ public final class CinematicArtKit {
 
     private static final class Form {
         private float[] verts; private int count;
-        Form(float[] base){
+        private final boolean lite;
+        Form(float[] base){this(base,false);}
+        Form(float[] base,boolean lightweight){
+            lite=lightweight;
             verts=Arrays.copyOf(base,Math.max(base.length+131072,131072));
             count=base.length;
         }
@@ -72,6 +75,7 @@ public final class CinematicArtKit {
         }
         void ellipsoid(float x,float y,float z,float rx,float ry,float rz,
                        int longitude,int latitude,float r,float g,float b){
+            if(lite){longitude=Math.max(10,longitude/2);latitude=Math.max(6,latitude/2);}
             for(int row=0;row<latitude;row++){
                 float phi0=-PI/2f+PI*row/latitude;
                 float phi1=-PI/2f+PI*(row+1)/latitude;
@@ -94,6 +98,7 @@ public final class CinematicArtKit {
         void torsoLoft(float centerX,float centerZ,float bottom,float height,
                        float[] rx,float[] rz,int longitude,
                        float r,float g,float blue){
+            if(lite)longitude=Math.max(10,longitude/2);
             int rows=rx.length-1;
             for(int j=0;j<rows;j++){
                 float y0=bottom+height*j/rows,y1=bottom+height*(j+1)/rows;
@@ -133,6 +138,7 @@ public final class CinematicArtKit {
             float ln=(float)Math.hypot(ux,uz);
             if(ln<.01f){ux=1;uz=0;}else{ux/=ln;uz/=ln;}
             float vx=dy*uz-dz*uy,vy=dz*ux-dx*uz,vz=dx*uy-dy*ux;
+            if(lite)sides=Math.max(5,sides*2/3);
             for(int i=0;i<sides;i++){
                 float a=TAU*i/sides,ang=TAU*(i+1)/sides;
                 float ca=(float)Math.cos(a),sa=(float)Math.sin(a);
@@ -151,7 +157,7 @@ public final class CinematicArtKit {
         /** A 30x16 pleated textile with double-sided geometry. */
         void mantle(float width,float top,float bottom,float back,
                     float red,float green,float blue){
-            int columns=32,rows=19;
+            int columns=lite?16:32,rows=lite?11:19;
             for(int i=0;i<columns;i++){
                 float u0=i/(float)columns,u1=(i+1f)/columns;
                 for(int j=0;j<rows;j++){
@@ -408,6 +414,27 @@ public final class CinematicArtKit {
             }
             f.engraving(wing,.06f,.86f,.64f,.43f);
         }
+    }
+    /**
+     * Lower GPU-cost hero LOD: anatomically shaped armor replaces the primitive
+     * block mannequin even when frame pacing drops. Geometry alone is created
+     * deterministically once; no per-frame tessellation or adaptive jitter.
+     */
+    public static ArtKit.Model bellwardenLite(){
+        Form f=new Form(new float[0],true);
+        bellwardenSculpt(f);
+        for(int side=-1;side<=1;side+=2){
+            f.ellipsoid(side*.66f,1.16f,.12f,.19f,.40f,.18f,20,12,
+                        .42f,.51f,.59f);
+            f.ellipsoid(side*.66f,.70f,.20f,.21f,.25f,.15f,18,12,
+                        .42f,.49f,.55f);
+            for(int k=0;k<4;k++){
+                float x=side*.66f+(k-1.5f)*.085f;
+                f.rod(x,.53f,.27f,x+side*.012f,.22f+(k%2)*.025f,.30f,
+                      .042f,8,.54f,.58f,.60f);
+            }
+        }
+        return f.result();
     }
     public static ArtKit.Model bellwarden(){
         // The original faceted block mannequin is deliberately NOT carried
