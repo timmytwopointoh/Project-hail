@@ -46,7 +46,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     // Optional imported Vesper GLB stays separate from the original player rig.
     private final java.util.concurrent.atomic.AtomicReference<VesperGlb.Result> vesperQueue=
         new java.util.concurrent.atomic.AtomicReference<>();
-    private volatile Mesh[] vesperIdle,vesperWalk;
+    private volatile Mesh[] vesperIdle,vesperWalk,vesperTPose,vesperLegUp,vesperDance;
     private volatile boolean vesperPlayable=false;
     public void stageVesper(VesperGlb.Result avatar){vesperQueue.set(avatar);}
     public boolean activateVesper(){
@@ -434,17 +434,26 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return handle;
     }
 
+    private Mesh[] meshes(ArtKit.Model[] frames){
+        Mesh[] result=new Mesh[frames.length];
+        for(int i=0;i<result.length;i++)result[i]=new Mesh(frames[i].vertices);
+        return result;
+    }
     private void acceptVesperQueue(){
         VesperGlb.Result avatar=vesperQueue.getAndSet(null);
         if(avatar!=null){
             vesperIdle=new Mesh[avatar.idle.length];vesperWalk=new Mesh[avatar.walk.length];
             for(int i=0;i<vesperIdle.length;i++)vesperIdle[i]=new Mesh(avatar.idle[i].vertices);
             for(int i=0;i<vesperWalk.length;i++)vesperWalk[i]=new Mesh(avatar.walk[i].vertices);
+            vesperTPose=meshes(avatar.tPose);
+            vesperLegUp=meshes(avatar.legUp);
+            vesperDance=meshes(avatar.dance);
             studioImported=vesperIdle[0];
             studioWireMeshes[ModelStudio.ITEMS.length-1]=null;
             Log.i("VESPER_GLTF","GLB_ANIMATION_READY joints="+avatar.joints+
                 " triangles="+avatar.triangles+" idle_frames="+vesperIdle.length+
-                " walk_frames="+vesperWalk.length);
+                " walk_frames="+vesperWalk.length+
+                " review_poses="+avatar.extraPoses);
         }
     }
     private void renderStudio(){
@@ -523,7 +532,20 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 9:chosen=environmentReliquary;break;
             case 10:chosen=environmentRoots;break;
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
-            default:chosen=studioImported!=null?studioImported:studioWarden;
+            default:
+                chosen=studioImported!=null?studioImported:studioWarden;
+                if(m.item==ModelStudio.ITEMS.length-1 && vesperIdle!=null){
+                    Mesh[] animated=m.pose==1?vesperTPose:
+                                    m.pose==2?vesperLegUp:
+                                    m.pose==3?vesperDance:vesperIdle;
+                    if(animated!=null && animated.length>0){
+                        int frame=(int)(qualityClock*(m.pose==3?6f:8f))%animated.length;
+                        chosen=animated[frame];
+                    }
+                    // A changing skinned pose invalidates cached wire-frame geometry.
+                    studioWireMeshes[m.item]=null;
+                }
+                break;
         }
         Matrix.setIdentityM(model,0);
         // All lab assets stand ON the exhibition plinth, not through it.
