@@ -36,6 +36,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh studioHuman,studioHumanLite,studioHandSculpt;
     private Mesh studioM26Sculpt,studioM26SculptLite;
     private Mesh studioM28Face,studioM28FaceLite;
+    private Mesh[] studioM29Tpose,studioM29Relaxed;
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -497,6 +498,20 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * Load only when the user selects M28: avoid slowing down historic hero
      * startup and older emulator devices. Manual review remains mandatory.
      */
+    /** Reference poses are actual deformed vertices and loaded on demand. */
+    private void initM29ReferenceMeshes(){
+        studioM29Tpose=new Mesh[2];
+        studioM29Relaxed=new Mesh[2];
+        ArtKit.Model high=HumanAnatomy.buildM28Candidate(false);
+        ArtKit.Model mobile=HumanAnatomy.buildM28Candidate(true);
+        studioM29Tpose[0]=new Mesh(M29ReferencePose.build(mobile,M29ReferencePose.T_POSE).vertices);
+        studioM29Tpose[1]=new Mesh(M29ReferencePose.build(high,M29ReferencePose.T_POSE).vertices);
+        studioM29Relaxed[0]=new Mesh(M29ReferencePose.build(mobile,M29ReferencePose.THREE_QUARTER_RELAXED).vertices);
+        studioM29Relaxed[1]=new Mesh(M29ReferencePose.build(high,M29ReferencePose.THREE_QUARTER_RELAXED).vertices);
+        Log.i("VEILBOUND_STUDIO","M29_TPOSE_AND_RELAXED_READY high_triangles="+
+              (studioM29Tpose[1].count/3)+" skin_atlas="+M29SkinAtlas.SIZE+
+              " visual_approval=false");
+    }
     private void initM28ReviewMeshes(){
         studioM28Face=new Mesh(HumanAnatomy.buildM28Candidate(false).vertices);
         studioM28FaceLite=new Mesh(HumanAnatomy.buildM28Candidate(true).vertices);
@@ -585,6 +600,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 17:
+            case 18:
+                if(studioM29Tpose==null||studioM29Relaxed==null)
+                    initM29ReferenceMeshes();
+                Mesh[] posed=m.item==17?studioM29Tpose:studioM29Relaxed;
+                chosen=posed[m.ultraMesh?1:0];
+                break;
             case 16:
                 if(studioM28Face==null||studioM28FaceLite==null)
                     initM28ReviewMeshes();
@@ -616,7 +638,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15||m.item==16)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=18)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
