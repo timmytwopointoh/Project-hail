@@ -21,7 +21,7 @@ def wait_kaiyu_frame(yaw, pitch, timeout=210):
    raise RuntimeError('Kaiyu GLES failure: '+log[-4000:])
   for entry in log.splitlines():
    if 'GLTF_LOADED actual_scene=true' in entry:
-    count=re.search(r'models=(\\d+) nodes=(\\d+) source_triangles=(\\d+)',entry)
+    count=re.search(r'models=(\d+) nodes=(\d+) source_triangles=(\d+)',entry)
     if not count or tuple(map(int,count.groups()))!=(90,90,133584):
      raise RuntimeError('Kaiyu scene counts differ from reviewed source: '+entry)
     loaded=True
