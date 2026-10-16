@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "description": "User review priority: exactly FIVE distinct digits per hand (four fingers plus opposable thumb), anatomically believable proportions and visible separation. Hair appearance intentionally deferred. Keep playable armored Bellwarden and existing offline gameplay.",
+  "tasks": [
+    {
+      "id": "VB-M21-HANDS-SHAPE",
+      "role": "models",
+      "priority": "P0",
+      "goal": "Refine the fused HumanAnatomy/ContinuousHuman hands toward physically believable palms, four separate fingers plus a thumb on each side. Require actual air gaps at fingertips, plausible digit-length order, knuckles and finger webbing without tearing off at the hand. No extra fingers and no mitten artifact. Keep HumanHandsTest and ContinuousHumanTest green."
+    },
+    {
+      "id": "VB-M21-HAND-RIG",
+      "role": "animation",
+      "priority": "P0",
+      "goal": "Define finger base/knuckle/thumb opposition joint landmarks compatible with the 15-bone human base, and plan articulated 3-joint finger chains without changing playable legacy armor animation until verified."
+    },
+    {
+      "id": "VB-M21-HAND-INSPECTION",
+      "role": "studio",
+      "priority": "P0",
+      "goal": "Improve repeatable extreme hand camera for Android Model Atelier; capture real front, three-quarter, side closeups of both hands. Review screenshots for visible count and gaps, not code-only digit count."
+    },
+    {
+      "id": "VB-M21-SKIN",
+      "role": "materials",
+      "priority": "P1",
+      "goal": "Maintain nonmetal skin shading, subtle knuckle creases and believable nail colors only once finger geometry is proven. Avoid any hair/hairline updates."
+    },
+    {
+      "id": "VB-M21-HUMAN-BODY",
+      "role": "models",
+      "priority": "P1",
+      "goal": "Continue torso and facial anatomy refinement, but do not prioritize hair. Keep original neutral shorts and connected body topology."
+    }
+  ]
+}
