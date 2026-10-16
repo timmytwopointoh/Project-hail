@@ -1,0 +1,34 @@
+name: VEILBOUND - Approve Worker Patch Into Draft PR
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Manager workflow run ID with exact reviewed patch artifact'
+        required: true
+        type: string
+      slot_id:
+        description: 'Reviewed worker slot (w001 etc.)'
+        required: true
+        type: string
+      role:
+        description: 'Specialist that owns source file'
+        required: true
+        type: choice
+        options: [combat, animation, models, materials, world, studio]
+      run_attempt:
+        description: 'Artifact attempt, normally 1'
+        required: true
+        default: '1'
+        type: choice
+        options: ['1','2','3']
+permissions:
+  contents: read
+# Manual workflow registration only. The feature branch implementation
+# requires full candidate APK + Android emulator success before a draft PR.
+jobs:
+  choose-ai-development-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Choose feature/veilbound-parallel-ai-qa in the Run workflow branch picker."
+          exit 1
