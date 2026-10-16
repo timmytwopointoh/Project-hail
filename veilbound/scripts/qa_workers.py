@@ -12,11 +12,11 @@ PACKAGE = ROOT / "veilbound/app/src/main/java/game/ashenveil/veilbound"
 TESTS = ROOT / "veilbound/tests/game/ashenveil/veilbound"
 PURE = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
         "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures"]
+        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BootAssets"]
 SUITES = {
     "combat": ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay"],
     "assets": ["EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
-               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures"],
+               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BootAssets"],
 }
 
 def command(*args):
