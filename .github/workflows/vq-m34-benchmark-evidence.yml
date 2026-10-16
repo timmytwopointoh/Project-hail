@@ -1,0 +1,60 @@
+name: VQ M34 - Observed Factory Runtime Evidence
+on:
+  push:
+    branches: ['feature/vq-m34-runtime-benchmarks-*']
+    paths:
+      - 'veilforge/vq_ci_benchmarks.py'
+      - 'veilforge/tests/test_vq_ci_benchmarks.py'
+      - 'veilforge/evidence/m34-09-observed-runs.json'
+      - '.github/workflows/vq-m34-benchmark-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vq-m34-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark-source-evidence:
+    name: Validate measured Actions evidence (no emulator launch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reject incomplete runs, missing Android roles and fabricated speedups
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -p 'test_vq_ci_benchmarks.py' -v
+          python3 -m compileall -q veilforge/vq_ci_benchmarks.py
+          python3 veilforge/vq_ci_benchmarks.py \
+            --input veilforge/evidence/m34-09-observed-runs.json \
+            --out inspection_output/m34-09/runtime_evidence.json
+      - name: Record actual job wall spans and distinguish ZIP from APK payload
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          row=json.loads(Path("inspection_output/m34-09/runtime_evidence.json").read_text())
+          lines=["### M34-09: actual successful GitHub Actions factory runs",
+                 "Only two comparable M34 runs available; no speedup claim.",
+                 "| Run | Observed job span (s) | APK artifact ZIP (bytes) | Capture ZIPs (bytes) |",
+                 "| --- | ---: | ---: | ---: |"]
+          for r in row["runs"]:
+              lines.append(f'| {r["run_id"]} | {r["job_wall_span_seconds"]:.0f} | {r["apk_archive_bytes"]} | {r["capture_archive_bytes"]} |')
+          lines.append("Raw APK bytes, PNG payload bytes and physical GPU timing not measured.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
+              f.write("\n".join(lines)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vq-m34-09-measured-runtime-evidence
+          path: inspection_output/m34-09/runtime_evidence.json
+          if-no-files-found: error
+          retention-days: 30

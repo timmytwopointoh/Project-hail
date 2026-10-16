@@ -1,0 +1,524 @@
+[
+  {
+    "run": {
+      "id": 38916145322,
+      "name": "VEILFORGE - Universal Game Asset Factory",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "246a0f1bb4fbe9a71afab321f3ece17b2a6b1f3c",
+      "head_branch": "feature/veilforge-m34-efficient-emulator-qa",
+      "html_url": "https://github.com/timmytwopointoh/Project-hail/actions/runs/38916145322"
+    },
+    "jobs": {
+      "total_count": 18,
+      "jobs": [
+        {
+          "id": 117024008055,
+          "name": "Validate library and allocate scoped asset jobs",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:17Z",
+          "completed_at": "2026-10-16T14:29:45Z"
+        },
+        {
+          "id": 117024231967,
+          "name": "Factory asset / ceremonial_sword",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:47Z",
+          "completed_at": "2026-10-16T14:29:57Z"
+        },
+        {
+          "id": 117024232008,
+          "name": "Factory asset / treasure_chest",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:58Z",
+          "completed_at": "2026-10-16T14:30:08Z"
+        },
+        {
+          "id": 117024232030,
+          "name": "Factory asset / ancient_gate_standard",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:47Z",
+          "completed_at": "2026-10-16T14:29:56Z"
+        },
+        {
+          "id": 117024232073,
+          "name": "Factory asset / forest_tree_mobile",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:47Z",
+          "completed_at": "2026-10-16T14:29:55Z"
+        },
+        {
+          "id": 117024232123,
+          "name": "Factory asset / ancient_gate_mobile",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:47Z",
+          "completed_at": "2026-10-16T14:29:57Z"
+        },
+        {
+          "id": 117024232154,
+          "name": "Factory asset / rolling_terrain",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:57Z",
+          "completed_at": "2026-10-16T14:30:08Z"
+        },
+        {
+          "id": 117024232170,
+          "name": "Factory asset / cargo_cart",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:47Z",
+          "completed_at": "2026-10-16T14:29:56Z"
+        },
+        {
+          "id": 117024232418,
+          "name": "Factory asset / ancient_tree",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:29:48Z",
+          "completed_at": "2026-10-16T14:30:01Z"
+        },
+        {
+          "id": 117024409057,
+          "name": "Independently audit entire game-asset catalog",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:30:11Z",
+          "completed_at": "2026-10-16T14:30:21Z"
+        },
+        {
+          "id": 117024509582,
+          "name": "Assemble reusable world from reviewed asset outputs",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:30:23Z",
+          "completed_at": "2026-10-16T14:30:33Z"
+        },
+        {
+          "id": 117024610442,
+          "name": "Build independent Android glTF renderer APK",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:30:36Z",
+          "completed_at": "2026-10-16T14:31:23Z"
+        },
+        {
+          "id": 117025002862,
+          "name": "Android 15 / scene-world / pixel_6",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:31:26Z",
+          "completed_at": "2026-10-16T14:33:33Z"
+        },
+        {
+          "id": 117025003112,
+          "name": "Android 15 / characters / pixel_4",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:31:26Z",
+          "completed_at": "2026-10-16T14:33:27Z"
+        },
+        {
+          "id": 117025003126,
+          "name": "Android 15 / props-equipment / pixel_5",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:31:26Z",
+          "completed_at": "2026-10-16T14:33:10Z"
+        },
+        {
+          "id": 117025003186,
+          "name": "Android 15 / nature-mobile / pixel_7",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:31:26Z",
+          "completed_at": "2026-10-16T14:33:50Z"
+        },
+        {
+          "id": 117026134046,
+          "name": "Fail closed on incomplete emulator visual QA evidence",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:33:53Z",
+          "completed_at": "2026-10-16T14:34:01Z"
+        },
+        {
+          "id": 117026213543,
+          "name": "Independently verify mobile LOD and per-asset Android silhouettes",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:34:03Z",
+          "completed_at": "2026-10-16T14:34:36Z"
+        }
+      ]
+    },
+    "artifacts": {
+      "total_count": 19,
+      "artifacts": [
+        {
+          "id": 12053435037,
+          "name": "veilforge-android-nature-mobile",
+          "size_in_bytes": 5846546,
+          "expired": false
+        },
+        {
+          "id": 12053020826,
+          "name": "veilforge-android-visual-lod-review",
+          "size_in_bytes": 954,
+          "expired": false
+        },
+        {
+          "id": 12052951026,
+          "name": "veilforge-android-semantic-review",
+          "size_in_bytes": 1947,
+          "expired": false
+        },
+        {
+          "id": 12052931035,
+          "name": "veilforge-android-characters",
+          "size_in_bytes": 1490440,
+          "expired": false
+        },
+        {
+          "id": 12052806598,
+          "name": "veilforge-android-shared-probe-apk",
+          "size_in_bytes": 2040482,
+          "expired": false
+        },
+        {
+          "id": 12052424007,
+          "name": "veilforge-android-scene-world",
+          "size_in_bytes": 12948332,
+          "expired": false
+        },
+        {
+          "id": 12052159080,
+          "name": "veilforge-assembled-world-scene",
+          "size_in_bytes": 1316641,
+          "expired": false
+        },
+        {
+          "id": 12052128975,
+          "name": "veilforge-library-ancient_gate_mobile",
+          "size_in_bytes": 243901,
+          "expired": false
+        },
+        {
+          "id": 12052059456,
+          "name": "veilforge-library-final-review",
+          "size_in_bytes": 1619,
+          "expired": false
+        },
+        {
+          "id": 12052048754,
+          "name": "veilforge-android-props-equipment",
+          "size_in_bytes": 3686304,
+          "expired": false
+        },
+        {
+          "id": 12051988597,
+          "name": "veilforge-library-treasure_chest",
+          "size_in_bytes": 253659,
+          "expired": false
+        },
+        {
+          "id": 12051978782,
+          "name": "veilforge-library-forest_tree_mobile",
+          "size_in_bytes": 286781,
+          "expired": false
+        },
+        {
+          "id": 12051968474,
+          "name": "veilforge-library-ceremonial_sword",
+          "size_in_bytes": 263360,
+          "expired": false
+        },
+        {
+          "id": 12051939753,
+          "name": "veilforge-library-rolling_terrain",
+          "size_in_bytes": 670766,
+          "expired": false
+        },
+        {
+          "id": 12051769706,
+          "name": "veilforge-android-final-review",
+          "size_in_bytes": 1290,
+          "expired": false
+        },
+        {
+          "id": 12051584526,
+          "name": "veilforge-library-cargo_cart",
+          "size_in_bytes": 270591,
+          "expired": false
+        },
+        {
+          "id": 12051529782,
+          "name": "veilforge-library-ancient_tree",
+          "size_in_bytes": 497502,
+          "expired": false
+        },
+        {
+          "id": 12051484746,
+          "name": "veilforge-library-manager",
+          "size_in_bytes": 1943,
+          "expired": false
+        },
+        {
+          "id": 12051424999,
+          "name": "veilforge-library-ancient_gate_standard",
+          "size_in_bytes": 260643,
+          "expired": false
+        }
+      ]
+    }
+  },
+  {
+    "run": {
+      "id": 38918040166,
+      "name": "VEILFORGE - Universal Game Asset Factory",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6481720458f99258e19f1ed1fe16071adc508e73",
+      "head_branch": "feature/veilforge-m34-bounded-logcat-stream",
+      "html_url": "https://github.com/timmytwopointoh/Project-hail/actions/runs/38918040166"
+    },
+    "jobs": {
+      "total_count": 18,
+      "jobs": [
+        {
+          "id": 117030481233,
+          "name": "Validate library and allocate scoped asset jobs",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:15Z",
+          "completed_at": "2026-10-16T14:43:49Z"
+        },
+        {
+          "id": 117030758108,
+          "name": "Factory asset / ancient_gate_mobile",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:51Z",
+          "completed_at": "2026-10-16T14:43:58Z"
+        },
+        {
+          "id": 117030758123,
+          "name": "Factory asset / ceremonial_sword",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:51Z",
+          "completed_at": "2026-10-16T14:44:01Z"
+        },
+        {
+          "id": 117030758139,
+          "name": "Factory asset / ancient_gate_standard",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:52Z",
+          "completed_at": "2026-10-16T14:44:07Z"
+        },
+        {
+          "id": 117030758156,
+          "name": "Factory asset / rolling_terrain",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:44:00Z",
+          "completed_at": "2026-10-16T14:44:11Z"
+        },
+        {
+          "id": 117030758166,
+          "name": "Factory asset / treasure_chest",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:44:01Z",
+          "completed_at": "2026-10-16T14:44:11Z"
+        },
+        {
+          "id": 117030758181,
+          "name": "Factory asset / ancient_tree",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:51Z",
+          "completed_at": "2026-10-16T14:44:06Z"
+        },
+        {
+          "id": 117030758265,
+          "name": "Factory asset / forest_tree_mobile",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:51Z",
+          "completed_at": "2026-10-16T14:44:04Z"
+        },
+        {
+          "id": 117030758301,
+          "name": "Factory asset / cargo_cart",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:43:51Z",
+          "completed_at": "2026-10-16T14:43:59Z"
+        },
+        {
+          "id": 117030930921,
+          "name": "Independently audit entire game-asset catalog",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:44:13Z",
+          "completed_at": "2026-10-16T14:44:19Z"
+        },
+        {
+          "id": 117030993446,
+          "name": "Assemble reusable world from reviewed asset outputs",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:44:22Z",
+          "completed_at": "2026-10-16T14:44:32Z"
+        },
+        {
+          "id": 117031087808,
+          "name": "Build independent Android glTF renderer APK",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:44:34Z",
+          "completed_at": "2026-10-16T14:45:31Z"
+        },
+        {
+          "id": 117031554478,
+          "name": "Android 15 / nature-mobile / pixel_7",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:45:33Z",
+          "completed_at": "2026-10-16T14:47:31Z"
+        },
+        {
+          "id": 117031554521,
+          "name": "Android 15 / props-equipment / pixel_5",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:45:33Z",
+          "completed_at": "2026-10-16T14:47:39Z"
+        },
+        {
+          "id": 117031554594,
+          "name": "Android 15 / characters / pixel_4",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:45:34Z",
+          "completed_at": "2026-10-16T14:47:21Z"
+        },
+        {
+          "id": 117031554603,
+          "name": "Android 15 / scene-world / pixel_6",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:45:34Z",
+          "completed_at": "2026-10-16T14:48:11Z"
+        },
+        {
+          "id": 117032789785,
+          "name": "Fail closed on incomplete emulator visual QA evidence",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:48:13Z",
+          "completed_at": "2026-10-16T14:48:22Z"
+        },
+        {
+          "id": 117032872943,
+          "name": "Independently verify mobile LOD and per-asset Android silhouettes",
+          "conclusion": "success",
+          "started_at": "2026-10-16T14:48:24Z",
+          "completed_at": "2026-10-16T14:48:55Z"
+        }
+      ]
+    },
+    "artifacts": {
+      "total_count": 19,
+      "artifacts": [
+        {
+          "id": 12054185038,
+          "name": "veilforge-library-treasure_chest",
+          "size_in_bytes": 253659,
+          "expired": false
+        },
+        {
+          "id": 12054185009,
+          "name": "veilforge-library-ancient_gate_mobile",
+          "size_in_bytes": 243901,
+          "expired": false
+        },
+        {
+          "id": 12054131477,
+          "name": "veilforge-android-semantic-review",
+          "size_in_bytes": 1947,
+          "expired": false
+        },
+        {
+          "id": 12054026810,
+          "name": "veilforge-android-nature-mobile",
+          "size_in_bytes": 5731775,
+          "expired": false
+        },
+        {
+          "id": 12054010751,
+          "name": "veilforge-library-ancient_tree",
+          "size_in_bytes": 497502,
+          "expired": false
+        },
+        {
+          "id": 12054000391,
+          "name": "veilforge-library-ceremonial_sword",
+          "size_in_bytes": 263360,
+          "expired": false
+        },
+        {
+          "id": 12053970872,
+          "name": "veilforge-library-ancient_gate_standard",
+          "size_in_bytes": 260643,
+          "expired": false
+        },
+        {
+          "id": 12053946686,
+          "name": "veilforge-android-props-equipment",
+          "size_in_bytes": 3797855,
+          "expired": false
+        },
+        {
+          "id": 12053902018,
+          "name": "veilforge-android-scene-world",
+          "size_in_bytes": 13247923,
+          "expired": false
+        },
+        {
+          "id": 12053871219,
+          "name": "veilforge-assembled-world-scene",
+          "size_in_bytes": 1316641,
+          "expired": false
+        },
+        {
+          "id": 12053847275,
+          "name": "veilforge-android-visual-lod-review",
+          "size_in_bytes": 945,
+          "expired": false
+        },
+        {
+          "id": 12053477106,
+          "name": "veilforge-library-manager",
+          "size_in_bytes": 1943,
+          "expired": false
+        },
+        {
+          "id": 12053301720,
+          "name": "veilforge-library-cargo_cart",
+          "size_in_bytes": 270591,
+          "expired": false
+        },
+        {
+          "id": 12053276745,
+          "name": "veilforge-library-forest_tree_mobile",
+          "size_in_bytes": 286781,
+          "expired": false
+        },
+        {
+          "id": 12053102715,
+          "name": "veilforge-android-characters",
+          "size_in_bytes": 1469959,
+          "expired": false
+        },
+        {
+          "id": 12053077465,
+          "name": "veilforge-android-shared-probe-apk",
+          "size_in_bytes": 2040484,
+          "expired": false
+        },
+        {
+          "id": 12052982499,
+          "name": "veilforge-library-rolling_terrain",
+          "size_in_bytes": 670766,
+          "expired": false
+        },
+        {
+          "id": 12052908576,
+          "name": "veilforge-android-final-review",
+          "size_in_bytes": 1290,
+          "expired": false
+        },
+        {
+          "id": 12052574389,
+          "name": "veilforge-library-final-review",
+          "size_in_bytes": 1619,
+          "expired": false
+        }
+      ]
+    }
+  }
+]
