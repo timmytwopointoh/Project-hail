@@ -63,6 +63,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/HeroPoseTest.java \
             veilbound/tests/game/ashenveil/veilbound/ShapeEngineTest.java \
             veilbound/tests/game/ashenveil/veilbound/BellwardenAnatomyTest.java \
+            veilbound/tests/game/ashenveil/veilbound/ForgedPlateTest.java \
             veilbound/tests/game/ashenveil/veilbound/BootAssetsTest.java \
             veilbound/tests/game/ashenveil/veilbound/CombatGameplayTest.java \
             veilbound/tests/game/ashenveil/veilbound/EnvironmentKitTest.java \
@@ -80,6 +81,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HeroPoseTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ShapeEngineTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.BellwardenAnatomyTest
+          java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ForgedPlateTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.BootAssetsTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.CombatGameplayTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.EnvironmentKitTest
