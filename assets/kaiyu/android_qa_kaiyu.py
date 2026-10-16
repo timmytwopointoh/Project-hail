@@ -16,7 +16,19 @@ def main():
  frames=[];shots=[]
  for i,(yaw,pitch) in enumerate(qa.VIEWS):
   qa.adb('shell','am','start','--activity-single-top','-n',qa.ACTIVITY,'--es','asset','kaiyu','--ei','yaw',str(yaw),'--ei','pitch',str(pitch),timeout=35)
-  log=qa.wait_frame('kaiyu',yaw,pitch,timeout=45)
+  try:
+   log=qa.wait_frame('kaiyu',yaw,pitch,timeout=150)
+  except Exception as exc:
+   # Preserve real device evidence on a first-frame failure, never invent a PASS.
+   (out/'android_first_frame_failure.txt').write_text(
+    str(exc)+'\n'+qa.adb('logcat','-d',timeout=40)[-120000:],encoding='utf-8')
+   try:
+    (out/'android_activity_dump.txt').write_text(
+     qa.adb('shell','dumpsys','activity','activities',timeout=30),encoding='utf-8')
+   except Exception: pass
+   try: qa.screenshot(out/'android_first_frame_failure.png')
+   except Exception: pass
+   raise
   dest=out/f'kaiyu_android_{i:02d}.png'
   image,metrics,attempts=qa.capture_visible_frame(dest,attempts=12)
   assert metrics['foreground_fraction']>.003 and metrics['channel_stddev']>3
