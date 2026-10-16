@@ -24,6 +24,21 @@ public final class ForgedPlateTest {
         }
         require(faceVertices>22,"Forged panel has no broad raised steel surface");
         require(flangeVertices>0,"Forged panel lost physical thickness");
+        ArtKit.Model pauldron=ShapeEngine.pauldronShell(new ShapeEngine.Ring[]{
+            new ShapeEngine.Ring(.57f,1.67f,-.05f,.20f,.17f,0,.02f),
+            new ShapeEngine.Ring(.57f,1.80f,-.06f,.25f,.21f,0,.04f),
+            new ShapeEngine.Ring(.57f,1.93f,-.07f,.27f,.23f,0,.05f),
+            new ShapeEngine.Ring(.57f,2.09f,-.07f,.13f,.12f,0,.01f)
+        },26,steel,edge);
+        require(pauldron.triangleCount>220,
+                "Open layered shoulder was replaced with dummy primitives");
+        float zmin=99f,zmax=-99f;
+        for(int i=0;i<pauldron.vertices.length;i+=9){
+            zmin=Math.min(zmin,pauldron.vertices[i+2]);
+            zmax=Math.max(zmax,pauldron.vertices[i+2]);
+        }
+        require(zmin>-.10f&&zmax>.16f,
+                "Shoulder plate needs genuinely open back and dished front");
         ArtKit.Model hero=BellwardenAnatomy.build(false);
         float maxX=-999,minX=999;int lowerGlove=0;
         for(int i=0;i<hero.vertices.length;i+=9){
