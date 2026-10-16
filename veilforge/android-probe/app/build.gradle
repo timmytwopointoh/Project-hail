@@ -9,5 +9,8 @@ android {
         versionCode 1
         versionName '0.1.0-render-qa'
     }
-    buildTypes { debug { minifyEnabled false } release { minifyEnabled false } }
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
 }
