@@ -10,6 +10,7 @@ on:
       - 'veilbound/tools/HumanVariantCLI.java'
       - 'veilbound/tests/game/ashenveil/veilbound/M29ReferenceSkinTest.java'
       - 'docs/veilbound/M29_REFERENCE_AND_SKIN_PLAN.md'
+      - 'veilforge/pose_deformation_audit.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -139,6 +140,33 @@ jobs:
         with:
           pattern: m29-actual-geometry-*
           path: inspection_output/reviews
+      - name: Learn unsafe pose strain from real exported vertices
+        run: |
+          set -euo pipefail
+          ROOT=inspection_output/reviews
+          OUT=inspection_output/m29-director
+          mkdir -p "$OUT"
+          for POSE in tpose relaxed; do
+            python3 veilforge/pose_deformation_audit.py \
+              --baseline "$ROOT/m29-actual-geometry-baseline/human_candidate.obj" \
+              --posed "$ROOT/m29-actual-geometry-$POSE/human_candidate.obj" \
+              --variant "$POSE" --out "$OUT/pose_strain_$POSE.json"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/m29-director")
+          tests={key:json.loads((root/("pose_strain_"+key+".json")).read_text())
+                 for key in ("tpose","relaxed")}
+          assert all(x["triangles_evaluated"]>10000 for x in tests.values())
+          assert all(not x["auto_promoted"] and
+                     not x["manual_reference_likeness_approved"] for x in tests.values())
+          print("M29_POSE_STRAIN_LESSONS",{
+              k:{"strain_accepted":v["geometric_stretch_accepted"],
+                 "over3x":v["triangle_faces_stretched_over_3x"],
+                 "hip_leaks":v["lower_torso_and_pelvis_vertices_displaced"]}
+              for k,v in tests.items()})
+          PY
       - name: Validate all three real 3D poses; preserve manual image gate
         run: |
           set -euo pipefail
@@ -162,6 +190,10 @@ jobs:
                 "reference_images":"T-pose and secondary 3/4 generated in conversation",
                 "source_image_pixels_available_in_repository":False,
                 "poses":quality,"real_mesh_reference_poses":2,
+                "pose_strain_reports":{
+                    name:json.loads((out/("pose_strain_"+name+".json")).read_text())
+                    for name in ("tpose","relaxed")},
+                "pose_geometric_stretch_approved":False,
                 "new_skin_material":"deterministic micro-normal roughness atlas",
                 "skin_atlas_photographic":False,
                 "human_visual_reference_alignment":"PENDING",
