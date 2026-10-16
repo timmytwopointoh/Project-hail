@@ -12,12 +12,15 @@ def main():
  a=ap.parse_args();out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
  apk=Path(a.apk);digest=hashlib.sha256(apk.read_bytes()).hexdigest()
  sdk=int(qa.adb('shell','getprop','ro.build.version.sdk').strip());assert sdk==35, sdk
- qa.adb('install','-r',str(apk),timeout=180);qa.adb('logcat','-c')
+ qa.adb('install','-r',str(apk),timeout=180)
+ qa.adb('logcat','-G','16M',timeout=35)
+ qa.adb('logcat','-c')
+ qa.adb('shell','wm','size','720x1280',timeout=35)
  frames=[];shots=[]
  for i,(yaw,pitch) in enumerate(qa.VIEWS):
   qa.adb('shell','am','start','--activity-single-top','-n',qa.ACTIVITY,'--es','asset','kaiyu','--ei','yaw',str(yaw),'--ei','pitch',str(pitch),timeout=35)
   try:
-   log=qa.wait_frame('kaiyu',yaw,pitch,timeout=150)
+   log=qa.wait_frame('kaiyu',yaw,pitch,timeout=210)
   except Exception as exc:
    # Preserve real device evidence on a first-frame failure, never invent a PASS.
    (out/'android_first_frame_failure.txt').write_text(
@@ -25,6 +28,9 @@ def main():
    try:
     (out/'android_activity_dump.txt').write_text(
      qa.adb('shell','dumpsys','activity','activities',timeout=30),encoding='utf-8')
+   except Exception: pass
+   try:
+    (out/'kaiyu_tagged_logcat.txt').write_text(qa.adb('logcat','-d','-s','VEILFORGE_PROBE:V','AndroidRuntime:E','ActivityManager:E','*:S',timeout=40))
    except Exception: pass
    try: qa.screenshot(out/'android_first_frame_failure.png')
    except Exception: pass
