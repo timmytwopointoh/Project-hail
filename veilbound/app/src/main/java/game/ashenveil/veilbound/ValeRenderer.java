@@ -299,6 +299,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float actualDt=Math.max(.0001f,Math.min((now-previous)*1e-9f,.25f));
         float dt=Math.max(.001f,Math.min(actualDt,.044f));
         previous=now;
+        acceptVesperQueue();
         state.update(dt);
         qualityClock+=actualDt;frames++;
         drawCalls=0;
@@ -433,8 +434,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return handle;
     }
 
-    private void renderStudio(){
-        initStudioHighDetail();
+    private void acceptVesperQueue(){
         VesperGlb.Result avatar=vesperQueue.getAndSet(null);
         if(avatar!=null){
             vesperIdle=new Mesh[avatar.idle.length];vesperWalk=new Mesh[avatar.walk.length];
@@ -446,6 +446,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
                 " triangles="+avatar.triangles+" idle_frames="+vesperIdle.length+
                 " walk_frames="+vesperWalk.length);
         }
+    }
+    private void renderStudio(){
+        initStudioHighDetail();
         ArtKit.Model pending=importQueue.getAndSet(null);
         if(pending!=null){
             studioImported=new Mesh(pending.vertices);
