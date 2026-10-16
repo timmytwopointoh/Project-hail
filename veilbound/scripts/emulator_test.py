@@ -391,7 +391,7 @@ def main():
                          timeout=20).decode("utf-8","replace")
             states=[x for x in pose_log.splitlines()
                     if "item=13" in x and "material=" in x]
-            value=re.search(r"material=(\\d+)",states[-1]) if states else None
+            value=re.search(r"material=(\d+)",states[-1]) if states else None
             if value is not None and int(value.group(1))!=4:
                 break
             if value is not None and int(value.group(1))==4:
