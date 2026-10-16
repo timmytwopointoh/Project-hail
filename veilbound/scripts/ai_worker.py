@@ -78,11 +78,11 @@ def run_java_checks(replacement):
         classes.mkdir()
         pure = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
                 "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BootAssets"]
+                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BootAssets"]
         suites = ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay",
                   "EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
                   "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader",
-                  "MaterialTextures", "ShapeEngine", "BootAssets"]
+                  "MaterialTextures", "HeroPose", "ShapeEngine", "BootAssets"]
         cmd = ["javac", "-d", str(classes)]
         cmd += [str(staging / (cls + ".java")) for cls in pure]
         cmd += [str(ROOT / TESTS / (suite + "Test.java")) for suite in suites]
