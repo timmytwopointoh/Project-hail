@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 20
-        versionName '0.20.0-continuous-anatomy-forge'
+        versionCode 21
+        versionName '0.21.0-five-digit-anatomy'
     }
     buildTypes {
         debug { minifyEnabled false }
