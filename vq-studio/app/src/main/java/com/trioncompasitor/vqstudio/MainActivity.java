@@ -221,7 +221,7 @@ public final class MainActivity extends Activity {
   }
   private void loadVerifiedRevision(String requestedId,String selectedRun){
     try{
-      LiveMeshClient.Snapshot snap=LiveMeshClient.latest(this,requestedId,selectedRun);
+      LiveMeshClient.Snapshot snap=LiveMeshClient.latest(this,requestedId,selectedRun,loadedSnapshotKey);
       if(snap==null)return;
       if(snap.identity().equals(loadedSnapshotKey))return;
       runOnUiThread(()->{
