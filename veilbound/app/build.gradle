@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 15
-        versionName '0.15.0-fitted-forged-armor'
+        versionCode 16
+        versionName '0.15.1-layered-pauldron-sculpt'
     }
     buildTypes {
         debug { minifyEnabled false }
