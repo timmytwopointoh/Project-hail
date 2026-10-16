@@ -1,7 +1,7 @@
 name: VEILBOUND - Six Isolated Production Engines
 on:
   push:
-    branches: ['feature/veilbound-m13-loading-sculpt-engines', 'feature/veilbound-m14-full-character-sculpt', 'feature/veilbound-m15-fitted-armor-realism']
+    branches: ['feature/veilbound-m13-loading-sculpt-engines', 'feature/veilbound-m14-full-character-sculpt', 'feature/veilbound-m15-fitted-armor-realism', 'feature/veilbound-m15b-layered-pauldron-sculpt']
     paths:
       - 'veilbound/tools/**'
       - 'veilbound/app/src/main/java/game/ashenveil/veilbound/ShapeEngine.java'
