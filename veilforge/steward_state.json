@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "engine": "VEILFORGE",
+  "claimant": "Timothy Harris",
+  "github_account": "timmytwopointoh",
+  "repository": "timmytwopointoh/Project-hail",
+  "operating_mode": "plan_only",
+  "autonomous_execution_enabled": false,
+  "auto_merge": false,
+  "production_promote": false,
+  "max_active_worker_and_emulator_jobs": 10,
+  "max_emulator_jobs": 4,
+  "max_expensive_inference_runs_per_day": 0,
+  "allow_source_modification": false,
+  "persistent_model_claim": false,
+  "source_of_truth": [
+    "AGENTS.md",
+    "veilforge/VEILFORGE_CHARTER.md",
+    "veilforge/AGENT_INSTRUCTIONS.md",
+    "veilforge/ENGINE_MASTER_PLAN.json",
+    "veilforge/queue_backlog.json",
+    "veilforge/UNIFIED_QUEUE.md",
+    "docs/ownership/RIGHTS_AND_PROVENANCE.md",
+    "docs/ownership/THIRD_PARTY_REGISTER.md",
+    "docs/ownership/BRAND_NAME_CLEARANCE.md"
+  ],
+  "next_priority": "Establish signed source provenance and audit 10-slot worker+emulator queue before activating any expensive recurring inference",
+  "handoff": {
+    "last_verified_provenance_run": "https://github.com/timmytwopointoh/Project-hail/actions/runs/38883856153",
+    "last_verified_mixed_queue_run": null,
+    "known_limitations": [
+      "GitHub Actions schedule requires default-branch workflow",
+      "No independent proof of copyright ownership or authorship",
+      "No continuous background ChatGPT session",
+      "Third-party model licenses are under review",
+      "VEILFORGE commercial brand name has not been trademark-cleared; similarly named web projects exist"
+    ],
+    "last_verified_provenance_commit": "7b4ec7eb1f9889b3b9757c3aaa3c8c548e63040f",
+    "last_verified_provenance_status": "signed_github_attestation_step_succeeded",
+    "provenance_evidence_timestamp_note": "2026-10-16 UTC; precise time is in run manifest"
+  }
+}

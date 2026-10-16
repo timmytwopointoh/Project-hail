@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 # Queue runs are isolated and do not overlap one another on this branch.
 # This does NOT override GitHub account-wide limits or constrain other workflows.
@@ -72,12 +74,35 @@ jobs:
           assert p['selected_count']==p['emulator_count']+p['asset_worker_count']
           print('VEILFORGE_TEN_SLOT_QUEUE',p['selected_count'],'emulators',p['emulator_count'])
           PY
+      - name: Check claimant, source integrity, and signed-evidence inputs before queued work
+        run: |
+          set -euo pipefail
+          test -s LICENSE
+          test -s veilforge/VEILFORGE_CHARTER.md
+          test -s docs/ownership/RIGHTS_AND_PROVENANCE.md
+          python3 veilforge/provenance.py snapshot \
+            --root . --out inspection_output/unified-plan/ownership_source_manifest.json
+          python3 veilforge/provenance.py verify \
+            --root . --snapshot inspection_output/unified-plan/ownership_source_manifest.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          doc=json.loads(Path('inspection_output/unified-plan/ownership_source_manifest.json').read_text())
+          assert doc['claimed_owner']=='Timothy Harris'
+          assert doc['github_account']=='timmytwopointoh'
+          assert doc['human_signature_present'] is False
+          print('VEILFORGE_RIGHTS_PROVENANCE_PREFLIGHT',doc['source_commit_sha'])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: veilforge-unified-immutable-plan
           path: inspection_output/unified-plan/
           retention-days: 21
           if-no-files-found: error
+      - name: Cryptographically attest queued build's exact ownership manifest
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/unified-plan/ownership_source_manifest.json
 
   shared-apk:
     name: Prepare one immutable Android asset-probe APK
