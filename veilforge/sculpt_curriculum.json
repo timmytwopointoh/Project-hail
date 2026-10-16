@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "engine": "VEILFORGE",
+  "curriculum": "M26 evidence-driven sculpting",
+  "principle": "Each defect becomes a bounded parameter experiment with before/after geometry and independent human visual review. This is not neural-network training or automatic aesthetic judgement.",
+  "immutable_guards": [
+    "preserve armored Bellwarden gameplay and Easter egg",
+    "preserve M25 reviewed source and M24 source history",
+    "freeze hair and clothing",
+    "four distinct fingers plus opposed thumb per hand",
+    "never auto-merge or promote candidates",
+    "do not claim photorealism from metric scores"
+  ],
+  "stages": [
+    {
+      "id": "S1",
+      "name": "Reference anatomy and silhouette",
+      "priority": 1,
+      "owner": "anatomy-director",
+      "goals": [
+        "compare front/side/back/three-quarter body proportions to supplied Bellwarden Base Body Test reference",
+        "correct torso vs leg and natural limb silhouette"
+      ],
+      "gates": [
+        "14 authentic mesh views",
+        "arm/leg ratios and height",
+        "manual front/profile signoff"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S2",
+      "name": "Facial planes and real anatomy",
+      "priority": 1,
+      "owner": "face-manager",
+      "goals": [
+        "integrated orbital sockets, eyelid rims, nasal bridge and alae",
+        "jaw/cheek anatomy without floating beads",
+        "neutral lip seam, face loops and bilateral geometry"
+      ],
+      "gates": [
+        "front/profile/three-quarter facial closeups",
+        "symmetric eye landmarks",
+        "reviewer verifies no floating/painted-on face details"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S3",
+      "name": "Hands, feet and functional anatomy",
+      "priority": 2,
+      "owner": "extremity-manager",
+      "goals": [
+        "five anatomical digits per hand, open gaps, opposable thumb",
+        "arched foot and heel/toe transitions",
+        "cross-angle wrist and ankle attachment"
+      ],
+      "gates": [
+        "six hand views and both feet",
+        "digit/rig validation",
+        "multi-pose attachment audit"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S4",
+      "name": "Sculpt continuity and corrective surfaces",
+      "priority": 1,
+      "owner": "surface-manager",
+      "goals": [
+        "remove pillowy isolated muscle bumps",
+        "smooth shoulder/chest/abdomen/leg insertions",
+        "preserve anatomical landmarks through small local offsets"
+      ],
+      "gates": [
+        "normal validity and bounded displacement",
+        "before/after OBJ proof",
+        "no degraded silhouettes or high detail regression"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S5",
+      "name": "Retopology and UV master",
+      "priority": 2,
+      "owner": "topology-manager",
+      "goals": [
+        "create coherent facial and muscle deformation loops",
+        "reduce open boundaries, degenerates, nonmanifold regions",
+        "produce meaningful UV island charts"
+      ],
+      "gates": [
+        "no newly created nonmanifold/degenerate faces",
+        "outstanding boundary edges explicitly reported",
+        "manual retopology approval"
+      ],
+      "state": "blocked_on_reference_visual_review"
+    },
+    {
+      "id": "S6",
+      "name": "PBR skin and fine surfaces",
+      "priority": 2,
+      "owner": "materials-manager",
+      "goals": [
+        "physically credible base color, pores, fine micro-normals, AO and roughness",
+        "reduce plastic response and eliminate shader glitter",
+        "test material under standard/moon/ember light"
+      ],
+      "gates": [
+        "color-space correct glTF maps",
+        "camera-consistent materials",
+        "real Android skin render proof"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S7",
+      "name": "Rigging and expressive deformation",
+      "priority": 3,
+      "owner": "animation-manager",
+      "goals": [
+        "skin weights preserve eyelid, mouth, shoulder, elbows, hips, knees and ankles",
+        "validate attachments over full motion",
+        "introduce facial expression controls and realistic motion"
+      ],
+      "gates": [
+        "multiple measurable motion frames",
+        "no pinched limbs or clipping",
+        "real in-game angle/pose inspection"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S8",
+      "name": "Mobile/performance and gameplay Testing Grounds",
+      "priority": 3,
+      "owner": "testing-director",
+      "goals": [
+        "identical-source Android 15 emulator farm",
+        "compare candidate against preserved knight gameplay stability",
+        "accept human only after manual reference review"
+      ],
+      "gates": [
+        "all emulator reports same commit and APK",
+        "actual mobile FPS and budget evidence",
+        "explicit human review approval"
+      ],
+      "state": "in_progress"
+    },
+    {
+      "id": "S9",
+      "name": "Generalize sculpt lessons to every asset",
+      "priority": 4,
+      "owner": "veilforge-director",
+      "goals": [
+        "reuse region-aware mesh sculpting for creatures, armor, architecture, props and environments",
+        "add artist-approved lesson recipes to reusable engine",
+        "measure transfer rather than assume it"
+      ],
+      "gates": [
+        "non-human mesh examples",
+        "unit tests for new asset families",
+        "no loss of prior working features"
+      ],
+      "state": "planned"
+    }
+  ],
+  "feedback_schema": {
+    "required": [
+      "id",
+      "stage",
+      "defect",
+      "severity",
+      "confidence",
+      "evidence",
+      "decision"
+    ],
+    "evidence_required": [
+      "source_run",
+      "artifact",
+      "views",
+      "kind"
+    ],
+    "decision_values": [
+      "reject_visual",
+      "needs_revision",
+      "approve_candidate_for_review"
+    ],
+    "severity_range": [
+      1,
+      5
+    ],
+    "confidence_range": [
+      0,
+      1
+    ],
+    "allowed_defects": [
+      "protruding_eyes",
+      "flat_eyelids",
+      "inflated_cheeks",
+      "weak_nose_bridge",
+      "puppet_jaw",
+      "lumpy_shoulders",
+      "capsule_chest",
+      "stump_ankles"
+    ],
+    "warning": "Structured labels are explicitly curated from manually observed renders. No automatic screenshot recognition in this version."
+  },
+  "dials": [
+    {
+      "id": "eye_recession",
+      "stage": "S2",
+      "region": "eyes",
+      "direction": "positive value moves orbital surface inward",
+      "maximum_displacement_model_units": 0.01
+    },
+    {
+      "id": "upper_lid_transition",
+      "stage": "S2",
+      "region": "eyelids",
+      "direction": "positive softens forward lid ridge",
+      "maximum_displacement_model_units": 0.006
+    },
+    {
+      "id": "cheek_plane",
+      "stage": "S2",
+      "region": "cheeks",
+      "direction": "positive reduces projecting cheek bump",
+      "maximum_displacement_model_units": 0.009
+    },
+    {
+      "id": "nose_bridge",
+      "stage": "S2",
+      "region": "nose",
+      "direction": "positive reinforces nasal ridge only",
+      "maximum_displacement_model_units": 0.006
+    },
+    {
+      "id": "jaw_transition",
+      "stage": "S2",
+      "region": "jaw",
+      "direction": "positive softens forward jaw fullness",
+      "maximum_displacement_model_units": 0.01
+    },
+    {
+      "id": "shoulder_flow",
+      "stage": "S4",
+      "region": "shoulders",
+      "direction": "positive reduces prominent deltoid dome",
+      "maximum_displacement_model_units": 0.008
+    },
+    {
+      "id": "chest_flow",
+      "stage": "S4",
+      "region": "chest",
+      "direction": "positive smoothens pectoral capsule",
+      "maximum_displacement_model_units": 0.007
+    },
+    {
+      "id": "ankle_transition",
+      "stage": "S3",
+      "region": "feet",
+      "direction": "positive subtly rounds dorsal ankle/heel transition",
+      "maximum_displacement_model_units": 0.007
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "record_type": "manually_reviewed_defect_observations",
+  "source_reference": "Bellwarden Base Body Test, original user-provided male anatomy image",
+  "automatic_image_interpretation": false,
+  "immutable_baseline": "M25 unarmored adult candidate, playable historical knight preserved",
+  "records": [
+    {
+      "id": "M25-01-EYE",
+      "stage": "S2",
+      "defect": "protruding_eyes",
+      "severity": 5,
+      "confidence": 0.92,
+      "evidence": {
+        "source_run": "38875627662",
+        "artifact": "m25-anatomy-head_cranium",
+        "views": [
+          "face_front.png",
+          "face_side.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "reject_visual",
+      "note": "Eye plates were round and overly forward; first pass rejected."
+    },
+    {
+      "id": "M25-02-LID",
+      "stage": "S2",
+      "defect": "flat_eyelids",
+      "severity": 5,
+      "confidence": 0.88,
+      "evidence": {
+        "source_run": "38876111750",
+        "artifact": "m25-anatomy-head_cranium",
+        "views": [
+          "face_front.png",
+          "face_side.png",
+          "face_three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Colored eye geometry exists but eyelid anatomy is insufficient; reviewer approval pending."
+    },
+    {
+      "id": "M25-02-CHEEK",
+      "stage": "S2",
+      "defect": "inflated_cheeks",
+      "severity": 4,
+      "confidence": 0.83,
+      "evidence": {
+        "source_run": "38876111750",
+        "artifact": "m25-anatomy-head_cranium",
+        "views": [
+          "face_front.png",
+          "face_three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Facial planes show overly pillowy cheek-to-jaw transitions."
+    },
+    {
+      "id": "M25-02-JAW",
+      "stage": "S2",
+      "defect": "puppet_jaw",
+      "severity": 4,
+      "confidence": 0.86,
+      "evidence": {
+        "source_run": "38876111750",
+        "artifact": "m25-anatomy-head_cranium",
+        "views": [
+          "face_front.png",
+          "face_side.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Jaw and lower face remain mannequin-like despite reduced face accents."
+    },
+    {
+      "id": "M24-01-SHOULDER",
+      "stage": "S4",
+      "defect": "lumpy_shoulders",
+      "severity": 4,
+      "confidence": 0.8,
+      "evidence": {
+        "source_run": "38870225476",
+        "artifact": "m24-anatomy-front_silhouette",
+        "views": [
+          "front.png",
+          "three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Deltoids protrude like capsules; need smoother anatomy and motion checks."
+    },
+    {
+      "id": "M24-01-CHEST",
+      "stage": "S4",
+      "defect": "capsule_chest",
+      "severity": 4,
+      "confidence": 0.79,
+      "evidence": {
+        "source_run": "38870225476",
+        "artifact": "m24-anatomy-front_silhouette",
+        "views": [
+          "front.png",
+          "side.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Pectoral/serratus/abdomen forms still lumpy."
+    },
+    {
+      "id": "M24-01-ANKLE",
+      "stage": "S3",
+      "defect": "stump_ankles",
+      "severity": 5,
+      "confidence": 0.87,
+      "evidence": {
+        "source_run": "38870225476",
+        "artifact": "m24-anatomy-front_silhouette",
+        "views": [
+          "front.png",
+          "side.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Foot/ankle forms are overly blocky; bounded deformation is only a first geometry experiment."
+    },
+    {
+      "id": "M25-02-NOSE",
+      "stage": "S2",
+      "defect": "weak_nose_bridge",
+      "severity": 3,
+      "confidence": 0.72,
+      "evidence": {
+        "source_run": "38876111750",
+        "artifact": "m25-anatomy-head_cranium",
+        "views": [
+          "face_side.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Bridge and alae remain simplified; avoid additional isolated nose dots."
+    }
+  ],
+  "safety": {
+    "automatically_train_neural_network": false,
+    "auto_promote": false,
+    "manually_approved_candidate": false,
+    "change_hair": false,
+    "replace_knight": false
+  }
+}
