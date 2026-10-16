@@ -1,0 +1,63 @@
+name: VQ Studio OFFLINE - Android APK and device repository test
+on:
+  push:
+    branches: ['app/vq-studio-offline-repository-20261016']
+    paths: ['vq-studio/app/**','vq-studio/scripts/**','.github/workflows/vq-studio-offline-android.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vq-studio-offline-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-device:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Build self-contained offline APK
+        run: gradle -p vq-studio :app:assembleDebug --no-daemon --max-workers=2
+      - name: Confirm app has absolutely no Internet permission
+        run: |
+          set -euo pipefail
+          APK=vq-studio/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$APK" > permissions.txt
+          if grep -Fq 'android.permission.INTERNET' permissions.txt; then
+            echo "Offline VQ MUST NOT have Internet access";exit 1
+          fi
+          echo "VQ_OFFLINE_NO_INTERNET_PERMISSION_PASS"
+      - name: Enable hardware virtualization
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm-vq-offline.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android emulator offline model generation and SQLite revision checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 3072M
+          disk-size: 4096M
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash vq-studio/scripts/test_offline_emulator.sh
+      - name: Name phone-installable APK
+        if: always()
+        run: cp vq-studio/app/build/outputs/apk/debug/app-debug.apk VQ-Studio-OFFLINE-v0.2-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VQ-Studio-OFFLINE-APK-and-real-emulator-proof
+          path: |
+            VQ-Studio-OFFLINE-v0.2-debug.apk
+            inspection_output/vq-offline/
+            permissions.txt
+          if-no-files-found: warn
+          retention-days: 21
