@@ -440,6 +440,20 @@ def main():
         if not report["vesper_synthetic_aura_draw_seen"]:
             raise AssertionError("Synthetic Vesper aura was not rendered by GLES")
         report["screenshots"].append(shot("05_vesper_synthetic_aura_stage.png"))
+        # Verify visible purple content in the isolated synthetic stage,
+        # not just a successful GLES draw call.
+        with Image.open(OUT/"05_vesper_synthetic_aura_stage.png") as aura_image:
+            a=aura_image.convert("RGB")
+            w0,h0=a.size
+            center=a.crop((int(w0*.37),int(h0*.32),int(w0*.64),int(h0*.76)))
+            colored=0
+            for red,green,blue in center.getdata():
+                if red>55 and blue>50 and blue>green*1.5 and red>green*1.3:
+                    colored+=1
+        report["vesper_synthetic_aura_colored_pixels"]=colored
+        if colored<135:
+            raise AssertionError("Android Vesper aura too faint to read in stage: "+str(colored))
+
         report["full_vesper_glb_verified"]=False
         report["status"]="passed"
     except Exception as exc:
