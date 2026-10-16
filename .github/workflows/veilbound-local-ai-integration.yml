@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 # Rerun the bounded one-worker integration with trusted behavioral-feedback
-# passed into the second model call; only functional Java changes can qualify.
+# passed into the second model call; Java NaN comparison syntax must be valid.
 # No GitHub API token, model
 # API key, or writes/merges, and no reliance on the character team's branch.
 jobs:
