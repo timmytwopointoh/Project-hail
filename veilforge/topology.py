@@ -193,8 +193,11 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
                  "nonmanifold_edges":after["nonmanifold_edges"],
                  "degenerate_triangles":after["degenerate_triangles"]},
         "topology_improved":(
-            after["boundary_edges"]<=before["boundary_edges"] and
-            after["nonmanifold_edges"]<=before["nonmanifold_edges"]),
+            after["nonmanifold_edges"]<=before["nonmanifold_edges"] and
+            after["degenerate_triangles"]<=before["degenerate_triangles"] and
+            (mode!="human" or after["boundary_edges"]<=before["boundary_edges"])),
+        "boundary_edge_delta":after["boundary_edges"]-before["boundary_edges"],
+        "open_rims_preserved":mode!="human",
         "closed_oriented_manifold_automatically_proven":False,
         "ready_for_game":False,"manual_visual_review_required":True,
         "safe_export_candidate":after["nonmanifold_edges"]==0 and
