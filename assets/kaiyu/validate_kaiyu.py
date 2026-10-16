@@ -1,8 +1,8 @@
 """Verify real glTF skinning and measurable animation deformation of Kaiyu M1."""
-import json, numpy as np, math, struct
+import json, numpy as np, math, struct, os
 from pathlib import Path
 from kaiyu_skin_m1 import unpack,data,rest_matrices,local
-p=Path('/mnt/data/kaiyu_skinned_m2.glb');j,b=unpack(p)
+p=Path(os.environ.get('KAIYU_OUT','/mnt/data'))/'kaiyu_skinned_m2.glb';j,b=unpack(p)
 assert j['asset']['version']=='2.0'
 assert len(j['skins'])==7
 assert len(j['animations'])==1 and len(j['animations'][0]['channels'])==22
@@ -66,5 +66,5 @@ assert len(results)==7
 assert total_tri>1000
 assert all(x['weighted_vertex_count']>100 for x in results)
 report={'schema':1,'label':'Kaiyu M1 deformation structural check','source_glb':p.name,'glb_bytes':p.stat().st_size,'source_triangles_from_skinned_primitives':total_tri,'skins':len(results),'animation_channels':len(animated_node),'sample_frame':frame,'sample_time_sec':float(times[frame]),'passes':{'gltf_structure':True,'joint_weights':True,'inverse_bind_rest_correct':True,'measured_real_deformation':True,'source_materials_preserved':True},'groups':results,'emulator_android_pass':False,'reference_likeness_pass':False,'production_ready':False}
-Path('/mnt/data/kaiyu_m2_validation.json').write_text(json.dumps(report,indent=2))
+(Path(os.environ.get('KAIYU_OUT','/mnt/data'))/'kaiyu_m2_validation.json').write_text(json.dumps(report,indent=2))
 print(json.dumps(report,indent=2))
