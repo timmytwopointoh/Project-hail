@@ -132,3 +132,53 @@ jobs:
           path: inspection_output/library-review/
           if-no-files-found: warn
           retention-days: 14
+
+  scene-package:
+    name: Assemble reusable world from reviewed asset outputs
+    needs: [library-manager, asset-producers, library-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-library-*
+          path: inspection_output/library-collected
+      - name: Build real multi-mesh, multi-instance glTF world package
+        run: |
+          set -euo pipefail
+          python3 veilforge/assembly.py \
+            --catalog veilforge/catalog.json \
+            --scenes veilforge/scenes.json \
+            --id ruin_courtyard_demo \
+            --assets-root inspection_output/library-collected \
+            --out inspection_output/scene-package
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/scene-package")
+          manifest=json.loads((root/"scene_manifest.json").read_text())
+          scene=json.loads((root/"ruin_courtyard_demo.gltf").read_text())
+          assert manifest["instances"]==8
+          assert manifest["unique_asset_sources"]==7
+          assert len(scene["nodes"])==8
+          assert len(scene["meshes"])==7
+          assert all((root/b["uri"]).stat().st_size==b["byteLength"]
+                     for b in scene["buffers"])
+          assert manifest["production_approved"] is False
+          print("VEILFORGE_SCENE_QA_PASS",manifest["instances"],
+                "instances, assets",manifest["unique_asset_sources"])
+          PY
+      - name: Archive actual reusable scene pack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-assembled-world-scene
+          path: inspection_output/scene-package/
+          if-no-files-found: warn
+          retention-days: 14

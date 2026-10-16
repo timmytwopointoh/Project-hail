@@ -79,3 +79,27 @@ M5: Blender/headless true high-poly sculpt and normal/AO/roughness baking,
 LOD chains and verified glTF/GLB.
 M6: actual game importer + automated visual benchmark on multiple GPUs,
 retaining artistic sign-off.
+
+## Asset-pack and scene compiler (M3 addition)
+
+The new scene compiler combines approved source candidate geometry into a real
+multi-mesh glTF 2.0 scene package without duplicating the geometry for each
+instance. Each instance has an ID, position, Y-axis rotation and scale. The
+result holds multiple source mesh buffers, reused by independent scene nodes.
+
+Scene recipes are kept in veilforge/scenes.json. The initial
+ruin_courtyard_demo contains eight placements referencing seven distinct
+catalog assets (terrain, gate, trees, loot, sword and cargo cart). The CI scene
+job downloads the eight independently produced asset artifacts, verifies each
+glTF/hash/buffer, writes a complete scene package and archives it for external
+game import.
+
+The compiler fails closed on unknown assets, path escapes, nonfinite or extreme
+transforms, missing source binaries and unsupported glTF extensions. Skinning
+and advanced texture packing are future explicit features; the compiler does
+not silently remove them. Scene pack QA is NOT proof of final visual appearance
+or gameplay navigation/collision quality.
+
+~~~bash
+python3 veilforge/assembly.py --catalog veilforge/catalog.json   --scenes veilforge/scenes.json --id ruin_courtyard_demo   --assets-root inspection_output/library-collected   --out inspection_output/scene-package
+~~~

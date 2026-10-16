@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "description": "An engine smoke-test assembly only; not a complete game level or accepted environment.",
+  "scenes": [
+    {
+      "id": "ruin_courtyard_demo",
+      "instances": [
+        {
+          "id": "ground",
+          "asset": "rolling_terrain",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "yaw": 0,
+          "scale": 1
+        },
+        {
+          "id": "gateway",
+          "asset": "ancient_gate_standard",
+          "position": [
+            0,
+            0,
+            -2
+          ],
+          "yaw": 0,
+          "scale": 1
+        },
+        {
+          "id": "tree_west",
+          "asset": "ancient_tree",
+          "position": [
+            -3.7,
+            0,
+            -1.6
+          ],
+          "yaw": 17,
+          "scale": 1
+        },
+        {
+          "id": "tree_east",
+          "asset": "ancient_tree",
+          "position": [
+            3.8,
+            0,
+            -1.2
+          ],
+          "yaw": -31,
+          "scale": 0.85
+        },
+        {
+          "id": "tree_south",
+          "asset": "forest_tree_mobile",
+          "position": [
+            -2.6,
+            0,
+            3.5
+          ],
+          "yaw": 114,
+          "scale": 0.8
+        },
+        {
+          "id": "loot_chest",
+          "asset": "treasure_chest",
+          "position": [
+            -0.9,
+            0,
+            -0.5
+          ],
+          "yaw": 55,
+          "scale": 0.85
+        },
+        {
+          "id": "sword_drop",
+          "asset": "ceremonial_sword",
+          "position": [
+            0.2,
+            1,
+            -0.2
+          ],
+          "yaw": 83,
+          "scale": 0.5
+        },
+        {
+          "id": "supply_cart",
+          "asset": "cargo_cart",
+          "position": [
+            2.5,
+            0,
+            2.7
+          ],
+          "yaw": 28,
+          "scale": 0.85
+        }
+      ]
+    }
+  ]
+}

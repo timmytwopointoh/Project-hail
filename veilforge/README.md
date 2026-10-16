@@ -73,3 +73,7 @@ Progress towards source-quality retopology and PBR/skin shader upgrades is track
 ### M2 acceptance gates
 
 The manager-of-managers now publishes separate **CI evidence gates** and **topology quality acceptance**. A green workflow does not silently classify outstanding nonmanifold edges or open human skin as approved: `unresolved_topology` includes the exact before/after counts and asset name. Back-to-back cloth triangles are removed from exported armor and studio mesh, and those mixed-material glTF exports are explicitly two-sided so the cape remains visible from either side. The Android source never changes.
+
+## M3 universal asset library
+
+The independent general-purpose 3D asset builders and world scene-pack system live in [ASSET_FACTORY.md](ASSET_FACTORY.md). This extends the engine beyond characters with six new procedural model families, a catalog, multi-material glTF exports, actual mesh previews, and reusable scene composition. Working game code is not changed.
