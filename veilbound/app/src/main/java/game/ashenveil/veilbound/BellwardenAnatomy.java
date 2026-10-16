@@ -171,13 +171,15 @@ public final class BellwardenAnatomy {
                 r(x,1.62f,-.04f,.22f,.215f,.035f),
                 r(x,1.83f,-.045f,.25f,.24f,.035f),
                 r(x,2.02f,-.065f,.18f,.19f,0));
-            // Forged pauldron: stepped shoulder ridge moves into collar.
-            add(sculpt,POLISH,ringSides,
-                r(x,1.68f,-.05f,.23f,.23f,.03f),
-                r(x,1.78f,-.05f,.265f,.235f,.045f),
-                r(x,1.91f,-.065f,.285f,.245f,.065f),
-                r(x,2.01f,-.075f,.263f,.228f,.055f),
-                r(x,2.11f,-.07f,.125f,.13f,.01f));
+            // Authentic open pauldron: a shoulder dish with four fitted,
+            // separately rimmed lames over visible mail, not a sealed barrel.
+            sculpt.add(ShapeEngine.pauldronShell(new ShapeEngine.Ring[]{
+                r(x,1.67f,-.045f,.215f,.16f,.020f),
+                r(x,1.77f,-.045f,.255f,.205f,.037f),
+                r(x,1.88f,-.065f,.270f,.229f,.053f),
+                r(x,1.98f,-.072f,.245f,.205f,.046f),
+                r(x,2.08f,-.073f,.115f,.115f,.012f)
+            },mobile?12:26,POLISH,EDGE));
             // Separate overlapping plates slide visually over upper arm.
             add(sculpt,IRON,narrowSides,
                 r(x,1.42f,.025f,.205f,.18f,.012f),
