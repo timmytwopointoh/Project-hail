@@ -24,6 +24,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
+    private boolean ultraHeroLod=true;
     private Mesh playerPremiumSword;
     private final HeroPose.Frame heroFrame=new HeroPose.Frame();
     private Mesh verdigrisPool;
@@ -661,8 +662,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         boolean materialQuality=dist2<80f && fps>6.0f;
         GLES20.glUniform1f(uSurfaceQuality,materialQuality?1f:0f);
         GLES20.glUniform1f(uHeroShading,foe?0f:1f);
+        // Hysteresis avoids visible high/low geometry popping near the FPS threshold.
+        if(!foe){if(fps<7.0f)ultraHeroLod=false;else if(fps>13.5f)ultraHeroLod=true;}
         Rigged rig=boss?knightRig:(foe?revenantRig:
-            (fps>=8.5f?playerRig:playerLiteRig));
+            (ultraHeroLod?playerRig:playerLiteRig));
         if(foe && (x-state.x)*(x-state.x)+(z-state.z)*(z-state.z)>144f){
             rig=boss?knightFarRig:revenantFarRig;
         }
@@ -686,6 +689,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Matrix.rotateM(model,0,foe?attackTwist:heroFrame.rootYaw,0,1,0);
         if(!foe)Matrix.rotateM(model,0,heroFrame.rootRoll,0,0,1);
         draw(rig.torso,model,1,1,1,foe?.04f:0);
+        if(!foe&&rig.helmet.count>0){
+            // Rotated about cervical joint; gaze stabilizes against stride,
+            // breath, dodge and strike as an independent piece of the armor.
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,y+heroFrame.bob,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+            Matrix.scaleM(model,0,scale,scale,scale);
+            Matrix.translateM(model,0,0,2.22f,0);
+            Matrix.rotateM(model,0,heroFrame.helmetYaw,0,1,0);
+            Matrix.rotateM(model,0,heroFrame.helmetPitch,1,0,0);
+            draw(rig.helmet,model,1f,1f,1f,0);
+        }
         if(!foe&&rig.mantle.count>0){
             // Counter-sway the mantle about a fixed collar hinge.
             Matrix.setIdentityM(model,0);
@@ -706,18 +721,20 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         drawRigLimb(rig.leftArm,rig.parts.shoulderX,rig.parts.shoulderY,
                     x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
                     foe?(-step*18f-12f-flinch*13f+roll*20f):heroFrame.leftArmPitch,
-                    foe?(-8f-fatigue*inhale*44f):heroFrame.leftArmRoll,false);
+                    foe?(-8f-fatigue*inhale*44f):heroFrame.leftArmRoll,false,0f);
         drawRigLimb(rig.rightArm,rig.parts.shoulderX,rig.parts.shoulderY,
                     x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
                     foe?(step*16f+13f-armDrive-brace):heroFrame.rightArmPitch,
                     foe?(-22f+(swing>0?30f*CombatMotion.smooth(phase/.38f):0f)):
-                        heroFrame.rightArmRoll,true);
+                        heroFrame.rightArmRoll,true,0f);
         drawRigLimb(rig.leftLeg,rig.parts.hipX,rig.parts.hipY,
                     x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(step*22f-roll*35f):heroFrame.leftLegPitch,2f,false);
+                    foe?(step*22f-roll*35f):heroFrame.leftLegPitch,2f,false,
+                    foe?0f:heroFrame.leftFootLift);
         drawRigLimb(rig.rightLeg,rig.parts.hipX,rig.parts.hipY,
                     x,y+(foe?bob:heroFrame.bob),z,yaw,scale,
-                    foe?(-step*22f+roll*24f):heroFrame.rightLegPitch,-2f,true);
+                    foe?(-step*22f+roll*24f):heroFrame.rightLegPitch,-2f,true,
+                    foe?0f:heroFrame.rightFootLift);
 
         Matrix.setIdentityM(model,0);
         Matrix.translateM(model,0,x,y+(foe?bob:heroFrame.bob),z);
@@ -737,7 +754,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         }
         Matrix.scaleM(model,0,boss?1f:.82f,boss?1f:.92f,boss?1f:.82f);
         draw(boss?greatswordModel:(foe?swordModel:
-            (fps>=8.5f?playerPremiumSword:swordModel)),model,
+            (ultraHeroLod?playerPremiumSword:swordModel)),model,
              foe?.72f:1f,foe?.68f:1f,foe?.72f:1f,foe?.04f:.10f);
         // Glint on the moving blade during the same contact window as physics.
         if(swing>0&&phase>=CombatMotion.ACTIVE_START&&
@@ -755,9 +772,9 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private void drawRigLimb(Mesh limb,float jointX,float jointY,
                              float x,float y,float z,float yaw,float size,
-                             float pitch,float spread,boolean right){
+                             float pitch,float spread,boolean right,float footLift){
         Matrix.setIdentityM(model,0);
-        Matrix.translateM(model,0,x,y,z);
+        Matrix.translateM(model,0,x,y+footLift,z);
         Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
         Matrix.scaleM(model,0,size,size,size);
         Matrix.translateM(model,0,right?jointX:-jointX,jointY,0);
@@ -879,12 +896,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     }
     private static final class Rigged {
         final CharacterRig.Parts parts;
-        final Mesh torso,leftArm,rightArm,leftLeg,rightLeg,mantle;
+        final Mesh torso,leftArm,rightArm,leftLeg,rightLeg,mantle,helmet;
         Rigged(CharacterRig.Parts p){
             parts=p;torso=new Mesh(p.torso.vertices);
             leftArm=new Mesh(p.leftArm.vertices);rightArm=new Mesh(p.rightArm.vertices);
             leftLeg=new Mesh(p.leftLeg.vertices);rightLeg=new Mesh(p.rightLeg.vertices);
             mantle=new Mesh(p.mantle==null?new float[0]:p.mantle.vertices);
+            helmet=new Mesh(p.helmet==null?new float[0]:p.helmet.vertices);
         }
     }
     private static final class Mesh {
