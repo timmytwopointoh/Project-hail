@@ -1,0 +1,66 @@
+name: VEILBOUND - Own Local AI Real Inference Test
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feature/veilbound-parallel-ai-qa']
+    paths:
+      - '.github/workflows/veilbound-local-ai-smoke.yml'
+      - 'veilbound/scripts/local_ai.py'
+      - 'veilbound/tests/test_local_ai.py'
+      - 'veilbound/scripts/local_ai_smoke.py'
+      - 'veilbound/scripts/install_local_ai.sh'
+permissions:
+  contents: read
+# This is the only automatic model-download/inference test. The large
+# 50-worker coding matrix still runs only when manually requested.
+# Never expose Ollama beyond localhost or pass GitHub/API credentials.
+concurrency:
+  group: veilbound-local-ai-smoke-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  real-local-model-inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate local Python inference protocol
+        run: python3 -m unittest discover -s veilbound/tests -p 'test_local_ai.py' -v
+      - name: Install small CPU-only open-weight model in this VM
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:0.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Demand an actual, schema-valid model response
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:0.5b
+        run: |
+          python3 veilbound/scripts/local_ai_smoke.py \
+            --model qwen2.5-coder:0.5b \
+            --out inspection_output/local-ai-smoke
+          cat inspection_output/local-ai-smoke/real_local_ai_smoke.json >> "${GITHUB_STEP_SUMMARY}"
+      - name: Install production coding model on local runner
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Prove actual 1.5B model inference and structured proposal response
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: |
+          python3 veilbound/scripts/local_ai_smoke.py \
+            --model qwen2.5-coder:1.5b \
+            --out inspection_output/local-ai-production-smoke
+          cat inspection_output/local-ai-production-smoke/real_local_ai_smoke.json >> "${GITHUB_STEP_SUMMARY}"
+      - name: Archive actual inference proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-ai-actual-inference-proof
+          path: |
+            inspection_output/local-ai-smoke/
+            inspection_output/local-ai-production-smoke/
+          if-no-files-found: warn
+          retention-days: 14

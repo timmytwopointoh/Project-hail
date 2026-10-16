@@ -5,14 +5,22 @@ on:
       - 'feature/veilbound-*'
       - main
     paths:
-      - 'veilbound/**'
+      # Only game/runtime and emulator analysis changes need a costly full APK run.
+      # Manager task plans and docs are covered by fast parallel QA instead.
+      - 'veilbound/app/**'
+      - 'veilbound/build.gradle'
+      - 'veilbound/settings.gradle'
+      - 'veilbound/scripts/emulator_test.py'
+      - 'veilbound/scripts/emulator_test.sh'
+      - 'veilbound/scripts/qa_analyze.py'
+      - 'veilbound/scripts/qa_coordinator.py'
       - '.github/workflows/veilbound-native3d.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: veilbound-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -71,7 +79,7 @@ jobs:
         run: gradle -p veilbound :app:assembleDebug --no-daemon
       - name: Validate game build and scripts
         run: |
-          python3 -m py_compile veilbound/scripts/emulator_test.py veilbound/scripts/qa_analyze.py
+          python3 -m py_compile veilbound/scripts/emulator_test.py veilbound/scripts/qa_analyze.py veilbound/scripts/qa_coordinator.py veilbound/scripts/ai_worker.py
           bash -n veilbound/scripts/emulator_test.sh
           unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
       - name: Install image quality analyzer
@@ -100,6 +108,11 @@ jobs:
       - name: Analyze screenshots, renderer logs and resource budget
         if: always()
         run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
+      - name: Prioritize machine-detectable failures into repair tasks
+        if: always()
+        run: |
+          python3 veilbound/scripts/qa_coordinator.py --input inspection_output/veilbound --commit "${{ github.sha }}"
+          cat inspection_output/veilbound/task_plan.md >> "${GITHUB_STEP_SUMMARY}"
       - name: Upload screenshots, logs and quality report
         if: always()
         uses: actions/upload-artifact@v4

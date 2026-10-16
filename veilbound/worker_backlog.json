@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "description": "50 reviewed independent microtasks across six owned Java domains. Multiple same-domain proposals remain isolated until review; this is an optional scaling backlog, not a command to spend.",
+  "tasks": [
+    {
+      "id": "VB-ROADMAP-COMBAT",
+      "role": "combat",
+      "priority": "P1",
+      "goal": "Correct objective counters so completed objectives never display overflow such as 3/2; verify lock-on target acquisition and combat state invariants in WorldState."
+    },
+    {
+      "id": "VB-ROADMAP-ANIMATION",
+      "role": "animation",
+      "priority": "P1",
+      "goal": "Improve sword swing phases, fluid forward attack arc and clear impact timing while preserving dodge, idle and stamina behavior in CombatMotion and CharacterRig."
+    },
+    {
+      "id": "VB-ROADMAP-MODELS",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Improve hero and enemy silhouettes, armor layering, hands and boots, and reduce blocky geometry with efficient deterministic mesh structures."
+    },
+    {
+      "id": "VB-ROADMAP-MATERIALS",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Add controlled roughness, metal and leather detail and more believable material sampling within native GLES2 texture and atlas budgets."
+    },
+    {
+      "id": "VB-ROADMAP-WORLD",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Improve flagstone and ruins geometry variation, terrain details and static asset batching without increasing runtime mesh regeneration."
+    },
+    {
+      "id": "VB-ROADMAP-STUDIO",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Refine the Model Atelier asset registry, camera framing and orbit controls with testable, stable real-emulator navigation."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-01",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Make lock-on discard dead, missing or out-of-range targets without changing the camera unexpectedly."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-02",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Keep ash-sigil progress monotonic and never greater than REQUIRED_SIGILS in WorldState snapshots."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-03",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Make every defeated foe increment totalKills at most once even if its death routine is revisited."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-04",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Keep checkpoint and respawn transitions consistent with already collected objectives."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-05",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Ensure each sword sweep registers no more than one damage event per target."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-06",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Guard stamina, HP and invulnerability timers against negative or NaN values."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-07",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Prevent a defeated boss from re-entering attacks after the victory state activates."
+    },
+    {
+      "id": "VB-SCALABLE-COMBAT-08",
+      "role": "combat",
+      "priority": "P2",
+      "goal": "Bound green impact-stain pool occupancy, lifetimes and placement without reallocating per frame."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-01",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Ensure bladeBearing follows one smooth right-to-left front arc and has continuous endpoints."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-02",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Refine attack wind-up, active contact and recovery transitions without moving the hit-window behind the character."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-03",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Check collision sweep windows detect a crossing hit even with coarse frame delta."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-04",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Prevent hits on targets behind the player with clear angle and range bounds."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-05",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Improve pure-Java exertion and idle breathing pose blend signals without adding allocations."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-06",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Normalize dodge and attack easing near start and end so poses do not snap."
+    },
+    {
+      "id": "VB-SCALABLE-ANIMATION-07",
+      "role": "animation",
+      "priority": "P2",
+      "goal": "Make animation helper functions remain finite and deterministic at extreme input values."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-01",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Improve deterministic mesh normal validity and reject degenerate high-detail triangles."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-02",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Refine the generated hero boot, gauntlet and hand silhouette without changing gameplay hitbox."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-03",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Improve triangle winding consistency for armor panels and sculpted geometry."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-04",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Add boss model silhouette details while preserving low-poly fallback geometry."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-05",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Review OBJ loader parser handling of invalid or missing normals and UVs."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-06",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Generate finer armor engraving geometry with bounded vertex and memory counts."
+    },
+    {
+      "id": "VB-SCALABLE-MODELS-07",
+      "role": "models",
+      "priority": "P2",
+      "goal": "Reduce obvious mesh seams in character shoulders, elbows and helmet joins."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-01",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Add subtle, bounded leather grain variation for character equipment material maps."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-02",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Improve steel edge wear and roughness response while preserving low-end GLES2 constraints."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-03",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Validate material atlas offsets, dimensions and texture coordinates against bounds."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-04",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Improve cloth weave variation and avoid high-frequency aliasing at medium distance."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-05",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Introduce controlled brass patina for relic and helmet accents."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-06",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Ensure tileable stone albedo maps do not show obvious repetition."
+    },
+    {
+      "id": "VB-SCALABLE-MATERIALS-07",
+      "role": "materials",
+      "priority": "P2",
+      "goal": "Constrain surface texture generator memory allocations and deterministic seed behavior."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-01",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Vary flagstone outline, tilt and chipped corners while preserving collision readability."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-02",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Enhance masonry course offsets and ruin wall stone silhouette variation."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-03",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Improve prop and rubble scatter density with a fixed geometry budget."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-04",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Refine procedural dead roots with taper, branching and grounded root flares."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-05",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Give destroyed chapel stones plausible broken faces and nonuniform edges."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-06",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Add limited erosion channels and moss patches that respond to stone orientation."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-07",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Check world mesh bounds and skip degenerate triangles before geometry assembly."
+    },
+    {
+      "id": "VB-SCALABLE-WORLD-08",
+      "role": "world",
+      "priority": "P2",
+      "goal": "Use deterministic environmental variations instead of expensive per-frame random rebuilding."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-01",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Test studio orbit yaw wrapping and ensure turns remain finite through repeated rotations."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-02",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Improve studio camera pitch clamps without flipping or rolling the model."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-03",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Refine close-up zoom range to reveal hands and material detail without clipping."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-04",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Preserve item index and framing correctly when switching forward and backward."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-05",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Improve closeup focus presets for boss versus hero models."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-06",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Keep light and material preset cycling deterministic at every wraparound."
+    },
+    {
+      "id": "VB-SCALABLE-STUDIO-07",
+      "role": "studio",
+      "priority": "P2",
+      "goal": "Ensure studio reset restores a consistent viewing angle and camera pan."
+    }
+  ]
+}

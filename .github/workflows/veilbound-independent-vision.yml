@@ -1,0 +1,46 @@
+name: VEILBOUND - Local AI Emulator Telemetry Review
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Native-3D emulator workflow run ID containing screenshot artifact'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  visual-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image reader
+        run: python -m pip install 'Pillow>=10,<13'
+      - name: Download precisely the emulator screenshots from this run
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-native3d-inspection-report
+          path: inspection_output/veilbound
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Start locally hosted open-weight text model
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Review emulator JSON telemetry (NO pixel vision claimed)
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+        run: python3 veilbound/scripts/ai_worker.py --role visual --screenshots inspection_output/veilbound --out inspection_output/independent-vision
+      - name: Preserve review beside test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-telemetry-${{ github.run_attempt }}
+          path: inspection_output/independent-vision/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,300 @@
+name: VEILBOUND - Master AI Worker Manager
+on:
+  workflow_dispatch:
+    inputs:
+      max_workers:
+        description: 'Maximum independent coding workers (bounded for cost/control)'
+        required: true
+        type: choice
+        default: '6'
+        options: ['6', '12', '24', '50']
+      max_parallel:
+        description: 'Simultaneous local CPU model jobs (each downloads ~1 GB)'
+        required: true
+        type: choice
+        default: '2'
+        options: ['2', '4', '8', '12']
+      run_mode:
+        description: 'Plan only or run self-hosted AI coding workers (no AI API key)'
+        required: true
+        type: choice
+        default: 'plan_only'
+        options: ['plan_only', 'coding_proposals']
+      emulator_run_id:
+        description: 'Optional Android emulator run ID for evidence-driven prioritization'
+        required: false
+        type: string
+  push:
+    branches: ['feature/veilbound-parallel-ai-qa']
+    paths:
+      - '.github/workflows/veilbound-ai-workers.yml'
+      - 'veilbound/scripts/worker_manager.py'
+      - 'veilbound/scripts/ai_worker.py'
+      - 'veilbound/scripts/proposal_guard.py'
+      - 'veilbound/scripts/evidence_guard.py'
+      - 'veilbound/scripts/local_ai.py'
+      - 'veilbound/scripts/install_local_ai.sh'
+      - 'veilbound/worker_backlog.json'
+      - 'veilbound/scripts/team_manager.py'
+  workflow_run:
+    workflows: ['VEILBOUND - Native 3D Android RPG']
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+# Pushes run director and manager checks only; model downloads and
+# inference require explicit manual run_mode=coding_proposals.
+# All inference is on localhost, with no outside AI APIs or keys.
+jobs:
+  manager:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.head_repository.full_name == github.repository &&
+       contains(fromJSON('["success","failure"]'), github.event.workflow_run.conclusion))
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      worker_count: ${{ steps.plan.outputs.worker_count }}
+      team_count: ${{ steps.plan.outputs.team_count }}
+      team_matrix: ${{ steps.plan.outputs.team_matrix }}
+      division_count: ${{ steps.plan.outputs.division_count }}
+      division_matrix: ${{ steps.plan.outputs.division_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run can access secrets: ALWAYS use trusted default branch.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download precise emulator QA evidence when selected
+        if: github.event_name == 'workflow_run' || inputs.emulator_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-native3d-inspection-report
+          path: inspection_output/veilbound
+          run-id: ${{ github.event.workflow_run.id || inputs.emulator_run_id }}
+          github-token: ${{ github.token }}
+      - name: Fail closed if selected emulator evidence is absent or malformed
+        if: github.event_name == 'workflow_dispatch' && inputs.emulator_run_id != ''
+        run: |
+          python3 veilbound/scripts/evidence_guard.py \
+            --input inspection_output/veilbound \
+            --run-id "${{ inputs.emulator_run_id }}"
+      - name: Spawn worker assignments from measured QA and roadmap
+        id: plan
+        run: |
+          python3 veilbound/scripts/worker_manager.py \
+            --max-workers "${{ inputs.max_workers || '6' }}" \
+            --workflow-conclusion "${{ github.event.workflow_run.conclusion || '' }}" \
+            --github-output "${GITHUB_OUTPUT}" \
+            --out inspection_output/manager
+          cat inspection_output/manager/assignment_plan.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Archive manager decisions
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager/
+          retention-days: 14
+
+  division-managers:
+    needs: manager
+    if: needs.manager.outputs.division_count != '0'
+    name: Division manager / ${{ matrix.division }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.manager.outputs.division_matrix) }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download director's immutable allocation plan
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Approve division specialists and capacity
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --director-plan inspection_output/manager/assignment_plan.json \
+            --division "${{ matrix.division }}" \
+            --output inspection_output/division/division_approval.json
+      - name: Publish division manager authorization
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-division-${{ matrix.division }}-${{ github.run_attempt }}
+          path: inspection_output/division/division_approval.json
+          if-no-files-found: error
+          retention-days: 14
+
+  team-managers:
+    needs: [manager, division-managers]
+    if: needs.manager.outputs.team_count != '0'
+    name: Specialist manager / ${{ matrix.division }} / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.manager.outputs.team_matrix) }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Load exact top-level director assignments
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Read signed-off division-manager plan
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-division-${{ matrix.division }}-${{ github.run_attempt }}
+          path: inspection_output/division
+      - name: Approve up to ten isolated child assignments
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --director-plan inspection_output/manager/assignment_plan.json \
+            --division-approval inspection_output/division/division_approval.json \
+            --team "${{ matrix.team }}" \
+            --output "inspection_output/team-approval/team_approval.json"
+      - name: Publish immutable team-to-worker handoff
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-team-${{ matrix.team }}-${{ github.run_attempt }}
+          path: inspection_output/team-approval/team_approval.json
+          if-no-files-found: error
+          retention-days: 14
+  parallel-code-workers:
+    needs: [manager, team-managers]
+    if: >-
+      needs.manager.outputs.worker_count != '0' &&
+      github.event_name == 'workflow_dispatch' && inputs.run_mode == 'coding_proposals'
+    name: Independent coder / ${{ matrix.slot_id }} / ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel || '2') }}
+      matrix: ${{ fromJSON(needs.manager.outputs.matrix) }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.repository.default_branch || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download exact manager-to-worker assignment
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-team-${{ matrix.team }}-${{ github.run_attempt }}
+          path: inspection_output/approved-team
+      - name: Verify the team manager approved this precise worker task
+        env:
+          VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
+          VEILBOUND_TASK_ID: ${{ matrix.task_id }}
+        run: |
+          python3 veilbound/scripts/team_manager.py \
+            --verify-child \
+            --team "${{ matrix.team }}" \
+            --role "${{ matrix.role }}" \
+            --slot-id "${{ matrix.slot_id }}" \
+            --task-id "${VEILBOUND_TASK_ID}" \
+            --goal "${VEILBOUND_TASK_GOAL}" \
+            --output inspection_output/approved-team/team_approval.json
+      - name: Install and launch VEILBOUND's CPU-local open-weight coding AI
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Generate isolated source patch and validate trusted Java tests
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:1.5b
+          VEILBOUND_TASK_GOAL: ${{ matrix.goal }}
+          VEILBOUND_TASK_ID: ${{ matrix.task_id }}
+          VEILBOUND_WORKER_SLOT: ${{ matrix.slot_id }}
+        run: |
+          python3 veilbound/scripts/ai_worker.py \
+            --role "${{ matrix.role }}" \
+            --out "inspection_output/agent-${{ matrix.slot_id }}"
+      - name: Save immutable source proposal and validation result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-coder-${{ matrix.slot_id }}-${{ github.run_attempt }}
+          path: inspection_output/agent-${{ matrix.slot_id }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  worker-auditor:
+    needs: [manager, parallel-code-workers]
+    if: >-
+      always() && github.event_name == 'workflow_dispatch' &&
+      inputs.run_mode == 'coding_proposals' && needs.manager.result == 'success'
+    name: Independent manager audit / all local AI patches
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Load original director assignments
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-master-worker-plan-${{ github.run_attempt }}
+          path: inspection_output/manager
+      - name: Collect all independent coding workers including failed ones
+        uses: actions/download-artifact@v4
+        with:
+          pattern: veilbound-coder-*-${{ github.run_attempt }}
+          path: inspection_output/all-agents
+        continue-on-error: true
+      - name: Reject missing, duplicate, untested, out-of-scope or fabricated worker approvals
+        run: |
+          python3 veilbound/scripts/worker_scorecard.py \
+            --plan inspection_output/manager/assignment_plan.json \
+            --results inspection_output/all-agents \
+            --out inspection_output/auditor
+      - name: Publish honest manager scorecard
+        if: always()
+        run: |
+          if [ -f inspection_output/auditor/worker_scorecard.md ]; then
+            cat inspection_output/auditor/worker_scorecard.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - name: Archive independent acceptance/rejection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-worker-audit-${{ github.run_attempt }}
+          path: inspection_output/auditor/
+          if-no-files-found: warn
+          retention-days: 14

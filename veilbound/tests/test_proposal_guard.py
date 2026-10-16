@@ -1,0 +1,147 @@
+"""Offline adversarial tests for model patch boundaries and quality."""
+import importlib.util
+import unittest
+from pathlib import Path
+
+PATH = Path(__file__).resolve().parents[1] / "scripts/proposal_guard.py"
+SPEC = importlib.util.spec_from_file_location("proposal_guard", PATH)
+guard = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(guard)
+
+PATH_OK = "veilbound/app/src/main/java/game/ashenveil/veilbound/CharacterRig.java"
+ORIGINAL = "package game.ashenveil.veilbound;\npublic final class CharacterRig {}\n"
+
+
+def proposal(old="public final class CharacterRig {}",
+             new="public final class CharacterRig { private static final int LIMIT = 1; }",
+             path=PATH_OK, edits=None):
+    return {"summary": "Introduce a small audited rig refinement",
+            "edits": edits if edits is not None else [
+                {"path": path, "find": old, "replace": new}],
+            "risks": []}
+
+
+class ProposalGuardTests(unittest.TestCase):
+    def validate(self, obj, source=ORIGINAL):
+        return guard.validate_proposal(obj, [PATH_OK], lambda p: source)
+
+    def test_one_real_scoped_replacement(self):
+        result = self.validate(proposal())
+        self.assertIn("LIMIT = 1", result[PATH_OK])
+        self.assertIn("package game", result[PATH_OK])
+
+    def test_noop_empty_and_unmatched_rejected(self):
+        for obj in (
+            proposal(edits=[]),
+            proposal(old="package", new="package"),
+            proposal(old="nonexistent", new="fixed"),
+        ):
+            with self.assertRaises(ValueError):
+                self.validate(obj)
+
+    def test_real_pilot_whitespace_only_change_is_rejected(self):
+        original = ("public synchronized void orbit(float dx,float dy){\\n"
+                    "        yaw+=clamp(dx,-1.4f,1.4f);\\n}")
+        obj = proposal(old="yaw+=clamp(dx,-1.4f,1.4f);",
+                       new="yaw += clamp(dx, -1.4f, 1.4f);")
+        with self.assertRaisesRegex(ValueError, "formatting or comments"):
+            self.validate(obj, source=original)
+
+    def test_comment_only_patch_is_not_a_real_ai_improvement(self):
+        obj = proposal(new="public final class CharacterRig { /* now better */ }")
+        with self.assertRaisesRegex(ValueError, "formatting or comments"):
+            self.validate(obj)
+
+    def test_semantic_filter_preserves_literal_comment_markers(self):
+        self.assertEqual(
+            'Stringurl="http://host/";',
+            guard.semantic_fingerprint(
+                'String url = "http://host/"; /* code comment */ '))
+
+    def test_path_traversal_and_different_role_are_rejected(self):
+        for path in ("../../.github/workflows/build.yml", "WorldState.java",
+                     PATH_OK + "/../../MainActivity.java"):
+            with self.assertRaisesRegex(ValueError, "outside"):
+                self.validate(proposal(path=path))
+
+    def test_duplicate_replace_intermediate_sequence_is_checked(self):
+        obj = proposal(edits=[
+            {"path": PATH_OK, "find": "class CharacterRig",
+             "replace": "class CharacterRigDetail"},
+            {"path": PATH_OK, "find": "class CharacterRig",
+             "replace": "class CharacterRigDetail"}])
+        with self.assertRaisesRegex(ValueError, "repeated an exact match"):
+            self.validate(obj)
+
+    def test_invalid_nan_comparisons_are_rejected_with_corrective_feedback(self):
+        source = ("package game.ashenveil.veilbound;\\n"
+                  "public final class CharacterRig { private static float clamp(float x,float lo,float hi)"
+                  "{return Math.max(lo,Math.min(hi,x));} }\\n")
+        old = "return Math.max(lo,Math.min(hi,x));"
+        for wrong in ("return x != Float.NaN ? Math.max(lo,Math.min(hi,x)) : lo;",
+                      "return x == Float.NaN ? lo : Math.max(lo,Math.min(hi,x));",
+                      "return Double.NaN != x ? x : lo;"):
+            with self.subTest(wrong=wrong):
+                with self.assertRaisesRegex(ValueError, "Float.isNaN"):
+                    self.validate(proposal(old=old, new=wrong), source=source)
+        correct = ("return Float.isNaN(x) ? lo : Math.max(lo,Math.min(hi,x));")
+        result = self.validate(proposal(old=old, new=correct), source=source)
+        self.assertIn(correct, result[PATH_OK])
+
+    def test_dangerous_generated_java_is_rejected(self):
+        banned = (
+            "Runtime.getRuntime().exec(\"x\");",
+            "new ProcessBuilder(\"curl\");",
+            "System.getenv(\"TOKEN\");",
+            "new java.net.Socket(\"host\", 4);",
+            "Class.forName(\"java.lang.Runtime\");",
+            "Files.write(output, bytes);",
+            "static { System.out.println(1); }",
+        )
+        for line in banned:
+            with self.subTest(line=line):
+                obj = proposal(new="public final class CharacterRig { " + line + " }")
+                with self.assertRaisesRegex(ValueError, "prohibited"):
+                    self.validate(obj)
+
+    def test_float_nan_comparisons_are_invalid_even_when_java_compiles(self):
+        for expression in (
+            "x == Float.NaN", "x != Float.NaN",
+            "Float.NaN == x", "Float.NaN != x",
+            "x == Double.NaN", "Double.NaN != x",
+        ):
+            with self.subTest(expression=expression):
+                updated = "public final class CharacterRig { boolean f(float x){return " + expression + ";} }"
+                with self.assertRaisesRegex(ValueError, "never detect NaN"):
+                    self.validate(proposal(new=updated))
+
+    def test_correct_float_nan_api_is_allowed_as_real_java_change(self):
+        changed = ("public final class CharacterRig { "
+                   "boolean f(float x){return Float.isNaN(x);} }")
+        result = self.validate(proposal(new=changed))
+        self.assertIn("Float.isNaN(x)", result[PATH_OK])
+
+    def test_malformed_shape_and_budget(self):
+        for obj in (
+            {**proposal(), "commands": ["curl x"]},
+            {**proposal(), "summary": ""},
+            {**proposal(), "risks": ["x" * 400]},
+            proposal(edits=[proposal()["edits"][0]] * 4),
+            proposal(new="x" * 6000),
+        ):
+            with self.assertRaises(ValueError):
+                self.validate(obj)
+
+    def test_source_read_is_never_written_by_guard(self):
+        calls = []
+        def read(path):
+            calls.append(path)
+            return ORIGINAL
+        result = guard.validate_proposal(proposal(), [PATH_OK], read)
+        self.assertEqual([PATH_OK], list(result))
+        self.assertTrue(calls)
+        self.assertEqual("package game.ashenveil.veilbound;\npublic final class CharacterRig {}\n",
+                         ORIGINAL)
+
+if __name__ == "__main__":
+    unittest.main()

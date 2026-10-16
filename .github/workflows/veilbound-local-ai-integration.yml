@@ -1,0 +1,79 @@
+name: VEILBOUND - Local AI End-to-End Studio Pilot
+on:
+  push:
+    branches: ['feature/veilbound-parallel-ai-qa']
+    paths:
+      - '.github/workflows/veilbound-local-ai-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+# Rerun the bounded one-worker integration with trusted behavioral-feedback
+# passed into the second model call; Java NaN comparison syntax must be valid.
+# No GitHub API token, model
+# API key, or writes/merges, and no reliance on the character team's branch.
+jobs:
+  real-studio-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check proposal policy and QA integrity unit tests
+        run: |
+          python3 -m unittest discover -s veilbound/tests -p 'test_proposal_guard.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_evidence_guard.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_local_ai.py' -v
+          python3 -m py_compile veilbound/scripts/ai_worker.py veilbound/scripts/local_ai_pilot.py
+      - name: Prove unpatched Studio FAILS the targeted finite-gesture test
+        run: |
+          python3 - <<'PY'
+          import shutil, sys, tempfile
+          from pathlib import Path
+          sys.path.insert(0, "veilbound/scripts")
+          from ai_worker import JAVA
+          from local_ai_pilot import ROOT, verify_studio_finite_gestures
+          with tempfile.TemporaryDirectory() as folder:
+              target = Path(folder) / "proposed" / JAVA / "ModelStudio.java"
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(ROOT / JAVA / "ModelStudio.java", target)
+              passed, evidence = verify_studio_finite_gestures(folder)
+              if passed:
+                  raise SystemExit("Original Studio already passes the requested NaN fix; stop unnecessary inference")
+              if "Studio camera state poisoned" not in evidence:
+                  raise SystemExit("Trusted Java negative-control test failed for an unrelated cause: " + evidence[:300])
+              print("Confirmed: unpatched Studio has the exact finite-gesture defect")
+          PY
+      - name: Boot private on-runner 3B coding model
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:3b
+        run: bash veilbound/scripts/install_local_ai.sh
+      - name: Director -> division -> specialist -> local coder -> real Java tests
+        env:
+          VEILBOUND_LOCAL_MODEL: qwen2.5-coder:3b
+        run: |
+          python3 veilbound/scripts/local_ai_pilot.py \
+            --role studio \
+            --backlog veilbound/studio_finite_ai_pilot_backlog.json \
+            --out inspection_output/local-studio-worker
+      - name: Show report and preserve measured result
+        if: always()
+        run: |
+          if [ -f inspection_output/local-studio-worker/worker_result.json ]; then
+            cat inspection_output/local-studio-worker/worker_result.json >> "${GITHUB_STEP_SUMMARY}"
+          fi
+      - name: Archive source patch and verified Java test outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-local-studio-end-to-end-evidence
+          path: inspection_output/local-studio-worker/
+          if-no-files-found: warn
+          retention-days: 14

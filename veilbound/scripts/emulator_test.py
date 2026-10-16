@@ -141,15 +141,24 @@ def main():
         time.sleep(2.5)
         hero=shot("01_atelier_hero.png")
         report["screenshots"].append(hero)
-        adb("shell","input","swipe",int(w*.54),int(h*.46),
-            int(w*.78),int(h*.40),620,timeout=35)
-        time.sleep(.8)
-        turned=shot("01_atelier_orbit.png")
+        # A GL frame can be delayed by first-time high-detail mesh uploads.
+        # Retry *real ADB swipes* with image evidence; never force the camera
+        # state or mark orbit as tested without an observed scene change.
+        for orbit_attempt in range(3):
+            adb("shell","input","swipe",int(w*.54),int(h*.46),
+                int(w*.78),int(h*.40),650,timeout=35)
+            time.sleep(1.1 + orbit_attempt*.5)
+            turned=shot("01_atelier_orbit.png")
+            with Image.open(OUT/"01_atelier_hero.png") as before, Image.open(OUT/"01_atelier_orbit.png") as after:
+                diff=ImageChops.difference(before.convert("RGB").resize((160,90)),
+                                           after.convert("RGB").resize((160,90)))
+                delta=sum(ImageStat.Stat(diff).mean)/3
+                atelier["orbit_pixel_delta"]=round(delta,3)
+                atelier["orbit_attempts"]=orbit_attempt+1
+                atelier["orbit"]=delta>0.5
+            if atelier["orbit"]:
+                break
         report["screenshots"].append(turned)
-        with Image.open(OUT/"01_atelier_hero.png") as before, Image.open(OUT/"01_atelier_orbit.png") as after:
-            diff=ImageChops.difference(before.convert("RGB").resize((160,90)),
-                                       after.convert("RGB").resize((160,90)))
-            atelier["orbit"]=diff.getbbox() is not None
         # Verify the studio actually uses the new 512px material maps rather
         # than silently falling back to the earlier flat surface shader.
         studio_gl_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",timeout=20).decode("utf-8","replace")

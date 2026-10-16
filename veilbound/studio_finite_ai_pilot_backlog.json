@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "description": "One finite-input correctness trial for the self-hosted studio AI. Not an instruction to modify the game branch.",
+  "tasks": [
+    {
+      "id": "VB-PILOT-STUDIO-FINITE",
+      "role": "studio",
+      "priority": "P1",
+      "goal": "Repair private static float clamp(float x,float lo,float hi) inside ModelStudio.java. Requirement: return lo if Float.isNaN(x), otherwise run the existing Math.max(lo,Math.min(hi,x)) clamp unchanged. Java x == Float.NaN and x != Float.NaN are ALWAYS invalid for detecting NaN and MUST NOT be generated. Make exactly ONE localized Java logic edit by copying the existing method line byte-for-byte into find, then replacing only that line; do not change signatures, other methods, imports, tests or formatting-only code. A separate trusted Java test will inject NaN orbit/pan/dolly gestures and assert camera state stays finite while a normal orbit is unchanged."
+    }
+  ]
+}

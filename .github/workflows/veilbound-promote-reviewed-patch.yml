@@ -1,0 +1,176 @@
+name: VEILBOUND - Approve Worker Patch Into Draft PR
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Manager workflow run ID containing a reviewed worker proposal'
+        required: true
+        type: string
+      slot_id:
+        description: 'Exact selected worker slot, such as w001 or w050'
+        required: true
+        type: string
+      role:
+        description: 'Reviewed worker to promote'
+        required: true
+        type: choice
+        options: [combat, animation, models, materials, world, studio]
+      run_attempt:
+        description: 'Artifact naming attempt (usually 1)'
+        required: true
+        default: '1'
+        type: choice
+        options: ['1', '2', '3']
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+# This is a manual approval gate. No LLM or AI-generated shell code runs here.
+jobs:
+  promote-to-draft-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Verify source workflow and immutable source commit
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.source_run_id }}
+          SLOT_ID: ${{ inputs.slot_id }}
+        run: |
+          set -euo pipefail
+          [[ "${RUN_ID}" =~ ^[0-9]+$ ]] || { echo "Run ID is not numeric"; exit 1; }
+          [[ "${SLOT_ID}" =~ ^w[0-9]{3}$ ]] || { echo "Invalid worker slot"; exit 1; }
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > /tmp/veilbound-run.json
+          python3 - <<'PY'
+          import json,os,re
+          o=json.load(open('/tmp/veilbound-run.json'))
+          repo=os.environ['GITHUB_REPOSITORY']
+          if o.get('name') != 'VEILBOUND - Master AI Worker Manager':
+              raise SystemExit('Not a master manager worker run')
+          if o.get('conclusion') != 'success':
+              raise SystemExit('Manager run is not complete/successful')
+          if o.get('head_repository',{}).get('full_name') != repo:
+              raise SystemExit('Cross-repository worker artifacts are forbidden')
+          branch=o.get('head_branch','')
+          if not (branch.startswith('feature/veilbound-') or branch == 'main'):
+              raise SystemExit('Source branch outside allowed project scope')
+          sha=o.get('head_sha','')
+          if not re.fullmatch('[0-9a-f]{40}',sha):
+              raise SystemExit('Invalid worker commit SHA')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('sha='+sha+'\n')
+              out.write('base='+branch+'\n')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Get selected code proposal artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-coder-${{ inputs.slot_id }}-${{ inputs.run_attempt }}
+          run-id: ${{ inputs.source_run_id }}
+          path: inspection_output/approved-worker
+          github-token: ${{ github.token }}
+      - name: Check immutable source, scope and successful Java validation
+        env:
+          ROLE: ${{ inputs.role }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SLOT_ID: ${{ inputs.slot_id }}
+        run: |
+          set -euo pipefail
+          python3 veilbound/scripts/promote_proposal.py \
+            --artifact inspection_output/approved-worker --role "${ROLE}" \
+            --expected-sha "${SOURCE_SHA}" --slot-id "${SLOT_ID}" --dry-run
+          python3 veilbound/scripts/promote_proposal.py \
+            --artifact inspection_output/approved-worker --role "${ROLE}" \
+            --expected-sha "${SOURCE_SHA}" --slot-id "${SLOT_ID}"
+          git diff --check
+          git diff --stat
+      - name: Set up trusted Android compile and emulator tools
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle for full Android debug build
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build APK from the reviewed candidate Java patch
+        run: |
+          gradle -p veilbound :app:assembleDebug --no-daemon
+          unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
+      - name: Install quantitative screenshot QA
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Enable Android virtualization
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Full Moto G (2025)-viewport Android 15 install, GL and touch acceptance
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash veilbound/scripts/emulator_test.sh
+      - name: Analyze candidate screenshots and classify any defects
+        if: always()
+        run: |
+          python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
+          python3 veilbound/scripts/qa_coordinator.py \
+            --input inspection_output/veilbound \
+            --commit "${{ steps.source.outputs.sha }}"
+      - name: Save candidate phone-focused QA and visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-reviewed-patch-emulator-evidence
+          path: inspection_output/veilbound/
+          if-no-files-found: warn
+      - name: Save emulator-tested reviewed APK for device inspection
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-reviewed-patch-moto-g-profile-TESTED-apk
+          path: veilbound/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Push isolated code branch and create DRAFT pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROLE: ${{ inputs.role }}
+          BASE: ${{ steps.source.outputs.base }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN: ${{ inputs.source_run_id }}
+          SLOT_ID: ${{ inputs.slot_id }}
+        run: |
+          set -euo pipefail
+          BRANCH="feature/veilbound-worker-${ROLE}-${SLOT_ID}-${GITHUB_RUN_ID}"
+          git checkout -b "${BRANCH}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add veilbound/app/src/main/java/game/ashenveil/veilbound/
+          git diff --cached --quiet && { echo 'No source changes to propose'; exit 1; }
+          git commit -m "Propose scoped VEILBOUND ${ROLE} worker change"
+          # Authenticate only AFTER generated code was compiled and exercised.
+          # Checkout deliberately did not persist write-capable Git credentials.
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/${BRANCH}"
+          gh pr create --draft --base "${BASE}" --head "${BRANCH}" \
+            --title "VEILBOUND: ${ROLE} / ${SLOT_ID} proposal from run ${SOURCE_RUN}" \
+            --body "Independent AI-suggested code changes, reviewed for promotion. Source commit: \`${SOURCE_SHA}\`. Model-authored Java patch must be reviewed as untrusted code. Pure Java tests passed at proposal time and Android 15 Moto G-sized emulator smoke passed before this draft PR was created. A real-device test is STILL REQUIRED before merge. Source manager run #${SOURCE_RUN}. No automatic merge."
+          echo 'NOTE: GitHub GITHUB_TOKEN pushes may not trigger downstream push workflows; manually run native APK QA on the promoted branch if no checks appear.' >> "${GITHUB_STEP_SUMMARY}"

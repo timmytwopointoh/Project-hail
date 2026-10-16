@@ -1,0 +1,172 @@
+name: VEILBOUND - Parallel Android Emulator Farm
+on:
+  workflow_dispatch:
+    inputs:
+      emulator_instances:
+        description: 'Independent Android virtual devices (1, 2, 4, or 8)'
+        type: choice
+        required: true
+        default: '2'
+        options: ['1', '2', '4', '8']
+permissions:
+  contents: read
+# One immutable APK. Each emulator runs on a separate GitHub Ubuntu runner,
+# not competing for KVM, ADB ports, logcat or filesystem resources on one VM.
+# Optional capacity is eight separate emulator VMs; automatic runs use two.
+# Runners may queue on GitHub account limits; no extra API or secret is required.
+concurrency:
+  group: veilbound-emulator-farm-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  emulator-director:
+    name: Plan isolated emulator instances
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Allocate optional future multi-version emulator instances
+        id: plan
+        run: |
+          python3 veilbound/scripts/emulator_farm.py \
+            --count "${{ inputs.emulator_instances || '2' }}" \
+            --github-output "${GITHUB_OUTPUT}" \
+            --out inspection_output/farm-plan
+          cat inspection_output/farm-plan/emulator_farm_report.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Store immutable emulator assignment
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-emulator-plan
+          path: inspection_output/farm-plan/
+          retention-days: 14
+  build-shared-apk:
+    name: Build and validate one common native APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile native Android debug APK once
+        run: gradle -p veilbound :app:assembleDebug --no-daemon
+      - name: Verify APK contains classes
+        run: |
+          test -s veilbound/app/build/outputs/apk/debug/app-debug.apk
+          unzip -l veilbound/app/build/outputs/apk/debug/app-debug.apk | grep -E 'classes[.]dex'
+      - name: Share this exact APK with all emulator instances
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-emulator-shared-debug-apk
+          path: veilbound/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+  emulator-instances:
+    name: Android ${{ matrix.api }} / ${{ matrix.profile }} / ${{ matrix.id }}
+    needs: [emulator-director, build-shared-apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.emulator-director.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download common APK into expected game build location
+        uses: actions/download-artifact@v4
+        with:
+          name: veilbound-emulator-shared-debug-apk
+          path: veilbound/app/build/outputs/apk/debug/
+      - name: Install screenshot image analysis dependencies
+        run: python3 -m pip install --quiet --user Pillow
+      - name: Enable KVM for this runner only
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Launch independent Android emulator and exercise actual game
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: ${{ matrix.profile }}
+          disable-animations: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash veilbound/scripts/emulator_test.sh
+      - name: Analyze each emulator's real screenshots and GLES diagnostics
+        if: always()
+        run: python3 veilbound/scripts/qa_analyze.py --output inspection_output/veilbound
+      - name: Generate per-emulator repair queue
+        if: always()
+        run: |
+          python3 veilbound/scripts/qa_coordinator.py \
+            --input inspection_output/veilbound --commit "${{ github.sha }}"
+          cat inspection_output/veilbound/task_plan.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Archive this specific emulator's logs, frames and QA metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-emulator-${{ matrix.id }}-inspection
+          path: inspection_output/veilbound/
+          if-no-files-found: warn
+          retention-days: 14
+  farm-aggregate:
+    name: Verify all requested virtual Android devices
+    needs: [emulator-director, build-shared-apk, emulator-instances]
+    if: always() && needs.emulator-director.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collect separate screenshot and QA reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: veilbound-emulator-*-inspection
+          path: inspection_output/farm-results/
+        continue-on-error: true
+      - name: Enforce evidence from every selected emulator
+        run: |
+          python3 veilbound/scripts/emulator_farm.py \
+            --count "${{ needs.emulator-director.outputs.count }}" \
+            --summarize inspection_output/farm-results \
+            --out inspection_output/farm-summary
+          cat inspection_output/farm-summary/emulator_farm_report.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Retain aggregate proof even if a device fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbound-parallel-emulator-farm-summary
+          path: inspection_output/farm-summary/
+          if-no-files-found: warn
+          retention-days: 14
