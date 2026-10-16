@@ -1,5 +1,5 @@
 import unittest
 
 class UVDistortionTests(unittest.TestCase):
-    def test_placeholder(self):
-        self.assertTrue(True)
+    def test_smoke(self):
+        self.assertEqual(2 + 2, 4)
