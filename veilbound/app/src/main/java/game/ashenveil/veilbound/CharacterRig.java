@@ -38,7 +38,7 @@ public final class CharacterRig {
         ArtKit.Model finish(){return used==0?null:new ArtKit.Model(Arrays.copyOf(data,used));}
     }
     public static Parts split(ArtKit.Model model,boolean boss,boolean revenant){
-        final float shoulderX=boss?1.05f:(revenant?.55f:.66f);
+        final float shoulderX=boss?1.05f:(revenant?.55f:.57f);
         final float shoulderY=boss?2.55f:(revenant?1.51f:1.78f);
         final float hipX=boss?.47f:(revenant?.22f:.29f);
         final float hipY=boss?1.08f:(revenant?.70f:1.02f);
@@ -64,6 +64,12 @@ public final class CharacterRig {
                 // Distinct cloth island with shoulder-level hinge, not welded
                 // to the entire rigid torso. Enemy rigs remain unchanged.
                 part=5;py=1.93f;pz=-.51f;
+            }else if(!boss&&!revenant&&y>.65f&&y<armTop
+                    &&Math.abs(x)>.435f){
+                // M15: classify long gauntlet digits and the forearm ahead
+                // of leg assignment. Otherwise fingers below .90 are
+                // swallowed into the pelvis/thigh and never swing in combat.
+                part=x<0?1:2;px=x<0?-shoulderX:shoulderX;py=shoulderY;
             }else if(z>-.34f&&y<legTop&&Math.abs(x)>legEdge){
                 part=x<0?3:4;px=x<0?-hipX:hipX;py=hipY;
             }else if(z>-.34f&&y>armBottom&&y<armTop&&Math.abs(x)>armEdge){
