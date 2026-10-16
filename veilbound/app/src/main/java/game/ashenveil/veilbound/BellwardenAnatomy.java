@@ -128,14 +128,14 @@ public final class BellwardenAnatomy {
         // Ornamental breastplate is TWO peaked non-round metal panels.
         plate(sculpt,new float[]{-.40f,1.59f,-.23f,1.76f,-.035f,1.72f,
             -.03f,1.28f,-.24f,1.22f,-.405f,1.39f},
-            .40f,.035f,.023f,POLISH,DARK);
+            .54f,.029f,.018f,POLISH,DARK);
         plate(sculpt,new float[]{.035f,1.72f,.23f,1.76f,.40f,1.59f,
             .405f,1.39f,.24f,1.22f,.03f,1.28f},
             .40f,.035f,.023f,POLISH,DARK);
         // Center keel and bell sigil are carved pointed metal contours.
         plate(sculpt,new float[]{-.072f,1.77f,0,1.92f,.072f,1.77f,
             .038f,1.37f,0,1.30f,-.038f,1.37f},
-            .435f,.024f,.021f,GOLD,IRON);
+            .562f,.022f,.017f,GOLD,IRON);
         // Overlapping leather/steel belt, not a spherical hip.
         add(sculpt,LEATHER,narrowSides,
             r(0,.91f,.012f,.33f,.29f,.015f),
@@ -158,7 +158,9 @@ public final class BellwardenAnatomy {
         }
 
         for(int side=-1;side<=1;side+=2){
-            float x=side*.665f;
+            // M15 fitted shoulder: move articulation inward from the overwide
+            // previous .665 centerline; keep hands attached to the whole arm.
+            float x=side*.57f;
 
             // 3: anatomy of articulated shoulder to forearm: narrowing
             // upper biceps, elbow hinge, wrist and segmented gauntlet.
@@ -172,10 +174,10 @@ public final class BellwardenAnatomy {
             // Forged pauldron: stepped shoulder ridge moves into collar.
             add(sculpt,POLISH,ringSides,
                 r(x,1.68f,-.05f,.23f,.23f,.03f),
-                r(x,1.78f,-.05f,.31f,.27f,.045f),
-                r(x,1.91f,-.065f,.355f,.30f,.065f),
-                r(x,2.01f,-.075f,.325f,.27f,.055f),
-                r(x,2.11f,-.07f,.14f,.13f,.01f));
+                r(x,1.78f,-.05f,.265f,.235f,.045f),
+                r(x,1.91f,-.065f,.285f,.245f,.065f),
+                r(x,2.01f,-.075f,.263f,.228f,.055f),
+                r(x,2.11f,-.07f,.125f,.13f,.01f));
             // Separate overlapping plates slide visually over upper arm.
             add(sculpt,IRON,narrowSides,
                 r(x,1.42f,.025f,.205f,.18f,.012f),
@@ -193,20 +195,28 @@ public final class BellwardenAnatomy {
                 x,1.46f,x+side*.19f,1.18f,
                 x+side*.14f,1.08f,x-side*.15f,1.08f},
                 .255f,.035f,.02f,POLISH,DARK);
-            // Human hand silhouette and four individually forged gauntlet
-            // fingers, not a single featureless mitten/ball.
+            // Human hand silhouette and four independently forged gauntlet
+            // fingers with tips BELOW the palm (the earlier gauntlet digits
+            // inexplicably pointed up inside the vambrace).
             add(sculpt,LEATHER,narrowSides,
                 r(x, .92f,.145f,.135f,.115f,.012f),
                 r(x,1.02f,.14f,.165f,.15f,.02f),
                 r(x,1.14f,.12f,.17f,.145f,.026f));
             for(int finger=0;finger<4;finger++){
                 float px=x+side*(finger-1.5f)*.060f;
-                float base=.92f+.015f*(finger==1?1:0);
+                float base=.70f+.012f*(finger==1?1:0);
                 add(sculpt,IRON,mobile?8:12,
                     r(px,base,.215f,.022f,.035f,.003f),
                     r(px,base+.075f,.205f,.03f,.039f,.006f),
-                    r(px,base+.13f,.195f,.028f,.035f,.005f));
+                    r(px,base+.18f,.195f,.034f,.042f,.006f));
             }
+            // Opposable thumb with an angled proximal joint, unlike an
+            // ornamental sphere glued to the palm.
+            float thumbX=x+side*.15f;
+            add(sculpt,IRON,mobile?8:14,
+                r(thumbX+side*.09f,.75f,.225f,.040f,.041f,.005f),
+                r(thumbX+side*.05f,.84f,.215f,.050f,.046f,.008f),
+                r(thumbX,.96f,.183f,.063f,.055f,.009f));
 
             // 4: legs join higher at hips; thigh thigh-shell tapers inward
             // and knees are separate pointed edge plates.
