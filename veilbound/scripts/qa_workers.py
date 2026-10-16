@@ -16,7 +16,7 @@ PURE = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
 SUITES = {
     "combat": ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay"],
     "assets": ["EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
-               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BootAssets"],
+               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "BootAssets"],
 }
 
 def command(*args):
