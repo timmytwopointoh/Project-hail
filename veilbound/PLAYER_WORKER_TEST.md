@@ -7,3 +7,6 @@ This trial uses the newly installed **local Qwen2.5-Coder 1.5B**, not a paid API
 - **Integration:** review all proposals and reject unsafe/weak ones. A coordinator may implement stronger changes directly as a separate reviewed source commit; do not claim a machine-generated result was merged unless an actual worker artifact passes review and integration.
 - **Acceptance:** model studio close-up differs visibly, player gameplay model noticeably improves, limbs/cloak animate with coherent smooth movement and combat swing, no Java/GL/emulator regressions. Document measured FPS and compare gameplay screenshots under same camera.
 - **Rollback:** stable v0.10 stays on `feature/veilbound-m10-realism-foundation`; m11 changes isolated.
+
+## Iteration 2 — bounded automated repair
+The actual first 1.5B local inference jobs generated source proposals but failed exact-match and Java signature/compilation gates. We now retry at most 3 times with trusted compiler/validation feedback and unchanged safe-file allowlists; all outputs remain review only. This commit is an explicit follow-up trigger for the scoped three-worker test.
