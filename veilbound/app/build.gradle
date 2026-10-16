@@ -8,8 +8,8 @@ android {
         applicationId 'game.ashenveil.veilbound'
         minSdk 26
         targetSdk 29
-        versionCode 16
-        versionName '0.15.1-layered-pauldron-sculpt'
+        versionCode 17
+        versionName '0.16.0-articulated-armor-joints'
     }
     buildTypes {
         debug { minifyEnabled false }
