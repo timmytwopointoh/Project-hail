@@ -17,7 +17,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: veilforge-m26-curriculum-\${{ github.ref }}
+  group: veilforge-m26-curriculum-${{ github.ref }}
   cancel-in-progress: true
 
 # Four specialist worker lanes * 3 real edited source meshes + an unchanged
@@ -65,7 +65,7 @@ jobs:
 
   sculpt-specialists:
     needs: director-preflight
-    name: M26 specialist / \${{ matrix.focus }}
+    name: M26 specialist / ${{ matrix.focus }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:
@@ -96,7 +96,7 @@ jobs:
             veilbound/tools/HumanVariantCLI.java
       - name: Generate bounded sculpt experiments from grounded M24/M25 lessons
         env:
-          FOCUS: \${{ matrix.focus }}
+          FOCUS: ${{ matrix.focus }}
         run: |
           set -euo pipefail
           ROOT="inspection_output/m26-$FOCUS"
@@ -145,8 +145,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m26-sculpt-\${{ matrix.focus }}
-          path: inspection_output/m26-\${{ matrix.focus }}/
+          name: m26-sculpt-${{ matrix.focus }}
+          path: inspection_output/m26-${{ matrix.focus }}/
           retention-days: 14
           if-no-files-found: warn
 
