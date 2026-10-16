@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "engine": "VEYLQUORIN / VEILFORGE",
-  "version": "M32-UV-AUDIT",
+  "version": "M33-UV-CONNECTED-CHARTS",
   "mission": "Universal reusable game asset creation, editing and verification; not an individual game.",
   "definition_of_done": "All applicable quality gates pass with reproducible source, target-game import, visual reference signoff, representative hardware and recorded provenance. Perfect aesthetics cannot be guaranteed or declared by automation.",
   "scope": {
@@ -160,7 +160,7 @@
       "acceptance": "No UV overlaps where forbidden, padding >= specified mip-gutter, measured texel density.",
       "status": "partial",
       "automatic_game_approval": false,
-      "implementation_note": "Triangle-local deterministic non-overlap atlas with explicit pixels gutters and resolution guard now implemented; coherent chart unwrapping, distortion optimization and mips remain unverified."
+      "implementation_note": "M31 triangle-local atlas and M32 seam audit retained. M33 adds connected material-isolated near-planar UV charts, oriented packing, one world-to-texel scale, gutters and overlap/stretch checks. Arbitrary curved unwrap, mip dilation, and Android approval remain unverified."
     },
     {
       "id": "MAT-01",
@@ -394,10 +394,10 @@
     }
   ],
   "current_iteration": {
-    "milestone": "UV-01",
-    "branch": "feature/vq-m32-coherent-organic-uv-20261016",
-    "depends_on": "verified M31 source e665867b431b787f237e38eb2f450f4e240d7b67",
-    "technical_gate": "source-derived 32-face low mesh has 40 continuous interior UV edges; triangle-local M31 atlas intentionally has 40 seams; CI suite required",
+    "milestone": "UV-02",
+    "branch": "feature/vq-m33-connected-planar-charts-20261016",
+    "depends_on": "M32 source fac032d982ae4df97790b04dae5d15ff3c7e1a1a",
+    "technical_gate": "one continuous 32-face source chart with 40 shared edges, 3200-face high sculpt bake, 14 actual views, reproducible tests",
     "game_release_approved": false
   }
 }
