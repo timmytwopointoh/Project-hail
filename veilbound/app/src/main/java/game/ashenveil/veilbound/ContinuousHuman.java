@@ -139,17 +139,21 @@ public final class ContinuousHuman {
                 // decreasing girth and a shallow natural forward curl.
                 // Preserve open air between tips and the existing hand SDF
                 // probes at y=.614: detail must not recreate a mitten.
+                // Subtle joint flexion sculpted into real capsules.
                 float middleY=.708f, distalY=.627f;
-                f.bone(fx,.795f,.087f,fx,middleY,.093f,
+                float middleZ=.096f, distalZ=.108f, tipZ=.119f;
+                float midX=fx+side*.002f, tipX=fx+side*.004f;
+                f.bone(fx,.795f,.087f,midX,middleY,middleZ,
                        .024f,.025f,2);
-                f.bone(fx,middleY,.093f,fx,distalY,.101f,
+                f.bone(midX,middleY,middleZ,midX,distalY,distalZ,
                        .021f,.022f,2);
-                f.bone(fx,distalY,.101f,fx,tipY,.106f,
-                       .019f,.020f,2);
-                // Knuckle pads are fused, not separate visible beads.
+                f.bone(midX,distalY,distalZ,tipX,tipY,tipZ,
+                       .018f,.019f,2);
+                // Rounded fingertips and tapered knuckles, fused per digit.
                 f.add(fx,.790f,.078f,.027f,.034f,.026f);
-                f.add(fx,middleY,.093f,.023f,.022f,.022f);
-                f.add(fx,distalY,.101f,.020f,.018f,.020f);
+                f.add(midX,middleY,middleZ,.023f,.022f,.022f);
+                f.add(midX,distalY,distalZ,.020f,.018f,.020f);
+                f.add(tipX,tipY,tipZ,.018f,.019f,.019f);
             }
             // Opposable thumb has a separate angled metacarpal and phalanx.
             // Its base joins the palm, while its tip bends away from the
@@ -157,9 +161,15 @@ public final class ContinuousHuman {
             f.bone(handCenter+side*.073f,.852f,.102f,
                    handCenter+side*.122f,.768f,.119f,
                    .032f,.031f,2);
+            // A distinct thumb phalanx bend improves the side silhouette.
             f.bone(handCenter+side*.122f,.768f,.119f,
-                   handCenter+side*.183f,.689f,.151f,
-                   .027f,.027f,2);
+                   handCenter+side*.158f,.725f,.148f,
+                   .028f,.028f,2);
+            f.bone(handCenter+side*.158f,.725f,.148f,
+                   handCenter+side*.183f,.689f,.170f,
+                   .024f,.025f,2);
+            f.add(handCenter+side*.183f,.689f,.170f,
+                  .024f,.025f,.026f);
             // Joined pelvis/thigh/hips to calf, ankle and broad human foot.
             float hx=side*.207f*g[4];
             f.add(hx,1.045f,-.018f,.175f*g[5],.204f,.159f);
