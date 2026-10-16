@@ -382,12 +382,31 @@ def main():
                      timeout=20).decode("utf-8","replace")
         if "item=13" not in pose_log or "M24_POSE_PREVIEW_READY" not in pose_log:
             raise AssertionError("VEILFORGE M24 deforming human was not loaded in game")
+        # An earlier wireframe material is a deliberately STATIC inspection
+        # frame in ValeRenderer. Ensure we are in shaded motion mode before
+        # attempting to prove movement with screenshots. Never bypass the
+        # motion gate or mistake a camera orbit for vertex deformation.
+        for material_attempt in range(7):
+            pose_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                         timeout=20).decode("utf-8","replace")
+            states=[x for x in pose_log.splitlines()
+                    if "item=13" in x and "material=" in x]
+            value=re.search(r"material=(\\d+)",states[-1]) if states else None
+            if value is not None and int(value.group(1))!=4:
+                break
+            if value is not None and int(value.group(1))==4:
+                touch(w*.52,h*.944)
+            time.sleep(.75)
+        else:
+            raise AssertionError("M24 animation still in frozen wireframe mode")
         report["screenshots"].append(shot("01_m24_pose_front.png"))
         # True animation evidence: same camera, moving *mesh pixels*,
         # not orbiting the camera or changing the model label.
         movement=[]
-        for attempt in range(3):
-            time.sleep(.21+.12*attempt)
+        for attempt in range(6):
+            # Stagger phase samples; emulator screenshots are slower than
+            # the 140 ms / 8-frame animation period and can alias frames.
+            time.sleep(.18+.11*(attempt%4))
             name="01_m24_pose_motion_"+str(attempt)+".png"
             report["screenshots"].append(shot(name))
             with Image.open(OUT/"01_m24_pose_front.png") as aa,Image.open(OUT/name) as bb:
