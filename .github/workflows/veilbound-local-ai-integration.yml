@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-# Rerun the bounded one-worker integration gate after correcting model-retry and
-# semantic-meaning guard: only functional Java token changes are accepted.
+# Rerun the bounded one-worker integration with trusted behavioral-feedback
+# passed into the second model call; only functional Java changes can qualify.
 # No GitHub API token, model
 # API key, or writes/merges, and no reliance on the character team's branch.
 jobs:
