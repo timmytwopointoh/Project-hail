@@ -438,32 +438,12 @@ public final class CinematicArtKit {
      * block mannequin even when frame pacing drops. Geometry alone is created
      * deterministically once; no per-frame tessellation or adaptive jitter.
      */
+    /** Full custom anatomical Bellwarden, no M0.7 sphere mannequin. */
     public static ArtKit.Model bellwardenLite(){
-        Form f=new Form(new float[0],true);
-        bellwardenSculpt(f);
-        for(int side=-1;side<=1;side+=2){
-            f.ellipsoid(side*.66f,1.16f,.12f,.19f,.40f,.18f,20,12,
-                        .42f,.51f,.59f);
-            f.ellipsoid(side*.66f,.70f,.20f,.21f,.25f,.15f,18,12,
-                        .42f,.49f,.55f);
-            for(int k=0;k<4;k++){
-                float x=side*.66f+(k-1.5f)*.085f;
-                f.rod(x,.53f,.27f,x+side*.012f,.22f+(k%2)*.025f,.30f,
-                      .042f,8,.54f,.58f,.60f);
-            }
-        }
-        return ShapeEngine.combine(f.result(),ShapeEngine.bellwardenForgedPlates(true));
+        return BellwardenAnatomy.build(true);
     }
     public static ArtKit.Model bellwarden(){
-        // The original faceted block mannequin is deliberately NOT carried
-        // into the high-detail playable sculpt. Retain individually modeled
-        // plated hands and thousands of gauntlet triangles, then author an
-        // entirely new ergonomic silhouette on top, with no buried cubes.
-        float[] handmade=DetailArtKit.bellwarden().vertices;
-        int primitiveFloats=ArtKit.bellwarden().vertices.length;
-        Form f=new Form(Arrays.copyOfRange(handmade,primitiveFloats,handmade.length));
-        bellwardenSculpt(f);
-        return ShapeEngine.combine(f.result(),ShapeEngine.bellwardenForgedPlates(false));
+        return BellwardenAnatomy.build(false);
     }
     public static ArtKit.Model hushed(){
         Form f=new Form(DetailArtKit.hushed().vertices);
