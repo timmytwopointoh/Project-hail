@@ -6,7 +6,7 @@ better methods; do not erase failed experiments or mistake diagnostics for art.
 
 ## Geometry and sculpture
 
-**Selective adaptive edge subdivision:** \`vq_adaptive_remesh.py\`.
+**Selective adaptive edge subdivision:** `vq_adaptive_remesh.py`.
 Select interior *shared* edges by length, locality, crease angle, material
 scope and hard triangle budgets. Split BOTH incident faces with conforming
 one-/two-/three-edge patterns to avoid T-junctions. Protect open borders,
@@ -14,34 +14,34 @@ nonmanifold attachments, creases, and cross-material seams. Reject inverted
 faces or increased topology defect counts. More triangles alone do not
 improve anatomy or silhouette.
 
-**Three targeted brushes:** \`vq_brushes.py\`. Sculpt to raise/carve,
+**Three targeted brushes:** `vq_brushes.py`. Sculpt to raise/carve,
 smooth to relax uneven areas, stamp to reuse relief patterns. Use stable
 material/region masks, edge/boundary protection and review candidate hashes
 without modifying the source. Smoothing initially exaggerated a bump;
 regression tests were retained while tuning the brush. Do not 'fix'
 appearance by relaxing a real geometry quality gate.
 
-**Independent source geometry + QA:** \`factory.py\`,
-\`gltf_export.py\`, \`vq_model_tools.py\`, \`topology.py\`,
-\`vq_refinement_pipeline.py\`. Produce actual OBJ/glTF vertex data and
+**Independent source geometry + QA:** `factory.py`,
+`gltf_export.py`, `vq_model_tools.py`, `topology.py`,
+`vq_refinement_pipeline.py`. Produce actual OBJ/glTF vertex data and
 camera views from that geometry, not synthetic screenshots or image-only
 stand-ins. Source-object SHA256 anchors outputs; isolated branches prevent
 game regressions.
 
 ## UV, texture and material preservation
 
-**UV atlas strategy:** \`vq_uv_atlas.py\` creates padded unique triangle
+**UV atlas strategy:** `vq_uv_atlas.py` creates padded unique triangle
 charts for mesh-derived baking, rejects too-small texel cells and does not
 silently reuse tiled old textures. M32/M33 separate source branches advanced
 continuous/coherent charts and must be audited before integrating.
 
-**High/low correspondence:** \`vq_uv_transfer.py\` projects compatible
+**High/low correspondence:** `vq_uv_transfer.py` projects compatible
 high-resolution triangles through exactly one low parent triangle and
 interpolates chart UVs. Reject UV-chart crossings, ambiguous stacked parents,
 out-of-cage displacement and mismatched materials. NOT arbitrary character
 raycast cage projection.
 
-**Real geometry-derived normal/height bake:** \`vq_mesh_baker.py\` samples
+**Real geometry-derived normal/height bake:** `vq_mesh_baker.py` samples
 true high-mesh geometric normals in the low mesh's tangent frame, stores
 signed height with bounded world range and checks UV overlap, mismatch,
 inversion and measured variation. Flat or negligible detail must fail.
@@ -49,7 +49,7 @@ The authored sample had 3,200 high-poly triangles versus 32 low-poly
 triangles; the M31 source-to-bake test achieved thousands of curved normal
 texels. This is not AO, arbitrary cage baking or exact MikkTSpace.
 
-**Material-safe glTF:** \`vq_multimaterial_export.py\` retains OBJ material
+**Material-safe glTF:** `vq_multimaterial_export.py` retains OBJ material
 groups, UVs, colors, source normals, and referenced albedo, normal, AO and
 metallic/roughness textures. Copy local PNGs only after source/manifest hash
 verification. Reject unsafe relative path traversal and false finished-asset
@@ -60,8 +60,8 @@ the material-preserving export supersedes it for real asset packages.
 
 **One shared APK, four real Android 15 roles, independent checks:** the
 asset factory builds the test APK once, records SHA256, and runs the same
-binary in \`scene-world\`, \`nature-mobile\`, \`props-equipment\`, and
-\`characters\` worker roles. Maintain 14 actual orbit views *per asset*,
+binary in `scene-world`, `nature-mobile`, `props-equipment`, and
+`characters` worker roles. Maintain 14 actual orbit views *per asset*,
 not merely 14 for the entire factory. All reports must include real screenshot
 SHA, GPU/GLES import markers and no fake launcher frames.
 
@@ -93,7 +93,7 @@ require relevant full tests.
 
 ## Workers, library and recovery
 
-Use \`veilforge/queue.py\` and \`veilforge/library_manager.py\` for bounded
+Use `veilforge/queue.py` and `veilforge/library_manager.py` for bounded
 work assignment, immutable artifacts, independently checked source provenance,
 and no unauthorized game promotion. The universal factory covers architecture,
 terrain, vegetation, props, weapons and vehicles; game-specific
@@ -103,10 +103,10 @@ When new lessons are learned:
 
 1. Keep the code change, deterministic regression test, QA evidence, exact
    Git SHA, observed failure and final repaired outcome.
-2. Update \`docs/vq-library/TECHNIQUE_PLAYBOOK.md\` and
-   \`docs/vq-library/BRANCH_AND_BUILD_LEDGER.json\`.
+2. Update `docs/vq-library/TECHNIQUE_PLAYBOOK.md` and
+   `docs/vq-library/BRANCH_AND_BUILD_LEDGER.json`.
 3. Generate a new full tracked-source archive via
-   \`veilforge/library_archive.py build\` and verify it.
+   `veilforge/library_archive.py build` and verify it.
 4. Upload the source ZIP to ChatGPT Library (the GitHub artifact expires),
    and preserve a release tag/Git SHA before any risky refactoring.
 5. Keep separate model/project branches named; never imply they merged
@@ -152,3 +152,36 @@ Source-only CI:
 [38940863117](https://github.com/timmytwopointoh/Project-hail/actions/runs/38940863117)
 passed on commit `eb33b174539f6290ee9b6eeb4b5f9052da2180b4`.
 It did not launch new emulators or alter any playable game.
+
+## MAT-02 — Optional source-safe glTF tangent VEC4 (2026-10-16)
+
+The separate, **unmerged** branch `feature/veilforge-mat02-tangent-basis-20261016`
+at source SHA `40f1519078d3340266e99d7d6d434934a6cbb938` adds
+`vq_tangent_space.py` (area-weighted tangent/bitangent derivatives,
+normal orthogonalization and glTF `TANGENT.xyz/w`) and
+`vq_tangent_export.py` (opt-in packaging over the unchanged
+`vq_multimaterial_export.py`). The derived temporary OBJ duplicates normal
+indices on mirrored UV faces so opposite-handed triangles do not share an
+indexed glTF vertex. The original OBJ and original material source are
+not overwritten. The final review records both original and derived SHA256.
+
+Run: `python3 veilforge/vq_tangent_export.py --obj input.obj --out build/tangent/model.gltf --tangents`.
+For existing multi-material packages add `--source-gltf` and
+`--source-manifest`; use a distinct output directory. The wrapper refuses
+missing/collapsed UVs, degenerate geometry, invalid normal orientation,
+nonfinite tangent inputs, existing output collisions and ambiguous handedness.
+Without `--tangents` the original exporter remains unchanged.
+
+**Evidence:** [full factory run 38945940215](https://github.com/timmytwopointoh/Project-hail/actions/runs/38945940215)
+passed source regression tests, eight asset producers, four Android 15
+emulator roles, real screenshot guards and both independent visual reviewers
+on the pinned SHA. The new tangent-export unit tests generated an actual
+indexed glTF binary with six vertices across a mirrored seam and VEC4
+handedness `(+1,+1,+1,-1,-1,-1)`. The Android factory regression
+still renders its existing probe assets, **not** the new opt-in tangent glTF.
+Therefore tangent-specific GLES import, normal-map illumination comparison,
+AO baking, exact MikkTSpace, physical-device performance, reference likeness
+and artist approval are **not verified**. MAT-02 remains partial.
+
+The original M29 material exporter, M30 normal/height baker, and all
+gameplay branches remain untouched. Never infer photorealism from these tests.

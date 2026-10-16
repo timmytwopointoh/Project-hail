@@ -73,6 +73,14 @@
         38918040166
       ],
       "note": "Actual APK 2304080 bytes and 154 accepted PNGs each; 319/340-second job spans. M34-09 partial until >=3 comparable clean runs and controlled speedup analysis. Separate unmerged branch."
+    },
+    {
+      "name": "MAT-02 opt-in glTF tangent VEC4 and mirrored UV seam split",
+      "branch": "feature/veilforge-mat02-tangent-basis-20261016",
+      "sha": "40f1519078d3340266e99d7d6d434934a6cbb938",
+      "status": "source_unit_and_full_factory_regression_pass_tangent_gpu_unverified",
+      "run": 38945940215,
+      "note": "Synthetic real OBJ -> indexed glTF TANGENT VEC4 source tests passed; original material exporter unchanged; full eight-producer/four-Android factory and both independent visual reviewers passed, but Android did not import tangent candidate. Not MikkTSpace/AO/physical GPU/artistic approval. MAT-02 partial; branch unmerged."
     }
   ],
   "separate_projects": [
@@ -103,6 +111,7 @@
     "Actions artifacts expire; use Library ZIP or git checkout for recovery.",
     "No private keys/signing secrets are archived.",
     "Manual artistic and real-device performance gates remain open.",
-    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release."
+    "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release.",
+    "MAT-02 tangent glTF is source-math verified only; Android factory regression did not import new tangent glTF. Exact MikkTSpace, AO and target-phone review remain open."
   ]
 }
