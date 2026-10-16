@@ -44,6 +44,7 @@ jobs:
           python3 -m unittest discover -s veilbound/tests -p 'test_local_ai.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_team_manager.py' -v
           python3 -m unittest discover -s veilbound/tests -p 'test_emulator_farm.py' -v
+          python3 -m unittest discover -s veilbound/tests -p 'test_emulator_overlay.py' -v
       - name: Syntax check self-hosted model installer and local client
         if: matrix.role == 'integrity'
         run: |
