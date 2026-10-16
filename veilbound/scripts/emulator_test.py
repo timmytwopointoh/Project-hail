@@ -419,6 +419,12 @@ def main():
         found=re.findall(r"\block=(-?\d+)",states)
         report["lock_target_diagnostic"]=int(found[-1]) if found else None
         report["lock_button_exercised"]=True
+        # Real Android parser/skinning smoke, using only a tiny synthetic GLB.
+        # Full Vesper reference likeness and game rendering remain unverified.
+        glb_log=adb("logcat","-d","-s","VESPER_GLTF:I","*:S",timeout=25).decode("utf-8","replace")
+        report["vesper_synthetic_glb_import_smoke_pass"]="GLB_IMPORT_SMOKE_PASS" in glb_log
+        if not report["vesper_synthetic_glb_import_smoke_pass"]:
+            raise AssertionError("Android Vesper synthetic GLB skin/import regression failed")
         report["status"]="passed"
     except Exception as exc:
         report["status"]="failed";report["error"]=repr(exc)
