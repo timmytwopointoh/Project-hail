@@ -70,7 +70,13 @@ def analyze(folder):
     if issue_codes:warnings.append("Non-zero OpenGL error codes: "+str(issue_codes))
     if perf and min(x["fps"] for x in perf)<8:
         warnings.append("Slow software-emulator frame rate; measure on physical Android")
-    if any(max(x["std_rgb"])<12 for x in metrics):
+    # Startup splash intentionally starts on a near-flat dark gradient;
+    # it is NOT an in-game black-frame failure. Inspect actual scene frames
+    # instead. Never exclude Studio, traversal or combat evidence.
+    scene_frames=[x for x in metrics if x["file"]!="00_startup_loading.png"]
+    if not scene_frames:
+        warnings.append("No gameplay scene screenshots available for blank-frame test")
+    elif any(max(x["std_rgb"])<12 for x in scene_frames):
         warnings.append("Screenshot has low variation; inspect potential blank render")
     if len(perf)==0:warnings.append("No FPS samples in tail log; check renderer log retention")
     result={"emulator_test":report.get("status","missing"),
