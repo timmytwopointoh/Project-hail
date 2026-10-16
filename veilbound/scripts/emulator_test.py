@@ -425,6 +425,19 @@ def main():
         report["vesper_synthetic_glb_import_smoke_pass"]="GLB_IMPORT_SMOKE_PASS" in glb_log
         if not report["vesper_synthetic_glb_import_smoke_pass"]:
             raise AssertionError("Android Vesper synthetic GLB skin/import regression failed")
+        # Isolated debug-only stage: tests floating magenta Vesper aura,
+        # using a two-joint triangle fixture, NOT the full game character.
+        adb("shell","am","start","-n",ACTIVITY,
+            "-a","game.ashenveil.veilbound.VESPER_STAGE_QA",
+            "--activity-single-top",timeout=30)
+        time.sleep(3.0)
+        aura_log=adb("logcat","-d","-s","VESPER_GLTF:I","*:S",
+                     timeout=25).decode("utf-8","replace")
+        report["vesper_synthetic_aura_stage_requested"]="AURA_STAGE_SMOKE_REQUEST" in aura_log
+        if not report["vesper_synthetic_aura_stage_requested"]:
+            raise AssertionError("Synthetic Vesper aura-stage launch not acknowledged")
+        report["screenshots"].append(shot("05_vesper_synthetic_aura_stage.png"))
+        report["full_vesper_glb_verified"]=False
         report["status"]="passed"
     except Exception as exc:
         report["status"]="failed";report["error"]=repr(exc)
