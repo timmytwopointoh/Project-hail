@@ -12,6 +12,29 @@ MAX_EDITS = 3
 MAX_REPLACEMENT_CHARS = 5000
 MAX_TOTAL_INSERTED = 10000
 MAX_RISKS = 8
+
+# Remove Java whitespace and comments while preserving string/char literals.
+# This is intentionally conservative: the guard may reject an unusual
+# meaningful whitespace edit, but it must never accept cosmetic edits as
+# evidence of an improved game behavior.
+JAVA_LEXEMES = re.compile(
+    r'//[^\\r\\n]*|/\\*[\\s\\S]*?\\*/|'
+    r'"(?:\\\\.|[^"\\\\])*"|'
+    r"'(?:\\\\.|[^'\\\\])*'|"
+    r'\\s+|[^/\\s"\\\']+|.',
+    re.DOTALL,
+)
+
+
+def semantic_fingerprint(source):
+    parts = []
+    for match in JAVA_LEXEMES.finditer(source):
+        lexeme = match.group()
+        if not lexeme or lexeme.isspace() or lexeme.startswith("//") or lexeme.startswith("/*"):
+            continue
+        parts.append(lexeme)
+    return "".join(parts)
+
 # Reject NEW text that grants the model an execution/network/filesystem bridge.
 # Matching only additions avoids punishing legitimate pre-existing code.
 FORBIDDEN_JAVA_ADDITIONS = re.compile(
@@ -65,6 +88,8 @@ def validate_proposal(proposal, allowed, read_source):
         if (not old or old == new or len(old) > MAX_REPLACEMENT_CHARS
                 or len(new) > MAX_REPLACEMENT_CHARS):
             raise ValueError("AI proposal contains a no-op or oversized edit")
+        if semantic_fingerprint(old) == semantic_fingerprint(new):
+            raise ValueError("AI proposal contains only formatting or comments")
         # New content can contain old content; remove the old occurrence once
         # to inspect genuinely added fragments for dangerous new capabilities.
         additions = new.replace(old, "", 1)
@@ -79,6 +104,7 @@ def validate_proposal(proposal, allowed, read_source):
         if current.count(old) != 1:
             raise ValueError("AI edit must match one exact existing source substring")
         replacement[path] = current.replace(old, new, 1)
-    if not any(replacement[p] != read_source(p) for p in replacement):
-        raise ValueError("AI proposal has no observable source change")
+    if not any(semantic_fingerprint(replacement[p]) !=
+               semantic_fingerprint(read_source(p)) for p in replacement):
+        raise ValueError("AI proposal has no functional Java token change")
     return replacement
