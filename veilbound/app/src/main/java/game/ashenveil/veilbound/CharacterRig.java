@@ -55,7 +55,9 @@ public final class CharacterRig {
             float y=(src[i+1]+src[i+10]+src[i+19])/3f;
             float z=(src[i+2]+src[i+11]+src[i+20])/3f;
             int part=0;float px=0,py=0,pz=0;
-            if(!boss&&!revenant&&z<-.42f&&y>.12f&&y<2.05f){
+            float paintedRed=(src[i+6]+src[i+15]+src[i+24])/3f;
+            if(!boss&&!revenant&&z<-.42f&&y>.12f&&y<2.05f
+                    &&paintedRed<.38f){
                 // Distinct cloth island with shoulder-level hinge, not welded
                 // to the entire rigid torso. Enemy rigs remain unchanged.
                 part=5;py=1.93f;pz=-.51f;
