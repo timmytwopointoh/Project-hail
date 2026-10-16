@@ -4,8 +4,11 @@ on:
     branches: ['feature/vq-m34-runtime-benchmarks-*']
     paths:
       - 'veilforge/vq_ci_benchmarks.py'
+      - 'veilforge/vq_ci_artifact_probe.py'
       - 'veilforge/tests/test_vq_ci_benchmarks.py'
+      - 'veilforge/tests/test_vq_ci_artifact_probe.py'
       - 'veilforge/evidence/m34-09-observed-runs.json'
+      - 'veilforge/evidence/m34-09-artifact-payloads.json'
       - '.github/workflows/vq-m34-benchmark-evidence.yml'
   workflow_dispatch:
 
@@ -31,8 +34,8 @@ jobs:
       - name: Reject incomplete runs, missing Android roles and fabricated speedups
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s veilforge/tests -p 'test_vq_ci_benchmarks.py' -v
-          python3 -m compileall -q veilforge/vq_ci_benchmarks.py
+          python3 -m unittest discover -s veilforge/tests -p 'test_vq_ci_*.py' -v
+          python3 -m compileall -q veilforge/vq_ci_benchmarks.py veilforge/vq_ci_artifact_probe.py
           python3 veilforge/vq_ci_benchmarks.py \
             --input veilforge/evidence/m34-09-observed-runs.json \
             --out inspection_output/m34-09/runtime_evidence.json
@@ -48,13 +51,18 @@ jobs:
                  "| --- | ---: | ---: | ---: |"]
           for r in row["runs"]:
               lines.append(f'| {r["run_id"]} | {r["job_wall_span_seconds"]:.0f} | {r["apk_archive_bytes"]} | {r["capture_archive_bytes"]} |')
-          lines.append("Raw APK bytes, PNG payload bytes and physical GPU timing not measured.")
+          payload=json.loads(Path("veilforge/evidence/m34-09-artifact-payloads.json").read_text())
+          for p in payload["runs"]:
+              lines.append(f'Run {p["run_id"]}: actual APK {p["apk"]["bytes"]} bytes, accepted PNG {p["accepted_png_count"]} views / {p["accepted_png_bytes"]} bytes, rejected modal retries {p["blocked_png_count"]}.')
+          lines.append("No controlled speedup or physical GPU timing has been established.")
           with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
               f.write("\n".join(lines)+"\n")
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: vq-m34-09-measured-runtime-evidence
-          path: inspection_output/m34-09/runtime_evidence.json
+          path: |
+            inspection_output/m34-09/runtime_evidence.json
+            veilforge/evidence/m34-09-artifact-payloads.json
           if-no-files-found: error
           retention-days: 30

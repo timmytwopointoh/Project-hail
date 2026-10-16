@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "milestone": "M34-09",
+  "source": "GitHub Actions artifact ZIP payloads downloaded and inspected 2026-10-16",
+  "runs": [
+    {
+      "run_id": 38916145322,
+      "apk": {
+        "bytes": 2304080,
+        "sha256": "59b629fe02178825cfaf7cb9efc8d501d543faf487459ff0537d624bcb845ad5",
+        "artifact_zip_sha256": "8bf9a128a8e3c5c848f3a4bb8825d0105b4c90e8b7d47b43fc5ad6537f6c30bf"
+      },
+      "accepted_png_count": 154,
+      "blocked_png_count": 7,
+      "accepted_png_bytes": 25380977,
+      "blocked_png_bytes": 522779,
+      "roles": {
+        "nature": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 6373645,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "b95edf00e37763d752dfb341309078ba69fbd9aac267cdf39ac158ec688c3f88"
+        },
+        "characters": {
+          "accepted_png_count": 28,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 1749399,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "aa12c256ea465b735cdf67de2d7f56a797618b3e0e81d5f6c21be35444c22673"
+        },
+        "scene": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 7,
+          "accepted_png_bytes": 13103311,
+          "blocked_png_bytes": 522779,
+          "artifact_zip_sha256": "20d8153480b386bfcde94a2eed8978185bdfc01a5b179b9da6d9e2e47202b1fd"
+        },
+        "props": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 4154622,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "efbb2cb0b76f752efb907424796867ca450fca2a467fb701b8858b6f524d037a"
+        }
+      }
+    },
+    {
+      "run_id": 38918040166,
+      "apk": {
+        "bytes": 2304080,
+        "sha256": "475f027a074c31c79f0e78e735ce0de86ca619861562dba282114497ca53883a",
+        "artifact_zip_sha256": "7dbf87cb73946d454cf08b40f0911ed6b1dc7d266efbb1a1ea1fed39db3f986c"
+      },
+      "accepted_png_count": 154,
+      "blocked_png_count": 9,
+      "accepted_png_bytes": 25528319,
+      "blocked_png_bytes": 679437,
+      "roles": {
+        "nature": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 6260898,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "31976af23d8e1fb838a995bdc9be2bab92f948b78daa03ef5243cfc5554e5b43"
+        },
+        "characters": {
+          "accepted_png_count": 28,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 1729467,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "2b6e1d5b45b7d4358a1a32931e110d83e26871e32262205f2990c7543811589d"
+        },
+        "scene": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 9,
+          "accepted_png_bytes": 13268957,
+          "blocked_png_bytes": 679437,
+          "artifact_zip_sha256": "e6e0920369a841d3a0e127dd41403c115e840407d895250708962632032523ac"
+        },
+        "props": {
+          "accepted_png_count": 42,
+          "blocked_png_count": 0,
+          "accepted_png_bytes": 4268997,
+          "blocked_png_bytes": 0,
+          "artifact_zip_sha256": "e7a50c526e4003134ca2a72dcb91a90ae1dc337d7fd76c70599e9b30684dbb8c"
+        }
+      }
+    }
+  ],
+  "claims": {
+    "photorealism": false,
+    "controlled_speedup": false,
+    "physical_hardware_performance": false
+  }
+}
