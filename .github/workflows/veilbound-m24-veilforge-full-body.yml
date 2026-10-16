@@ -53,10 +53,11 @@ jobs:
             "$SRC/HumanAnatomy.java" "$SRC/M24BodyRetarget.java" "$SRC/HumanSkeleton.java" \
             "$SRC/ObjMeshLoader.java" "$SRC/ModelStudio.java" \
             "$TEST/HumanHandsTest.java" "$TEST/HumanHandSculptTest.java" \
-            "$TEST/M24FullBodyTest.java"
+            "$TEST/M24FullBodyTest.java" "$TEST/M24BodyRetargetTest.java"
           java -cp /tmp/m24-classes game.ashenveil.veilbound.HumanHandsTest
           java -cp /tmp/m24-classes game.ashenveil.veilbound.HumanHandSculptTest
           java -cp /tmp/m24-classes game.ashenveil.veilbound.M24FullBodyTest
+          java -cp /tmp/m24-classes game.ashenveil.veilbound.M24BodyRetargetTest
           test -f docs/veilbound/M24_VEILFORGE_PLAN.md
 
   anatomy-managers:
