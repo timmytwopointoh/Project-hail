@@ -33,7 +33,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
-    private Mesh studioHuman,studioHumanLite,studioHandSculpt;
+    private Mesh studioHuman,studioHumanLite,studioHandSculpt,studioHumanPose;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
     private Mesh playerPremiumSword;
@@ -361,6 +361,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
         studioHuman=new Mesh(HumanAnatomy.buildM24Candidate(false).vertices);
         studioHumanLite=new Mesh(HumanAnatomy.buildM24Candidate(true).vertices);
+        // Rig stress pose is one-time CPU deformation during lab loading.
+        // Retains game as stable testing grounds; no gameplay character swap.
+        ArtKit.Model poseSource=HumanAnatomy.buildM24Candidate(true);
+        HumanSkeleton poseRig=HumanSkeleton.bind(poseSource);
+        float[] testAngles=new float[HumanSkeleton.JOINTS];
+        testAngles[5]=-.18f;testAngles[6]=.26f;testAngles[7]=-.10f;
+        testAngles[8]=.18f;testAngles[9]=-.26f;testAngles[10]=.10f;
+        testAngles[11]=.04f;testAngles[12]=-.20f;
+        testAngles[13]=-.04f;testAngles[14]=.20f;
+        studioHumanPose=new Mesh(poseRig.pose(testAngles));
+        Log.i("VEILBOUND_STUDIO","M24_POSE_PREVIEW_READY triangles="+
+              (studioHumanPose.count/3));
         studioHandSculpt=new Mesh(HumanHandSculpt.buildStandalone(false).vertices);
         Log.i("VEILBOUND_STUDIO","M23_HAND_ASSET_ATTACHED triangles="+studioHandSculpt.count/3);
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
@@ -502,6 +514,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 10:chosen=environmentRoots;break;
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
+            case 13:chosen=studioHumanPose;break;
             default:chosen=studioImported!=null?studioImported:studioWarden;
         }
         Matrix.setIdentityM(model,0);
@@ -516,7 +529,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
