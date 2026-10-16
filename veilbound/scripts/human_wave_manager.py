@@ -12,11 +12,16 @@ TEAMS={
 def main(root:Path):
     reports=[]
     for team in sorted(TEAMS):
-        matches=list(root.glob("**/"+team+"/manager_review.json"))
+        # GitHub's artifact downloader nests each team's root under its
+        # artifact NAME, not under the original local team folder.
+        matches=[]
+        for candidate in root.rglob("manager_review.json"):
+            report=json.loads(candidate.read_text())
+            if report.get("team")==team:matches.append((candidate,report))
         if len(matches)!=1:
             raise ValueError("Expected one independently produced manager report for "+team+
                              " got "+str(len(matches)))
-        r=json.loads(matches[0].read_text())
+        r=matches[0][1]
         if (r.get("team")!=team or r.get("micro_edits_evaluated")!=320 or
             r.get("workers_reviewed")!=5 or
             r.get("accepted_for_game") is not False or
