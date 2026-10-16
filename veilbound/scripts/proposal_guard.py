@@ -22,7 +22,7 @@ FORBIDDEN_JAVA_ADDITIONS = re.compile(
     r"(?:Socket|ServerSocket|URLClassLoader)\s*\(|"
     r"Files\s*\.\s*(?:write|delete|move|copy)|"
     r"Thread\s*\(|"
-    r"static\s*\{)\b|\.\s*exec\s*\(",
+    r"static\s*\{)|\.\s*exec\s*\(",
     re.IGNORECASE,
 )
 
