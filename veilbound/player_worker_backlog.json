@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "description": "One-time player-only visual worker evaluation. Reviewer must approve source patches before integration; no enemies, environment or global lighting changes.",
+  "tasks": [
+    {
+      "id": "VB-M11-PLAYER-ANIMATION",
+      "role": "animation",
+      "priority": "P0",
+      "goal": "Player-only: upgrade Bellwarden sword wind-up, active sweep, followthrough and smooth motion signals, and preserve green hit/contact collision. Modify only CombatMotion.java or CharacterRig.java. Do not modify enemies, world, global lighting, or control semantics."
+    },
+    {
+      "id": "VB-M11-PLAYER-MODEL",
+      "role": "models",
+      "priority": "P0",
+      "goal": "Player Bellwarden only: improve silhouette, armor layering, detail anatomy, helmet/visor and sword hand placement while retaining deterministic finite normal geometry and efficient LOD. Modify only Bellwarden-related portions in CinematicArtKit.java or DetailArtKit.java."
+    },
+    {
+      "id": "VB-M11-PLAYER-MATERIAL",
+      "role": "materials",
+      "priority": "P0",
+      "goal": "Player Bellwarden metal vs cloth vs leather material readability with mobile efficient micro normal and roughness treatment; preserve ES2 and deterministic atlas existing tests. Modify only MaterialTextures.java or SurfaceAtlas.java."
+    }
+  ]
+}
