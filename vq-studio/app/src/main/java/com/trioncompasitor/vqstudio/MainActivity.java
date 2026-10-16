@@ -21,10 +21,11 @@ public final class MainActivity extends Activity {
   private static final int PICK_OBJ=7;
   private final Handler timer=new Handler(Looper.getMainLooper());
   private final ExecutorService io=Executors.newSingleThreadExecutor();
-  private boolean active=false;
+  private volatile boolean active=false,autoLoad=true;
+  private volatile String loadedSnapshotKey="";
   private TextView status,history,meshLabel,small;
   private ModelViewport viewport;
-  private String requestId="",runId="";
+  private volatile String requestId="",runId="";
   private LinearLayout root;
   private final int mint=Color.rgb(94,244,198),ink=Color.rgb(224,238,238);
   private final Runnable updater=new Runnable(){@Override public void run(){
@@ -57,7 +58,14 @@ public final class MainActivity extends Activity {
     toggles.addView(button("Update",this::refresh),new LinearLayout.LayoutParams(0,dp(48),1));
     root.addView(toggles);
     root.addView(button("Open current model snapshots on GitHub",this::openRunArtifacts));
-    small=text("LIVE: GitHub worker steps • 3D: the most recently imported OBJ\nModel geometry will not change until a verified new snapshot is loaded.",12,ink);
+    root.addView(button("Automatic verified mesh loading ON/OFF",()->{
+      autoLoad=!autoLoad;
+      small.setText(autoLoad?
+        "AUTO ON • next integrity-verified 3D snapshot replaces geometry; camera remains unchanged.":
+        "AUTO OFF • imported/selected mesh remains unchanged until you turn loading on.");
+      if(autoLoad)refresh();
+    }));
+    small=text("AUTO ON • verified worker revisions appear in this 3D viewer. Camera orbit and zoom are preserved.",12,ink);
     root.addView(small);
     ScrollView scroll=new ScrollView(this);
     history=text("No worker update yet.",12,Color.rgb(159,210,210));history.setTextIsSelectable(true);
@@ -78,7 +86,9 @@ public final class MainActivity extends Activity {
     if(VQProtocol.SHOW_JOB.equals(intent.getAction())){
       String id=intent.getStringExtra("request_id");
       String run=intent.getStringExtra("run_id");
-      if(VQProtocol.validRequestId(id))requestId=id;
+      if(VQProtocol.validRequestId(id)&&!id.equals(requestId)){
+        requestId=id;runId="";loadedSnapshotKey="";autoLoad=true;
+      }
       if(VQProtocol.validRunId(run))runId=run;
       getPreferences(0).edit().putString("request_id",requestId)
           .putString("run_id",runId).apply();
@@ -119,6 +129,8 @@ public final class MainActivity extends Activity {
       try(InputStream in=getContentResolver().openInputStream(uri)){
         MeshData mesh=MeshData.read(in,"Imported real OBJ / "+uri.getLastPathSegment());
         runOnUiThread(()->{
+          autoLoad=false;
+          small.setText("AUTO OFF • manually imported model protected; enable auto loading to follow VQ.");
           viewport.setMesh(mesh);
           meshLabel.setText(mesh.label+" • "+mesh.triangles.length+" triangles");
           status.setText("Local OBJ loaded; remote job progress is shown below");
@@ -146,6 +158,33 @@ public final class MainActivity extends Activity {
         return out.toString("UTF-8");
       }
     }finally{h.disconnect();}
+  }
+  private void loadVerifiedRevision(String requestedId,String selectedRun){
+    try{
+      LiveMeshClient.Snapshot snap=LiveMeshClient.latest(this,requestedId,selectedRun);
+      if(snap==null)return;
+      if(snap.identity().equals(loadedSnapshotKey))return;
+      runOnUiThread(()->{
+        if(!active||!autoLoad||!requestedId.equals(requestId)
+           ||(!runId.isEmpty()&&!selectedRun.equals(runId)))return;
+        viewport.setMeshKeepingCamera(snap.mesh);
+        loadedSnapshotKey=snap.identity();
+        runId=snap.runId;
+        getPreferences(0).edit().putString("run_id",snap.runId).apply();
+        meshLabel.setText(snap.mesh.label+" • "+snap.triangles+
+                          " triangles • SHA256 "+snap.sha.substring(0,12));
+        small.setText("AUTO ON • live revision "+snap.sequence+
+          " loaded without camera reset • "+snap.stage+
+          " • geometry hash verified; artist approval still required");
+      });
+    }catch(Exception e){
+      final String message=e.getMessage()==null?"Model update not yet available":e.getMessage();
+      runOnUiThread(()->{
+        if(active&&autoLoad)
+          small.setText("AUTO ON • waiting for verified model: "+message+
+             " • current mesh retained");
+      });
+    }
   }
   private void refresh(){
     if(!active)return;
@@ -195,12 +234,20 @@ public final class MainActivity extends Activity {
           progress=trace.toString();
           String finalId=id;
           runOnUiThread(()->{
-            runId=finalId;
+            if(!finalId.equals(runId)){runId=finalId;loadedSnapshotKey="";}
             getPreferences(0).edit().putString("run_id",finalId).apply();
           });
         }
         final String a=headline,b=progress;
         runOnUiThread(()->{if(!active)return;status.setText(a);history.setText(b);});
+        // Source updates are fetched through Trion's caller-restricted ContentProvider,
+        // never via a token stored in VQ Studio. Each revision is verified twice.
+        if(chosen!=null&&autoLoad){
+          final String chosenRun=chosen.optString("id","");
+          final String chosenRequest=requestId;
+          if(VQProtocol.validRequestId(chosenRequest)&&VQProtocol.validRunId(chosenRun))
+            loadVerifiedRevision(chosenRequest,chosenRun);
+        }
       }catch(Exception e){
         runOnUiThread(()->{if(!active)return;status.setText("NETWORK UNAVAILABLE • local 3D viewer still works");
           history.setText("Worker status could not be refreshed: "+e.getMessage()+
