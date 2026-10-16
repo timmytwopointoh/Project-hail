@@ -32,6 +32,14 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==14,"M25 face close-up must be selectable in Testing Grounds");
+        ok(Math.abs(s.snapshot().zoom-1.45f)<.01f,"M25 face zoom must start close");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M25 face profile angle missing");
+        s.focusDetail();
+        ok(s.snapshot().panX==0f&&s.snapshot().zoom<1.3f,
+           "Face focus cannot be offset toward a hand");
+        s.nextItem(-1);
         ok(s.snapshot().item==13,"Deformation test must be inspectable in Testing Grounds");
         s.nextReviewView();
         ok("SIDE".equals(s.reviewViewName()),"Deformation test view switching");
