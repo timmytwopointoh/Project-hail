@@ -237,7 +237,9 @@ public final class WardenHud extends View {
         text(c,m.autoTurn?"⏸ AUTO ORBIT":"▶ AUTO ORBIT",764,565,13,PALE,true,true);
         text(c,"RESET",920,565,14,PALE,true,true);
         // Orientation marker: a calibrated studio model, not a combat arena.
-        text(c,"0°  —  90°  —  180°  —  270°",500,456,12,MIST,false,true);
+        text(c,m.item==11?
+            "TAP TO REVIEW: "+game.studio.reviewViewName()+"  •  FRONT / SIDE / BACK / 3/4":
+            "0°  —  90°  —  180°  —  270°",500,456,12,MIST,false,true);
         if(android.os.SystemClock.uptimeMillis()-lastStudioDiagnosticUptime>1150){
             lastStudioDiagnosticUptime=android.os.SystemClock.uptimeMillis();
             Log.i("VEILBOUND_STUDIO","item="+m.item+" name="+ModelStudio.ITEMS[m.item]+
@@ -317,6 +319,10 @@ public final class WardenHud extends View {
                     else if(x<874)lab.dolly(.235f);
                     else lab.dolly(-.235f);
                     invalidate();return true;
+                }
+                // Human-specific, reproducible 4-angle camera control.
+                if(y>432&&y<481&&x>300&&x<700&&lab.snapshot().item==11){
+                    lab.nextReviewView();invalidate();return true;
                 }
                 if(y>485&&y<548){
                     if(x<440){lab.nextItem(-1);invalidate();return true;}
