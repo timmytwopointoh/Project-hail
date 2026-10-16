@@ -176,6 +176,13 @@ jobs:
           path: veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Preserve the exact source mesh fingerprints packaged in the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-unified-scene-proof
+          path: veilforge/android-probe/app/src/main/assets/scene/scene_manifest.json
+          if-no-files-found: error
+          retention-days: 21
 
   unified-execution:
     name: Queue / ${{ matrix.id }}
@@ -282,6 +289,12 @@ jobs:
         with:
           name: veilforge-unified-immutable-plan
           path: inspection_output/queue-plan/
+      - name: Retrieve independently hashed baseline scene source provenance
+        if: needs.shared-apk.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: veilforge-unified-scene-proof
+          path: inspection_output/queue-baseline-proof/
       - name: Collect available per-task evidence; missing artifacts remain failures
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -294,11 +307,15 @@ jobs:
           APK_SHA: ${{ needs.shared-apk.outputs.sha256 }}
         run: |
           set -euo pipefail
+          EXTRA=()
+          if [ -n "$APK_SHA" ]; then
+            EXTRA=(--baseline-scene inspection_output/queue-baseline-proof/scene_manifest.json)
+          fi
           python3 veilforge/queue.py review \
             --plan inspection_output/queue-plan/queue_plan.json \
             --root inspection_output/queue-collected \
             --out inspection_output/queue-review \
-            --source-sha "$SOURCE_SHA" --apk-sha "$APK_SHA"
+            --source-sha "$SOURCE_SHA" --apk-sha "$APK_SHA" "${EXTRA[@]}"
           cat inspection_output/queue-review/queue_review.md >> "$GITHUB_STEP_SUMMARY"
       - name: Apply the stricter existing multi-emulator gate when all four roles ran
         env:
