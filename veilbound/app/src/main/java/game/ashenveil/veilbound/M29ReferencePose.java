@@ -40,12 +40,23 @@ public final class M29ReferencePose {
             // together: weighting individual digits by lateral X used to
             // produce stretched ribbons even when the welded edge audit
             // passed. Start the blend INSIDE the chest, complete by x=.35.
-            float arm=smooth((ax-.265f)/.085f)*
+            // At low Y the torso/pelvis/shorts also reach x=.30.
+            // Taper the X influence inward only near the shoulder, keeping
+            // the fingers coherently rotated while hips remain planted.
+            float lowerBodyGuard=1f-smooth((y-1.48f)/.17f);
+            float threshold=.265f+.135f*lowerBodyGuard;
+            float band=.085f-.040f*lowerBodyGuard;
+            float arm=smooth((ax-threshold)/band)*
                       smooth((y-.80f)/.12f)*
                       // Stop the high-deltoid movement before the fixed chest/neck
                       // junction; otherwise identical welded seam edges
                       // become four-face nonmanifold pairs in a strict T-pose.
                       (1f-smooth((y-shoulderY+.22f)/.18f));
+            // Modest dark shorts are a separate retained material, not a
+            // component of the rotating arm skeleton.
+            boolean shorts=v[i+6]<.29f&&v[i+7]<.28f&&v[i+8]<.28f
+                &&y<1.68f;
+            if(shorts)arm=0f;
             if(arm>.0001f){
                 float radians=pose==T_POSE?side*1.39f:
                     side*(side<0?.24f:.39f);
