@@ -86,6 +86,21 @@ class PromoteTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 promote.verify_reviewed_patch(rootdir, artifact, pending)
 
+    def test_old_pilot_cosmetic_patch_cannot_be_promoted_even_after_java_pass(self):
+        with tempfile.TemporaryDirectory() as rootdir, tempfile.TemporaryDirectory() as artifact:
+            relative = str(promote.JAVA / "ModelStudio.java")
+            original = "yaw+=clamp(dx,-1.4f,1.4f);\\n"
+            proposed = "yaw += clamp(dx, -1.4f, 1.4f);\\n"
+            src = Path(rootdir) / relative
+            src.parent.mkdir(parents=True, exist_ok=True)
+            src.write_text(original)
+            patch = "".join(difflib.unified_diff(
+                original.splitlines(keepends=True), proposed.splitlines(keepends=True),
+                fromfile="a/" + relative, tofile="b/" + relative))
+            (Path(artifact) / "changes.patch").write_text(patch)
+            with self.assertRaisesRegex(ValueError, "comments or formatting"):
+                promote.verify_reviewed_patch(rootdir, artifact, {relative: proposed})
+
     def test_rejects_path_traversal(self):
         with tempfile.TemporaryDirectory() as p:
             self.make(p)
