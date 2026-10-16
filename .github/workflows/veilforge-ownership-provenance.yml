@@ -6,7 +6,9 @@ on:
       - 'legal/veilforge-owner-20261016'
     paths:
       - 'LICENSE'
+      - 'AGENTS.md'
       - 'docs/ownership/**'
+      - 'veilforge/AGENT_INSTRUCTIONS.md'
       - 'veilforge/VEILFORGE_CHARTER.md'
       - 'veilforge/steward_state.json'
       - 'veilforge/steward.py'
