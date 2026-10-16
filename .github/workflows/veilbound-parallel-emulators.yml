@@ -19,6 +19,7 @@ on:
       - 'veilbound/app/**'
       - 'veilbound/scripts/emulator_farm.py'
       - 'veilbound/scripts/emulator_test.py'
+      - 'veilbound/scripts/qa_analyze.py'
       - 'veilbound/scripts/emulator_test.sh'
       - 'veilbound/scripts/emulator_shard_test.sh'
   workflow_dispatch:
