@@ -1,0 +1,36 @@
+# Default-branch registration so users can choose the reviewed VQ branch.
+# The actual inspector, model sources and test workflows live on that branch.
+name: VQ - Universal 3D Model Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      catalog_model:
+        description: 'Choose a model on the VQ development branch'
+        required: true
+        type: choice
+        default: 'ancient_tree'
+        options:
+          - 'ancient_tree'
+          - 'ceremonial_sword'
+          - 'cargo_cart'
+          - 'treasure_chest'
+          - 'ancient_gate_standard'
+          - 'ancient_gate_mobile'
+          - 'forest_tree_mobile'
+          - 'rolling_terrain'
+
+permissions:
+  contents: read
+
+jobs:
+  select-veylquorin-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Open the model tool on its actual source branch
+        run: |
+          echo '## VEYLQUORIN (VQ) model inspector' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Choose branch **brand/veylquorin-20261016** under Run workflow.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'That branch generates actual 3D geometry, fourteen views, UV/glTF checks and a model report.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Main is a safe registration stub; it does not start a full scan.' >> "$GITHUB_STEP_SUMMARY"
