@@ -43,6 +43,16 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private boolean lastMeshUltra=true;
     private boolean studioLinePrimitive=false;
     private Mesh studioImported;
+    // Optional imported Vesper GLB stays separate from the original player rig.
+    private final java.util.concurrent.atomic.AtomicReference<VesperGlb.Result> vesperQueue=
+        new java.util.concurrent.atomic.AtomicReference<>();
+    private volatile Mesh[] vesperIdle,vesperWalk;
+    private volatile boolean vesperPlayable=false;
+    public void stageVesper(VesperGlb.Result avatar){vesperQueue.set(avatar);}
+    public boolean activateVesper(){
+        if(vesperQueue.get()==null && vesperIdle==null)return false;
+        vesperPlayable=true;return true;
+    }
     private final java.util.concurrent.atomic.AtomicReference<ArtKit.Model> importQueue=
         new java.util.concurrent.atomic.AtomicReference<>();
     public void stageImportedMesh(ArtKit.Model imported){importQueue.set(imported);}
@@ -425,6 +435,17 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
 
     private void renderStudio(){
         initStudioHighDetail();
+        VesperGlb.Result avatar=vesperQueue.getAndSet(null);
+        if(avatar!=null){
+            vesperIdle=new Mesh[avatar.idle.length];vesperWalk=new Mesh[avatar.walk.length];
+            for(int i=0;i<vesperIdle.length;i++)vesperIdle[i]=new Mesh(avatar.idle[i].vertices);
+            for(int i=0;i<vesperWalk.length;i++)vesperWalk[i]=new Mesh(avatar.walk[i].vertices);
+            studioImported=vesperIdle[0];
+            studioWireMeshes[ModelStudio.ITEMS.length-1]=null;
+            Log.i("VESPER_GLTF","GLB_ANIMATION_READY joints="+avatar.joints+
+                " triangles="+avatar.triangles+" idle_frames="+vesperIdle.length+
+                " walk_frames="+vesperWalk.length);
+        }
         ArtKit.Model pending=importQueue.getAndSet(null);
         if(pending!=null){
             studioImported=new Mesh(pending.vertices);
@@ -706,6 +727,19 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private void drawKnight(float x,float y,float z,float yaw,boolean foe,
                             boolean boss,float tm,float walk,float swing,float dodge,
                             float moving,float fatigue,float stagger,float windup){
+        if(!foe && vesperPlayable && vesperIdle!=null && vesperWalk!=null){
+            Mesh[] frames=moving>.10f?vesperWalk:vesperIdle;
+            int index=((int)Math.floor(tm*(moving>.10f?9f:6f)))%frames.length;
+            if(index<0)index+=frames.length;
+            Matrix.setIdentityM(model,0);
+            Matrix.translateM(model,0,x,y,z);
+            Matrix.rotateM(model,0,(float)Math.toDegrees(yaw),0,1,0);
+            GLES20.glUniform1f(uHeroShading,0f);
+            GLES20.glUniform1f(uSkinMode,0f);
+            GLES20.glUniform1f(uSurfaceQuality,0f);
+            draw(frames[index],model,1,1,1,0);
+            return;
+        }
         float dist2=(x-state.x)*(x-state.x)+(z-state.z)*(z-state.z);
         // Dynamic material LOD: sharp BRDF only close to the camera.
         // Distant meshes retain fast ES2 per-vertex material lighting.
