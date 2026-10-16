@@ -57,6 +57,35 @@ def metrics(image):
     return {"foreground_fraction":round(frac,5),"channel_stddev":round(contrast,3),
             "dimensions":list(image.size)}
 
+def capture_visible_frame(path, *, attempts=8, interval=.75):
+    """Wait for the *presented* Android frame, not just the GL draw callback.
+
+    A FRAME_OK log is emitted before the emulator compositor necessarily
+    presents the buffer. SwiftShader can briefly return a uniform black
+    screenshot while the surface is attaching. Retry that transient only;
+    never accept a blank screenshot or fabricate an image.
+    """
+    if attempts < 1:
+        raise ValueError("At least one real screenshot attempt is required")
+    last = None
+    for attempt in range(1, attempts + 1):
+        pic = screenshot(path)
+        last = metrics(pic)
+        if last["foreground_fraction"] >= .0015 and last["channel_stddev"] >= 3:
+            return pic, last, attempt
+        print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
+              f"metrics={last}", flush=True)
+        # Persistent renderer errors are not compositor settling problems.
+        log = adb("logcat", "-d", "-s", "VEILFORGE_PROBE:I", "*:S", timeout=15)
+        if any(marker in log for marker in ("GL_ERROR", "LOAD_FAIL", "ASSET_NOT_FOUND")):
+            raise RuntimeError("Android GL renderer failed while awaiting screenshot: "
+                               + log[-1800:])
+        if attempt < attempts:
+            time.sleep(interval)
+    raise RuntimeError(f"Blank/near-empty emulator frame after {attempts} "
+                       f"real screenshot attempts: {last}")
+
+
 def change_fraction(a,b):
     from PIL import ImageChops
     a=a.resize((240,135));b=b.resize((240,135))
@@ -102,14 +131,12 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                 "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
             log=wait_frame(asset,yaw,pitch)
             dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
-            pic=screenshot(dest)
-            result=metrics(pic)
+            pic,result,attempts=capture_visible_frame(dest)
             result.update({"index":index,"yaw":yaw,"pitch":pitch,
+                            "capture_attempts":attempts,
                             "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
                             "image":str(dest.relative_to(output))})
             shots.append(pic);measurements.append(result)
-            if result["foreground_fraction"]<.0015 or result["channel_stddev"]<3:
-                raise RuntimeError(f"Blank/near-empty emulator frame for {asset}: {result}")
         changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
         del shots
         if max(changes)<.0006:
