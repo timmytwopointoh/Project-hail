@@ -33,7 +33,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
-    private Mesh studioHuman,studioHumanLite,studioHandSculpt,studioHumanPose;
+    private Mesh studioHuman,studioHumanLite,studioHandSculpt;
+    private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
     private Mesh playerPremiumSword;
@@ -366,14 +367,14 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         ArtKit.Model poseSource=HumanAnatomy.buildM24Candidate(true);
         HumanSkeleton poseRig=HumanSkeleton.bind(poseSource);
         M24BodyRetarget.alignBindJoints(poseRig);
-        float[] testAngles=new float[HumanSkeleton.JOINTS];
-        testAngles[5]=-.18f;testAngles[6]=.26f;testAngles[7]=-.10f;
-        testAngles[8]=.18f;testAngles[9]=-.26f;testAngles[10]=.10f;
-        testAngles[11]=.04f;testAngles[12]=-.20f;
-        testAngles[13]=-.04f;testAngles[14]=.20f;
-        studioHumanPose=new Mesh(poseRig.pose(testAngles));
+        studioHumanPoseFrames=new Mesh[M24AnimationLab.FRAMES];
+        for(int i=0;i<M24AnimationLab.FRAMES;i++){
+            studioHumanPoseFrames[i]=new Mesh(
+                M24AnimationLab.frame(poseSource,poseRig,i).vertices);
+        }
         Log.i("VEILBOUND_STUDIO","M24_POSE_PREVIEW_READY triangles="+
-              (studioHumanPose.count/3));
+              (studioHumanPoseFrames[0].count/3)+
+              " animated_frames="+studioHumanPoseFrames.length);
         studioHandSculpt=new Mesh(HumanHandSculpt.buildStandalone(false).vertices);
         Log.i("VEILBOUND_STUDIO","M23_HAND_ASSET_ATTACHED triangles="+studioHandSculpt.count/3);
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
@@ -515,7 +516,13 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 10:chosen=environmentRoots;break;
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
-            case 13:chosen=studioHumanPose;break;
+            case 13:
+                // Real vertex-animated testing-ground body, cached frames.
+                // Wire inspection freezes frame 0; no per-frame GPU rebuild.
+                chosen=studioHumanPoseFrames[m.material==4?0:
+                    (int)((System.nanoTime()/140000000L)%
+                        studioHumanPoseFrames.length)];
+                break;
             default:chosen=studioImported!=null?studioImported:studioWarden;
         }
         Matrix.setIdentityM(model,0);
