@@ -59,6 +59,9 @@ public final class HumanHandSculptTest {
         // Export the ACTUAL modeled triangle stream then reimport through
         // the same OBJ loader invoked from the Android file chooser.
         ArtKit.Model imported=ObjMeshLoader.load(new StringReader(obj(lite)));
+        ArtKit.Model standalone=HumanHandSculpt.buildStandalone(true);
+        check(standalone.triangleCount>lite.triangleCount,
+              "Standalone hand asset must include sculpted palms");
         check(imported.triangleCount==lite.triangleCount,
               "Sculpted asset did not survive OBJ to Android mesh interchange");
         ArtKit.Model attached=HumanAnatomy.buildWithSculptedHands(true);
