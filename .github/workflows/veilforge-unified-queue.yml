@@ -1,0 +1,358 @@
+name: VEILFORGE - Unified 10-Slot Queue
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_budget:
+        description: 'Maximum simultaneous worker + emulator jobs in this queue'
+        required: true
+        type: choice
+        default: '10'
+        options: ['2', '4', '6', '8', '10']
+      emulator_limit:
+        description: 'Maximum Android VMs within the same ten-job budget'
+        required: true
+        type: choice
+        default: '4'
+        options: ['0', '1', '2', '3', '4']
+  push:
+    branches: ['feature/engine-queue-ten-20261016']
+    paths:
+      - '.github/workflows/veilforge-unified-queue.yml'
+      - 'veilforge/queue.py'
+      - 'veilforge/queue_backlog.json'
+      - 'veilforge/tests/test_unified_queue.py'
+
+permissions:
+  contents: read
+
+# Queue runs are isolated and do not overlap one another on this branch.
+# This does NOT override GitHub account-wide limits or constrain other workflows.
+concurrency:
+  group: veilforge-ten-slot-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  queue-plan:
+    name: Validate engine and allocate up to ten queue jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+      has_emulators: ${{ steps.plan.outputs.has_emulators }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test all existing VEILFORGE engine components and queue isolation
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
+      - id: plan
+        name: Plan exact pending work, no dummy worker instances
+        env:
+          JOB_BUDGET: ${{ inputs.job_budget || '10' }}
+          EMULATOR_LIMIT: ${{ inputs.emulator_limit || '4' }}
+        run: |
+          set -euo pipefail
+          python3 veilforge/queue.py plan \
+            --max-jobs "$JOB_BUDGET" --emulator-limit "$EMULATOR_LIMIT" \
+            --out inspection_output/unified-plan --github-output "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('inspection_output/unified-plan/queue_plan.json').read_text())
+          assert p['selected_count']<=10
+          assert p['emulator_count']<=4
+          assert p['selected_count']==p['emulator_count']+p['asset_worker_count']
+          print('VEILFORGE_TEN_SLOT_QUEUE',p['selected_count'],'emulators',p['emulator_count'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-unified-immutable-plan
+          path: inspection_output/unified-plan/
+          retention-days: 21
+          if-no-files-found: error
+
+  shared-apk:
+    name: Prepare one immutable Android asset-probe APK
+    needs: queue-plan
+    if: github.event_name == 'workflow_dispatch' && needs.queue-plan.outputs.has_emulators == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      sha256: ${{ steps.digest.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build all deterministic catalog assets from this exact source revision
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pillow==11.3.0
+          mkdir -p inspection_output/queue-baseline
+          for ID in $(python3 -c 'import json;print(" ".join(x["id"] for x in json.load(open("veilforge/catalog.json"))["assets"]))'); do
+            python3 veilforge/factory.py --catalog veilforge/catalog.json \
+              --id "$ID" --out "inspection_output/queue-baseline/$ID"
+          done
+          python3 veilforge/assembly.py --catalog veilforge/catalog.json \
+            --scenes veilforge/scenes.json --id ruin_courtyard_demo \
+            --assets-root inspection_output/queue-baseline \
+            --out veilforge/android-probe/app/src/main/assets/scene
+      - name: Include current VEILBOUND high-detail human and armor in Android probe
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/forge-java"
+          javac -d "$RUNNER_TEMP/forge-java" \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/{ArtKit,DetailArtKit,CinematicArtKit,ShapeEngine,BellwardenAnatomy,HumanAnatomy,HumanSkeleton,ContinuousHuman,MaterialMapping,HeroPose,CombatMotion,CharacterRig,WorldState,ModelStudio,EnvironmentKit,SurfaceAtlas,MaterialTextures,ObjMeshLoader,BootAssets}.java \
+            veilbound/tools/TeamEngineCLI.java veilforge/ForgeHumanCLI.java
+          mkdir -p inspection_output/queue-human inspection_output/queue-armor
+          java -Xmx1700m -Djava.awt.headless=true -cp "$RUNNER_TEMP/forge-java" \
+            game.ashenveil.veilbound.ForgeHumanCLI inspection_output/queue-human
+          java -Xmx1500m -Djava.awt.headless=true -cp "$RUNNER_TEMP/forge-java" \
+            game.ashenveil.veilbound.TeamEngineCLI models inspection_output/queue-armor
+          python3 veilforge/topology.py \
+            --obj inspection_output/queue-human/human_source.obj \
+            --out inspection_output/queue-human/human_repaired.obj --mode human
+          python3 veilforge/gltf_export.py \
+            --obj inspection_output/queue-human/human_repaired.obj \
+            --out inspection_output/queue-human/human_repaired.gltf --profile skin
+          python3 veilforge/topology.py \
+            --obj inspection_output/queue-armor/bellwarden_full_anatomy.obj \
+            --out inspection_output/queue-armor/bellwarden_full_anatomy_repaired.obj --mode assembly
+          python3 veilforge/gltf_export.py \
+            --obj inspection_output/queue-armor/bellwarden_full_anatomy_repaired.obj \
+            --out inspection_output/queue-armor/bellwarden_full_anatomy_repaired.gltf \
+            --profile steel --double-sided
+          python3 veilforge/probe_pack.py \
+            --scene veilforge/android-probe/app/src/main/assets/scene \
+            --human inspection_output/queue-human/human_repaired.gltf \
+            --armor inspection_output/queue-armor/bellwarden_full_anatomy_repaired.gltf
+      - name: Confirm the APK includes actual asset and PBR texture files
+        run: |
+          set -euo pipefail
+          test -s veilforge/android-probe/app/src/main/assets/scene/ruin_courtyard_demo.gltf
+          test -s veilforge/android-probe/app/src/main/assets/scene/buffers/ancient_tree.bin
+          test -s veilforge/android-probe/app/src/main/assets/scene/textures/ancient_tree/leaf/albedo.png
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('veilforge/android-probe/app/src/main/assets/scene')
+          g=json.loads((root/'ruin_courtyard_demo.gltf').read_text())
+          assert len(g.get('meshes',[]))==10
+          assert g['extras']['production_approved'] is False
+          assert all((root/b['uri']).stat().st_size==b['byteLength'] for b in g['buffers'])
+          assert all((root/i['uri']).is_file() for i in g['images'])
+          print('VEILFORGE_SHARED_TEST_APK_ASSETS_VERIFIED')
+          PY
+      - name: Build the shared, isolated Android GLES test app
+        run: gradle -p veilforge/android-probe :app:assembleDebug --no-daemon
+      - id: digest
+        name: Record immutable shared APK SHA256
+        run: |
+          set -euo pipefail
+          APK=veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'classes[.]dex'
+          echo "sha256=$(sha256sum "$APK" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-unified-shared-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve the exact source mesh fingerprints packaged in the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-unified-scene-proof
+          path: veilforge/android-probe/app/src/main/assets/scene/scene_manifest.json
+          if-no-files-found: error
+          retention-days: 21
+
+  unified-execution:
+    name: Queue / ${{ matrix.id }}
+    needs: [queue-plan, shared-apk]
+    if: >-
+      ${{ always() && github.event_name == 'workflow_dispatch' &&
+          needs.queue-plan.result == 'success' &&
+          needs.queue-plan.outputs.count != '0' &&
+          (needs.shared-apk.result == 'success' || needs.shared-apk.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.queue-plan.outputs.matrix) }}
+    env:
+      TASK_ID: ${{ matrix.id }}
+      SOURCE_SHA: ${{ github.sha }}
+      APK_SHA: ${{ needs.shared-apk.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install portable preview/screenshot library
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Independent bounded geometry and material production worker
+        if: matrix.kind == 'asset'
+        env:
+          ASSET_ID: ${{ matrix.asset }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/queue/$TASK_ID"
+          python3 veilforge/factory.py --catalog veilforge/catalog.json \
+            --id "$ASSET_ID" --out "$OUT"
+          python3 veilforge/preview.py --catalog veilforge/catalog.json \
+            --id "$ASSET_ID" --out "$OUT/previews"
+          python3 veilforge/engine.py inspect \
+            --obj "$OUT/$ASSET_ID.obj" --out "$OUT/mesh_quality.json"
+          test -s "$OUT/asset_manifest.json"
+          test -s "$OUT/previews/contact_sheet.png"
+          echo "VEILFORGE_ASSET_WORKER_PRODUCED $ASSET_ID"
+      - name: Load byte-identical APK for dedicated emulator worker
+        if: matrix.kind == 'emulator'
+        uses: actions/download-artifact@v4
+        with:
+          name: veilforge-unified-shared-apk
+          path: veilforge/android-probe/app/build/outputs/apk/debug/
+      - name: Enforce one immutable APK on all selected emulators
+        if: matrix.kind == 'emulator'
+        run: |
+          set -euo pipefail
+          echo "$APK_SHA  veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk" | sha256sum -c -
+      - name: Enable isolated KVM on emulator's own GitHub runner
+        if: matrix.kind == 'emulator'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Run real Android 15 renderer and screenshot capture
+        if: matrix.kind == 'emulator'
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ASSET_ROLE: ${{ matrix.role }}
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 4096M
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 veilforge/android_visual_qa.py --role "$ASSET_ROLE" --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --output "inspection_output/queue/$TASK_ID/$ASSET_ROLE" --apk-sha "$APK_SHA" --source-sha "$SOURCE_SHA"
+      - name: Preserve isolated immutable worker output for manager review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-queue-${{ matrix.id }}
+          path: inspection_output/queue/${{ matrix.id }}/
+          if-no-files-found: warn
+          retention-days: 21
+
+  queue-review:
+    name: Inspect all queue evidence and retain next repair batch
+    needs: [queue-plan, shared-apk, unified-execution]
+    if: always() && github.event_name == 'workflow_dispatch' && needs.queue-plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: veilforge-unified-immutable-plan
+          path: inspection_output/queue-plan/
+      - name: Retrieve independently hashed baseline scene source provenance
+        if: needs.shared-apk.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: veilforge-unified-scene-proof
+          path: inspection_output/queue-baseline-proof/
+      - name: Collect available per-task evidence; missing artifacts remain failures
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: veilforge-queue-*
+          path: inspection_output/queue-collected/
+      - name: Independently audit each planned worker and Android device
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          APK_SHA: ${{ needs.shared-apk.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          EXTRA=()
+          if [ -n "$APK_SHA" ]; then
+            EXTRA=(--baseline-scene inspection_output/queue-baseline-proof/scene_manifest.json)
+          fi
+          python3 veilforge/queue.py review \
+            --plan inspection_output/queue-plan/queue_plan.json \
+            --root inspection_output/queue-collected \
+            --out inspection_output/queue-review \
+            --source-sha "$SOURCE_SHA" --apk-sha "$APK_SHA" "${EXTRA[@]}"
+          cat inspection_output/queue-review/queue_review.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply the stricter existing multi-emulator gate when all four roles ran
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          APK_SHA: ${{ needs.shared-apk.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,sys
+          from pathlib import Path
+          sys.path.insert(0,'veilforge')
+          from android_review import review
+          from android_visual_qa import ROLES
+          plan=json.loads(Path('inspection_output/queue-plan/queue_plan.json').read_text())
+          roles={j['role'] for j in plan['matrix']['include'] if j['kind']=='emulator'}
+          if roles==set(ROLES):
+              r=review(Path('inspection_output/queue-collected'),
+                       Path('inspection_output/queue-review/android-full-gate'),
+                       os.environ['SOURCE_SHA'],os.environ['APK_SHA'])
+              if not r['all_emulator_gates_passed']:
+                  raise SystemExit('Strict independent 4-role Android review failed')
+              print('VEILFORGE_STRICT_ANDROID_REVIEW_PASS',len(roles))
+          else:
+              print('Partial Android role batch:',len(roles),'of',len(ROLES))
+          PY
+      - name: Require all GitHub runner tasks to have succeeded
+        env:
+          TASK_RESULT: ${{ needs.unified-execution.result }}
+          APK_RESULT: ${{ needs.shared-apk.result }}
+        run: |
+          test "$TASK_RESULT" = success
+          test "$APK_RESULT" = success -o "$APK_RESULT" = skipped
+      - name: Preserve queue results and reviewer-controlled repair backlog
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-unified-queue-review
+          path: inspection_output/queue-review/
+          retention-days: 21
+          if-no-files-found: warn
