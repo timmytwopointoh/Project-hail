@@ -1,7 +1,7 @@
 """Verify real glTF skinning and measurable animation deformation of Kaiyu M1."""
 import json, numpy as np, math, struct, os
 from pathlib import Path
-from kaiyu_skin_m1 import unpack,data,rest_matrices,local
+from skin_kaiyu import unpack,data,rest_matrices,local
 p=Path(os.environ.get('KAIYU_OUT','/mnt/data'))/'kaiyu_skinned_m2.glb';j,b=unpack(p)
 assert j['asset']['version']=='2.0'
 assert len(j['skins'])==7
