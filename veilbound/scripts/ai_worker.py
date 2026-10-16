@@ -24,7 +24,7 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 ROLES = {
     "combat": ["WorldState.java"],
     "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
-    "models": ["ShapeEngine.java", "HumanAnatomy.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "models": ["HumanAnatomy.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "MaterialTextures.java", "SurfaceAtlas.java", "MaterialMapping.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
@@ -82,7 +82,7 @@ def run_java_checks(replacement):
         suites = ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay",
                   "EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
                   "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader",
-                  "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "MaterialMapping", "BootAssets"]
+                  "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "MaterialMapping", "BootAssets"]
         cmd = ["javac", "-d", str(classes)]
         cmd += [str(staging / (cls + ".java")) for cls in pure]
         cmd += [str(ROOT / TESTS / (suite + "Test.java")) for suite in suites]
