@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "center": [
+    0,
+    0,
+    0
+  ],
+  "radius": 5.2,
+  "target_edge_length": 0.24,
+  "max_edges": 450,
+  "triangle_budget": 6800,
+  "materials": [
+    "grass",
+    "earth"
+  ],
+  "crease_angle_deg": 56
+}

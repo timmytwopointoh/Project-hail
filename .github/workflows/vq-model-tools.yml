@@ -6,6 +6,14 @@ on:
     paths:
       - 'veilforge/vq_model_tools.py'
       - 'veilforge/vq_brushes.py'
+      - 'veilforge/vq_adaptive_remesh.py'
+      - 'veilforge/vq_adaptive_remesh_demo.json'
+      - 'veilforge/vq_refinement_pipeline.py'
+      - 'veilforge/vq_quality_plan.py'
+      - 'veilforge/VQ_ENGINE_QUALITY_PLAN.json'
+      - 'veilforge/VQ_M29_ENGINE_BLUEPRINT.md'
+      - 'veilforge/tests/test_vq_adaptive_remesh.py'
+      - 'veilforge/tests/test_vq_quality_plan.py'
       - 'veilforge/vq_brush_demo.json'
       - 'veilforge/tests/test_vq_brushes.py'
       - 'veilforge/VQ_BRUSH_TOOLS.md'
@@ -137,6 +145,48 @@ jobs:
                 "strokes",len(r["strokes"]),
                 "orbit_views",len(v["visual"]["views"]))
           PY
+      - name: Validate all VQ quality milestones without false completion claims
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_quality_plan.py \
+            --out inspection_output/vq-smoke/quality-plan/roadmap_report.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("inspection_output/vq-smoke/quality-plan/roadmap_report.json").read_text())
+          assert r["milestones"]>=30 and not r["all_milestones_verified"]
+          assert r["game_auto_promotion_allowed"] is False
+          print("VQ_MASTER_ROADMAP_VALIDATED",r["milestones"],"milestones")
+          PY
+      - name: Run non-destructive sculpt and conforming adaptive refinement on real terrain
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_refinement_pipeline.py \
+            --obj inspection_output/vq-smoke/brush-source/rolling_terrain.obj \
+            --brush veilforge/vq_brush_demo.json \
+            --refine veilforge/vq_adaptive_remesh_demo.json \
+            --out inspection_output/vq-smoke/adaptive
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-smoke/adaptive")
+          result=json.loads((root/"refinement_evidence.json").read_text())
+          remesh=json.loads((root/"stage2_refined_remesh_report.json").read_text())
+          inspected=json.loads((root/"inspector/vq_model_report.json").read_text())
+          assert result["source_triangles"]==result["brushed_triangles"]
+          assert result["remeshed_triangles"]>result["source_triangles"]
+          assert result["adaptive_interior_edges"]>100
+          assert remesh["topology_before"]==remesh["topology_after"]
+          assert result["checked_angles"]==14
+          assert inspected["uv"]["collapsed_uv_faces"]==0
+          assert inspected["technical_geometry_smoke_passed"] is True
+          assert result["multi_material_finished_gltf"] is False
+          assert not result["artist_approval"] and not result["game_ready"]
+          print("VQ_M29_ENGINE_GATE_PASS",
+                result["source_triangles"],"->",result["remeshed_triangles"],
+                "interior_edges",result["adaptive_interior_edges"],"views",result["checked_angles"])
+          PY
+          cat inspection_output/vq-smoke/adaptive/refinement_evidence.md >> "$GITHUB_STEP_SUMMARY"
       - name: Sign immutable VQ model inspection report under GitHub OIDC
         uses: actions/attest@v4
         with:
