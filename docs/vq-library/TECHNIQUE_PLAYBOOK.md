@@ -116,3 +116,39 @@ When new lessons are learned:
 general projection-cage baking, production tangent conventions, convincing
 anatomy, deforming facial rigs, hair/cloth physics, calibrated PBR and real
 target-phone frame-time measurements. Those remain roadmap goals.
+
+## M34-09 — Observed factory CI and real APK/capture bytes (2026-10-16)
+
+The source-only `vq_ci_benchmarks.py` checks the *actual* GitHub Actions
+job timestamps, source SHAs, eight asset producers, four Android 15 roles,
+single APK builder, both independent reviewers and required artifacts.
+Adversarial tests fail closed on missing roles, incomplete pagination, bad
+timestamps, unsuccessful jobs or absent screenshot evidence. The separate
+`vq_ci_artifact_probe.py` checks downloaded artifact ZIPs, computes the
+real uncompressed APK SHA256/byte length, distinguishes accepted 14-view
+PNG captures from blocked-modal retries, and verifies every asset's fourteen
+unique camera indices. It never labels blocked frames as accepted views.
+
+Two verified full-factory runs are currently available:
+- [38916145322](https://github.com/timmytwopointoh/Project-hail/actions/runs/38916145322):
+  job-span **319 s**, APK payload **2,304,080 bytes**, **154 accepted** PNGs
+  (**25,380,977 bytes**) and **7 blocked** modal retries.
+- [38918040166](https://github.com/timmytwopointoh/Project-hail/actions/runs/38918040166):
+  job-span **340 s**, APK payload **2,304,080 bytes**, **154 accepted** PNGs
+  (**25,528,319 bytes**) and **9 blocked** modal retries.
+
+The APKs are not byte-identical across these *different source commits*:
+their SHA256 digests are pinned in
+`veilforge/evidence/m34-09-artifact-payloads.json`. Each of the four
+role archives has a pinned ZIP SHA256 for independent reproduction. Source
+GitHub API job/artifact metadata is pinned in
+`veilforge/evidence/m34-09-observed-runs.json`. The measured job span is
+not billed compute time. **These two runs are not enough for a speedup
+claim**; M34-09 stays partial pending at least three comparable clean runs
+and controlled before/after methodology. Neither run demonstrates physical
+Moto G hardware performance or artistic/photoreal reference signoff.
+
+Source-only CI:
+[38940863117](https://github.com/timmytwopointoh/Project-hail/actions/runs/38940863117)
+passed on commit `eb33b174539f6290ee9b6eeb4b5f9052da2180b4`.
+It did not launch new emulators or alter any playable game.

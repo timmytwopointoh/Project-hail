@@ -2,9 +2,14 @@ name: VQ Library - Durable Source Snapshot
 
 on:
   push:
-    branches: ['feature/vq-library-snapshot-*']
+    branches: ['feature/vq-library-snapshot-*', 'feature/vq-m34-runtime-benchmarks-*']
     paths:
       - 'veilforge/library_archive.py'
+      - 'veilforge/vq_ci_benchmarks.py'
+      - 'veilforge/vq_ci_artifact_probe.py'
+      - 'veilforge/evidence/m34-09-*.json'
+      - 'veilforge/VQ_M34_EFFICIENCY_MAP.json'
+      - '.github/workflows/vq-m34-benchmark-evidence.yml'
       - 'veilforge/tests/test_library_archive.py'
       - 'docs/vq-library/**'
       - '.github/workflows/vq-library-archive.yml'

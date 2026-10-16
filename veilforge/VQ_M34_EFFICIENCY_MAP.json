@@ -87,8 +87,9 @@
       "id": "M34-09",
       "priority": "P1",
       "name": "Measure real CI runtime and artifact size",
-      "status": "planned",
-      "acceptance": "Collect before/after job times, APK size and capture bytes over >=3 comparable clean runs, no invented speed percentages."
+      "status": "partial",
+      "acceptance": "Collect before/after job times, APK size and capture bytes over >=3 comparable clean runs, no invented speed percentages.",
+      "implementation_note": "2026-10-16: Source-only CI 38940863117 verified fail-closed job/artifact timing audit plus downloaded ZIP payload inspector. Two successful factory runs 38916145322/38918040166 measured 319s/340s observed job spans, 2,304,080-byte APK payloads, 154 accepted PNG views each and 7/9 rejected modal retries. Not yet >=3 comparable clean runs; no controlled speedup, real-device GPU or aesthetic claim."
     },
     {
       "id": "M34-10",
