@@ -24,6 +24,8 @@ public final class MainActivity extends Activity {
   private volatile boolean active=false,autoLoad=true;
   private volatile String loadedSnapshotKey="";
   private volatile long lastAnonymousPollMs=0;
+  private final java.util.concurrent.atomic.AtomicBoolean refreshBusy=
+      new java.util.concurrent.atomic.AtomicBoolean(false);
   private TextView status,history,meshLabel,small;
   private ModelViewport viewport;
   private volatile String requestId="",runId="";
@@ -229,7 +231,7 @@ public final class MainActivity extends Activity {
     }
   }
   private void refresh(){
-    if(!active)return;
+    if(!active||!refreshBusy.compareAndSet(false,true))return;
     io.execute(()->{
       try{
         if(authenticatedStatus())return;
@@ -298,6 +300,8 @@ public final class MainActivity extends Activity {
         runOnUiThread(()->{if(!active)return;status.setText("NETWORK UNAVAILABLE • local 3D viewer still works");
           history.setText("Worker status could not be refreshed: "+e.getMessage()+
              "\nNo evidence of a new model update. Use Trion to inspect authenticated jobs.");});
+      }finally{
+        refreshBusy.set(false);
       }
     });
   }
