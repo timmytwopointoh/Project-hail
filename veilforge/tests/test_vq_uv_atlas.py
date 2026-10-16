@@ -9,8 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from engine import inspect_obj,read_obj
 from vq_uv_atlas import unwrap,plan
 from vq_mesh_baker import uv_rows,raster,bake
-from vq_adaptive_remesh import refine
-from vq_brushes import apply_brushes
+from vq_uv_transfer import transfer
 from vq_sculpt_detail_patch import build
 from factory import build_asset
 
@@ -67,27 +66,14 @@ class UVAtlasTests(unittest.TestCase):
             low=root/"meshes"/"source_low.obj"
             atlas=root/"atlas.obj"
             atlas_report=unwrap(low,atlas,texture_size=256,padding=2)
-            recipe={"schema_version":1,"center":[1,0,1],"radius":3,
-                    "target_edge_length":.25,"max_edges":36,
-                    "triangle_budget":150,"materials":["stone"],
-                    "crease_angle_deg":45}
-            selected=refine(atlas,recipe,root/"high_subdiv.obj")
-            self.assertGreater(selected["candidate_triangles"],
-                               selected["source_triangles"])
-            strokes={"schema_version":1,"strokes":[
-                {"id":"detail-left","op":"sculpt","center":[.65,0,.65],
-                 "radius":.9,"strength":.04,"materials":["stone"],
-                 "kind":"raise","seed":18},
-                {"id":"detail-right","op":"sculpt","center":[1.35,0,1.35],
-                 "radius":.9,"strength":.04,"materials":["stone"],
-                 "kind":"roughen","seed":29},
-                {"id":"detail-middle","op":"sculpt","center":[1,0,1],
-                 "radius":.65,"strength":.04,"materials":["stone"],
-                 "kind":"carve","seed":43}
-            ]}
-            brush=apply_brushes(root/"high_subdiv.obj",strokes,root/"sculpted.obj")
-            self.assertGreater(brush["strokes"][0]["groups_moved"],0)
-            baked=bake(atlas,root/"sculpted.obj",root/"baked",size=256)
+            high=root/"meshes"/"source_high.obj"
+            # A real 3200-face sculpt wave is mapped to low parent UV charts;
+            # no fabricated surface curvature or lowered bake thresholds.
+            correspondence=transfer(atlas,high,root/"projected_high.obj",
+                                    cage_distance=.06)
+            self.assertEqual(correspondence["high_faces"],3200)
+            self.assertGreaterEqual(correspondence["parent_charts_used"],25)
+            baked=bake(atlas,root/"projected_high.obj",root/"baked",size=256)
             self.assertGreater(baked["meaningful_normal_variation_texels"],100)
             self.assertGreater(baked["textured_coverage_fraction"],.60)
             self.assertEqual(baked["low_source_sha256"],atlas_report["candidate_sha256"])
