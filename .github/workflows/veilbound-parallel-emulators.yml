@@ -1,0 +1,23 @@
+name: VEILBOUND - Parallel Android Emulator Farm
+on:
+  workflow_dispatch:
+    inputs:
+      emulator_instances:
+        description: 'Independent Android VMs (1, 2, 4 or 8)'
+        type: choice
+        required: true
+        default: '2'
+        options: ['1', '2', '4', '8']
+permissions:
+  contents: read
+# This registers the manual controls on GitHub's default branch. The
+# real tested matrix lives on the isolated emulator-reliability branch.
+# No untested game or CI changes are merged into main by this stub.
+jobs:
+  select-tested-emulator-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Choose the real farm workflow branch
+        run: |
+          echo "::error::Use the Run workflow branch selector to choose feature/veilbound-parallel-emulator-reliability, then choose 1, 2, 4 or 8 emulators."
+          exit 1
