@@ -35,6 +35,19 @@ public final class HumanAnatomy {
             M25FaceSculpt.build(lite));
         return M25SkinPolish.apply(M24BodyRetarget.transform(composite));
     }
+    /**
+     * M26 opt-in learning-sculpt candidate. Eight monotonic bounded dials
+     * operate on the unchanged M25 source, preserving legacy hero assets.
+     */
+    public static ArtKit.Model buildM26Candidate(boolean lite,float[] dials){
+        return buildM26Candidate(lite,ContinuousHuman.BASE,dials);
+    }
+    public static ArtKit.Model buildM26Candidate(boolean lite,float[] controls,
+                                                   float[] dials){
+        ContinuousHuman.validate(controls);
+        M26SculptDials.validate(dials);
+        return M26SculptDials.apply(buildM25Candidate(lite,controls),dials);
+    }
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
