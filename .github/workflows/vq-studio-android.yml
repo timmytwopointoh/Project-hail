@@ -1,7 +1,7 @@
 name: VQ Studio - Standalone Android APK
 on:
   push:
-    branches: ['app/vq-studio-companion-v1']
+    branches: ['app/vq-studio-efficient-bridge-v2']
     paths:
       - 'vq-studio/**'
       - '.github/workflows/vq-studio-android.yml'
