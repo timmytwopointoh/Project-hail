@@ -1,5 +1,8 @@
 name: Veilbound M23 bounded refinement preflight
 on:
+  push:
+    branches:
+      - feature/veilbound-m23-extreme-refinement
   workflow_dispatch:
     inputs:
       candidate_limit:
@@ -18,7 +21,7 @@ jobs:
       - name: Verify branch and candidate budget
         shell: bash
         env:
-          LIMIT: ${{ inputs.candidate_limit }}
+          LIMIT: ${{ inputs.candidate_limit || '50' }}
         run: |
           set -euo pipefail
           [[ "$LIMIT" =~ ^[0-9]+$ ]] && (( LIMIT >= 1 && LIMIT <= 50 ))
