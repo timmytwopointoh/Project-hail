@@ -8,6 +8,7 @@
 - Exports human geometry as OBJ with normals, UVs and source vertex colors, and renders **14 distinct 3D camera views** plus a contact sheet in an independent Java software diagnostic viewer.
 - Reuses the six original Project-hail production roles. The asset workflow exercises human, models, materials, animation, world and studio in separate GitHub Actions runners; combat is intentionally outside the asset pipeline.
 - Reuses existing hierarchical worker-manager logic to plan up to 12 bounded role-specific proposals in M1, with the existing independent 50-slot anatomy exploration preserved. Slots are tasks/candidates, **not 50 trained autonomous AI models**. All proposals remain review-only.
+- Exports indexed **glTF 2.0 + binary** meshes with normals, UVs, original vertex colors, and PBR material slots; human exports also carry embedded-relative procedural PBR texture references. No skin weights or LOD are claimed yet.
 - Audits exported OBJ for missing geometry, bounds, degenerate faces, duplicate faces, UV and normal counts, boundary/nonmanifold topology, and content SHA-256.
 - Bakes deterministic original tiled albedo (sRGB), normal, roughness, metallic, AO and height maps for skin/stone/steel/leather/cloth, 128–2048 px. These are **procedural placeholders for a future photoreal material pipeline**, not scans or finished skin shading.
 - Publishes isolated job artifacts and consolidates six specialist reports in a review-only manager. No game files modified, no automatic asset promotion.
@@ -26,7 +27,7 @@ M22 ContinuousHuman / ShapeEngine / TeamEngineCLI (read-only inputs)
               |
        reviewer-controlled approval
               |
- future: retopology -> UV baking -> skeletal skinning -> glTF / GLB
+ future: retopology -> production UV baking -> skeletal skinning -> GLB
          -> artist-quality render comparisons -> desktop cinematic tier
          -> validated mobile LOD + normal/AO baking -> Android QA
 \`\`\`
