@@ -18,6 +18,13 @@ public final class ModelStudioTest {
         ok(s.snapshot().material==0,"Materials must cycle all supported inspection modes");
         s.selectImported();
         ok(s.snapshot().item==ModelStudio.ITEMS.length-1,"File import must select last studio slot");
+        ok(s.snapshot().pose==0,"Newly imported Vesper resets to idle");
+        s.selectVesperPose(1);ok(s.snapshot().pose==1,"T-pose button selects T-pose");
+        s.selectVesperPose(2);ok(s.snapshot().pose==2,"Leg-up button selects leg-up");
+        s.selectVesperPose(3);ok(s.snapshot().pose==3,"Dance button selects dance");
+        s.selectVesperPose(99);ok(s.snapshot().pose==3,"Invalid pose index must not change pose");
+        s.selectVesperPose(0);ok(s.snapshot().pose==0,"Idle button restores idle");
+
         ok(s.snapshot().ultraMesh,"Ultra sculpt should be the default");
         s.toggleMeshDetail();
         ok(!s.snapshot().ultraMesh,"LOD comparison must switch off ultra mesh");
@@ -33,6 +40,9 @@ public final class ModelStudioTest {
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
         ok(s.snapshot().item==11,"Human studio selection");
+        s.selectVesperPose(2);
+        ok(s.snapshot().pose==0,"Non-Vesper assets cannot enter Vesper pose modes");
+
         s.focusDetail();
         ModelStudio.Snapshot hand=s.snapshot();
         ok(Math.abs(2.12f+hand.panY-(.82f+.73f))<.15f,
