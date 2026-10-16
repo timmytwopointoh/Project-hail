@@ -30,6 +30,8 @@ on:
       - '.github/workflows/veilbound-ai-workers.yml'
       - 'veilbound/scripts/worker_manager.py'
       - 'veilbound/scripts/ai_worker.py'
+      - 'veilbound/scripts/proposal_guard.py'
+      - 'veilbound/scripts/evidence_guard.py'
       - 'veilbound/scripts/local_ai.py'
       - 'veilbound/scripts/install_local_ai.sh'
       - 'veilbound/worker_backlog.json'
@@ -75,7 +77,12 @@ jobs:
           path: inspection_output/veilbound
           run-id: ${{ github.event.workflow_run.id || inputs.emulator_run_id }}
           github-token: ${{ github.token }}
-        continue-on-error: true
+      - name: Fail closed if selected emulator evidence is absent or malformed
+        if: github.event_name == 'workflow_dispatch' && inputs.emulator_run_id != ''
+        run: |
+          python3 veilbound/scripts/evidence_guard.py \
+            --input inspection_output/veilbound \
+            --run-id "${{ inputs.emulator_run_id }}"
       - name: Spawn worker assignments from measured QA and roadmap
         id: plan
         run: |
