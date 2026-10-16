@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "strokes": [
+    {
+      "id": "deltoid-left-crease",
+      "op": "smooth",
+      "center": [
+        -0.424,
+        1.93,
+        0.08
+      ],
+      "radius": 0.18,
+      "strength": 0.32,
+      "materials": [
+        "default"
+      ],
+      "iterations": 2
+    },
+    {
+      "id": "deltoid-right-crease",
+      "op": "smooth",
+      "center": [
+        0.424,
+        1.93,
+        0.08
+      ],
+      "radius": 0.18,
+      "strength": 0.32,
+      "materials": [
+        "default"
+      ],
+      "iterations": 2
+    },
+    {
+      "id": "left-armpit-contour",
+      "op": "sculpt",
+      "center": [
+        -0.398,
+        1.857,
+        0.052
+      ],
+      "radius": 0.14,
+      "strength": 0.003,
+      "materials": [
+        "default"
+      ],
+      "kind": "raise",
+      "seed": 13
+    },
+    {
+      "id": "right-armpit-contour",
+      "op": "sculpt",
+      "center": [
+        0.398,
+        1.857,
+        0.052
+      ],
+      "radius": 0.14,
+      "strength": 0.003,
+      "materials": [
+        "default"
+      ],
+      "kind": "raise",
+      "seed": 13
+    }
+  ]
+}
