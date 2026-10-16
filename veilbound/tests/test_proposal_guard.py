@@ -51,7 +51,7 @@ class ProposalGuardTests(unittest.TestCase):
              "replace": "class CharacterRigDetail"},
             {"path": PATH_OK, "find": "class CharacterRig",
              "replace": "class CharacterRigDetail"}])
-        with self.assertRaisesRegex(ValueError, "one exact"):
+        with self.assertRaisesRegex(ValueError, "repeated an exact match"):
             self.validate(obj)
 
     def test_dangerous_generated_java_is_rejected(self):
