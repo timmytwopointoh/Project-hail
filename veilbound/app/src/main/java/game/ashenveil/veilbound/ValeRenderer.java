@@ -33,6 +33,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh sculptedWorld,environmentFlagstone,environmentCenotaph,environmentReliquary,environmentRoots;
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
+    private Mesh studioHuman,studioHumanLite;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
     private Mesh playerPremiumSword;
@@ -344,6 +345,8 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         if(studioWarden!=null)return;
         long start=System.nanoTime();
         studioWarden=new Mesh((prepared==null?CinematicArtKit.bellwarden():prepared.hero).vertices);
+        studioHuman=new Mesh(HumanAnatomy.build(false).vertices);
+        studioHumanLite=new Mesh(HumanAnatomy.build(true).vertices);
         studioHushed=new Mesh(CinematicArtKit.hushed().vertices);
         studioBoss=new Mesh(CinematicArtKit.ashKnight().vertices);
         studioSword=new Mesh(CinematicArtKit.sword().vertices);
@@ -481,6 +484,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 8:chosen=environmentCenotaph;break;
             case 9:chosen=environmentReliquary;break;
             case 10:chosen=environmentRoots;break;
+            case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             default:chosen=studioImported!=null?studioImported:studioWarden;
         }
         Matrix.setIdentityM(model,0);
