@@ -43,7 +43,7 @@ public final class HumanVariantCLI {
     private static void obj(ArtKit.Model mesh,Path file) throws Exception{
         float[] v=mesh.vertices;
         try(BufferedWriter w=Files.newBufferedWriter(file,StandardCharsets.UTF_8)){
-            w.write("# VEILBOUND M24 whole-body candidate + hand sculpt, review pending\n");
+            w.write("# VEILBOUND M25 face/surface whole-body candidate, review pending\n");
             for(int i=0;i<v.length;i+=9)
                 w.write("v "+f(v[i])+" "+f(v[i+1])+" "+f(v[i+2])+" "+
                     f(v[i+6])+" "+f(v[i+7])+" "+f(v[i+8])+"\n");
@@ -105,7 +105,7 @@ public final class HumanVariantCLI {
         }
         g.setColor(new Color(45,50,55));
         g.drawString(VIEWS[view].toUpperCase(Locale.US)+"  |  ACTUAL 3D MESH",14,28);
-        g.drawString("M24 FULL BODY - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
+        g.drawString("M25 FACE + SKIN - OFFLINE PREVIEW, NOT ANDROID",14,height-21);
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
@@ -172,6 +172,62 @@ public final class HumanVariantCLI {
         ImageIO.write(image,"png",file.toFile());
     }
 
+    /** Review-only head close-up of the M25 actual triangle stream. */
+    private static void renderFace(ArtKit.Model mesh,int view,Path file)
+            throws Exception{
+        int width=640,height=720;
+        BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=image.createGraphics();
+        g.setColor(new Color(215,216,218));g.fillRect(0,0,width,height);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+        float[] direction=camera(view),v=mesh.vertices;
+        float cy=M24BodyRetarget.y(0f,2.435f);
+        float depthCenter=.015f;
+        float origin=-depthCenter*direction[0];
+        float zoom=1070f;
+        ArrayList<Face> faces=new ArrayList<>();
+        for(int i=0;i<v.length;i+=27){
+            boolean inFace=true;
+            for(int k=0;k<3;k++){
+                int j=i+k*9;
+                if(v[j+1]<2.30f||v[j+1]>2.81f||Math.abs(v[j])>.32f){
+                    inFace=false;break;
+                }
+            }
+            if(!inFace)continue;
+            float nx=(v[i+3]+v[i+12]+v[i+21])/3f;
+            float ny=(v[i+4]+v[i+13]+v[i+22])/3f;
+            float nz=(v[i+5]+v[i+14]+v[i+23])/3f;
+            float facing=nx*direction[0]+nz*direction[2];
+            if(facing<-.02f)continue;
+            int[] xx=new int[3],yy=new int[3];
+            double depth=0;float red=0,green=0,blue=0;
+            for(int k=0;k<3;k++){
+                int j=i+k*9;
+                float horizontal=v[j]*direction[2]-v[j+2]*direction[0];
+                xx[k]=Math.round(width*.5f+(horizontal-origin)*zoom);
+                yy[k]=Math.round(height*.53f-(v[j+1]-cy)*zoom);
+                depth+=v[j]*direction[0]+v[j+2]*direction[2];
+                red+=v[j+6];green+=v[j+7];blue+=v[j+8];
+            }
+            float light=Math.max(.48f,Math.min(1.13f,
+                        .79f+.20f*ny+.22f*facing));
+            faces.add(new Face(xx,yy,depth/3,new Color(
+                Math.max(0,Math.min(255,Math.round(red/3f*light*255))),
+                Math.max(0,Math.min(255,Math.round(green/3f*light*255))),
+                Math.max(0,Math.min(255,Math.round(blue/3f*light*255))))));
+        }
+        faces.sort(Comparator.comparingDouble(face->face.depth));
+        for(Face face:faces){g.setColor(face.color);
+                             g.fillPolygon(new Polygon(face.px,face.py,3));}
+        g.setColor(new Color(45,50,55));
+        g.drawString("M25 FACE "+VIEWS[view].toUpperCase(Locale.US)+
+                     " | REAL 3D MESH",14,28);
+        g.drawString("OFFLINE CAMERA PROJECTION; NOT AN ANDROID SCREENSHOT",
+                     14,height-21);
+        g.dispose();
+        ImageIO.write(image,"png",file.toFile());
+    }
     public static void main(String[] args) throws Exception{
         if(args.length!=2)throw new IllegalArgumentException("args: <12 comma-separated controls> <output-folder>");
         String[] values=args[0].split(",");
@@ -179,7 +235,7 @@ public final class HumanVariantCLI {
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model mesh=HumanAnatomy.buildM24Candidate(false,p);
+        ArtKit.Model mesh=HumanAnatomy.buildM25Candidate(false,p);
         obj(mesh,dir.resolve("human_candidate.obj"));
         obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
         for(int view=0;view<VIEWS.length;view++)
@@ -188,6 +244,8 @@ public final class HumanVariantCLI {
             for(int view:new int[]{0,1,3})
                 renderHand(mesh,view,side,dir.resolve(
                     (side<0?"left":"right")+"_hand_"+VIEWS[view]+".png"));
+        for(int view:new int[]{0,1,3})
+            renderFace(mesh,view,dir.resolve("face_"+VIEWS[view]+".png"));
         StringBuilder views=new StringBuilder();
         for(String view:VIEWS){
             if(views.length()>0)views.append(',');
