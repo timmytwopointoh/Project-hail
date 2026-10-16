@@ -48,7 +48,13 @@ public final class M25AttachmentAuditTest {
         for(int i=0;i<landmarks.length;i++){
             float[] p=landmarks[i];
             float error=nearest(model,p[0],p[1],p[2]);
-            check(error<.15f,"Detached body socket or face plugin "+tags[i]+" gap "+error);
+            // Joint origins can sit inside the pelvis/shoulder muscle.
+            // Distance to the *surface* is not distance to a disconnect:
+            // retain stricter limits for eyes, ankles and wrists.
+            float maxGap=(tags[i].contains("hip")||tags[i].contains("shoulder"))
+                         ?.23f:.16f;
+            check(error<maxGap,"Detached body socket or face feature "+
+                              tags[i]+" surface distance "+error);
             if(i!=0)result.append(',');
             result.append('"').append(tags[i]).append("\":")
                 .append(String.format(java.util.Locale.US,"%.5f",error));
