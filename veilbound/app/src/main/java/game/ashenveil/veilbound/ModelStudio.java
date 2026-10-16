@@ -55,9 +55,12 @@ public final class ModelStudio {
     public synchronized void focusDetail(){
         autoTurn=false;
         if(item==11){
-            // M21 human hand review: move the camera target down to fingertips,
-            // then zoom close enough to distinguish FOUR fingers and thumb.
-            yaw=.12f;pitch=-.06f;panX=.59f;panY=-1.38f;zoom=1.35f;
+            // World-space hand center is y~1.55: the skin mesh is placed
+            // on the studio plinth at +0.82 and its fingers/palm span
+            // local y~0.49..1.02. The camera's baseline target is 2.12.
+            // Previous -1.38 aimed at y=0.74 (feet!), hiding the fingers.
+            // Keep the right hand centered, with enough room for its thumb.
+            yaw=.12f;pitch=-.06f;panX=.56f;panY=-.57f;zoom=1.45f;
             return;
         }
         yaw=.18f;pitch=.08f;
