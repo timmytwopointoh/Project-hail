@@ -2,10 +2,10 @@
 """VQ M29 bounded multi-tool quality experiment on a real OBJ asset.
 
 Runs non-destructive sculpt/smooth/stamp -> conforming adaptive subdivision ->
-real glTF *single-material diagnostic preview* -> fourteen VQ OBJ inspection
-views. Produces independent hashes and a rejectable quality-evidence pack.
-This stage intentionally does not claim cinematic rendering, material baking,
-multi-material finished glTF or Android import completion.
+one glTF export (source-material preserving when available, otherwise a
+single-material diagnostic) -> fourteen real geometry inspection views.
+No duplicate diagnostic file is emitted when a richer export is supplied.
+Does not claim cinematic lighting, automatic normal baking or Android approval.
 """
 from __future__ import annotations
 import argparse
@@ -36,14 +36,16 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
     remesh_report=refine(
         brush_out,json.loads(Path(refine_recipe).read_text(encoding="utf-8")),
         refined)
-    preview_gltf=out/"stage2_single_material_diagnostic.gltf"
-    gltf=export(refined,preview_gltf,profile=profile)
-    material_gltf=None
+    if source_manifest is not None and source_gltf is None:
+        raise ValueError("A source manifest requires a source glTF")
     if source_gltf is not None:
-        material_gltf=out/"stage2_material_preserved.gltf"
-        material_preserving_export(refined,material_gltf,
+        export_file=out/"stage2_material_preserved.gltf"
+        material_preserving_export(refined,export_file,
             source_gltf=source_gltf,source_manifest=source_manifest)
-    vision=inspect(refined,out/"inspector",gltf=material_gltf or preview_gltf,
+    else:
+        export_file=out/"stage2_single_material_diagnostic.gltf"
+        export(refined,export_file,profile=profile)
+    vision=inspect(refined,out/"inspector",gltf=export_file,
                    render_faces=render_faces)
     start=inspect_obj(source)
     final=inspect_obj(refined)
@@ -55,7 +57,7 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
     report={
         "schema_version":1,"engine":"VEYLQUORIN","milestone":"M29",
         "workflow":["source","sculpt_smooth_stamp","conforming_adaptive_subdivision",
-                    "single_material_diagnostic_gltf","14_real_obj_view_diagnostics"],
+                    "material_preserving_or_diagnostic_gltf","14_real_obj_view_diagnostics"],
         "source_obj_sha256":sha256(source.read_bytes()).hexdigest(),
         "brushed_sha256":sculpt_report["candidate_sha256"],
         "remeshed_sha256":remesh_report["candidate_sha256"],
@@ -64,8 +66,8 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
         "remeshed_triangles":final["triangles"],
         "adaptive_interior_edges":remesh_report["edges_selected"],
         "material_source_ids":["original OBJ usemtl assignments preserved in OBJ"],
-        "multi_material_export_verified":material_gltf is not None,
-        "gltf_single_material_diagnostic_only":material_gltf is None,
+        "multi_material_export_verified":source_gltf is not None,
+        "gltf_single_material_diagnostic_only":source_gltf is None,
         "source_topology_metrics":{k:start[k] for k in keys},
         "refined_topology_metrics":{k:final[k] for k in keys},
         "checked_angles":len(vision["visual"]["views"]),
@@ -77,7 +79,7 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
         "rigged_animation_verified":False,
         "reference_likeness_verified":False,
         "artist_approval":False,"game_ready":False,
-        "next_review":"Evaluate actual before/after details in 14 angles, then build a true multi-material glTF candidate and test with the Android emulators."}
+        "next_review":"Compare high-to-low baked normal maps and verify their material import on Android emulators."}
     (out/"refinement_evidence.json").write_text(json.dumps(report,indent=2)+"\n")
     text=["# VQ multi-stage quality experiment","",
           "This is a real geometry editing/export/inspection trial, not game approval.","",
@@ -87,7 +89,7 @@ def workflow(source,brush_recipe,refine_recipe,out,*,profile="stone",render_face
           f"Conforming edges split: {report['adaptive_interior_edges']}",
           f"Real source diagnostic views: {report['checked_angles']}",
           f"Topology regressions: {len(unexpected)}",
-          f"Original material groups/PBR textures preserved in second glTF: {report['multi_material_export_verified']}",
+          f"Source material groups and PBR textures preserved: {report['multi_material_export_verified']}",
           "Even a verified multi-material glTF still requires Android imports, tangent mapping, reference visuals, and release review.",
           "Android validation and aesthetic approval remain open."]
     (out/"refinement_evidence.md").write_text("\n".join(text)+"\n")

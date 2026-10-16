@@ -11,6 +11,12 @@ on:
       - 'veilforge/tests/test_vq_multimaterial_export.py'
       - 'veilforge/vq_adaptive_remesh_demo.json'
       - 'veilforge/vq_refinement_pipeline.py'
+      - 'veilforge/vq_sculpt_detail_patch.py'
+      - 'veilforge/vq_mesh_baker.py'
+      - 'veilforge/vq_engine_health.py'
+      - 'veilforge/tests/test_vq_mesh_baker.py'
+      - 'veilforge/tests/test_vq_engine_health.py'
+      - 'veilforge/VQ_M30_BAKING_AND_CLEANUP.md'
       - 'veilforge/vq_quality_plan.py'
       - 'veilforge/VQ_ENGINE_QUALITY_PLAN.json'
       - 'veilforge/VQ_M29_ENGINE_BLUEPRINT.md'
@@ -197,6 +203,38 @@ jobs:
                 "interior_edges",result["adaptive_interior_edges"],"views",result["checked_angles"])
           PY
           cat inspection_output/vq-smoke/adaptive/refinement_evidence.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Produce genuine high-detail sculpt meshes and bake actual geometry into maps
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_sculpt_detail_patch.py --out inspection_output/vq-smoke/m30/geometry
+          python3 veilforge/vq_mesh_baker.py \
+            --low inspection_output/vq-smoke/m30/geometry/source_low.obj \
+            --high inspection_output/vq-smoke/m30/geometry/source_high.obj \
+            --out inspection_output/vq-smoke/m30/baked --size 128
+          python3 veilforge/vq_model_tools.py \
+            --obj inspection_output/vq-smoke/m30/geometry/source_high.obj \
+            --out inspection_output/vq-smoke/m30/high-detail-inspection \
+            --render-faces 4000
+          python3 veilforge/vq_engine_health.py --root . \
+            --out inspection_output/vq-smoke/m30/engine_health.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-smoke/m30")
+          bake=json.loads((root/"baked/bake_manifest.json").read_text())
+          inspection=json.loads((root/"high-detail-inspection/vq_model_report.json").read_text())
+          health=json.loads((root/"engine_health.json").read_text())["status"]
+          assert bake["texels_sampled"] > 10000
+          assert bake["meaningful_normal_variation_texels"] > 1200
+          assert bake["max_high_poly_normal_angle_deg"] > 3
+          assert inspection["technical_geometry_smoke_passed"] is True
+          assert len(inspection["visual"]["views"]) == 14
+          assert health["technical_cleanup_gate_passed"]
+          assert bake["artistic_signoff"] is False and bake["android_emulator_verified"] is False
+          print("VQ_M30_TRUE_HIGH_TO_LOW_BAKE_PASS",bake["texels_sampled"],
+                "texels",bake["meaningful_normal_variation_texels"],
+                "nonflat; health",health["modules_checked"])
+          PY
       - name: Sign immutable VQ model inspection report under GitHub OIDC
         uses: actions/attest@v4
         with:
