@@ -13,6 +13,9 @@ on:
       - 'veilforge/vq_refinement_pipeline.py'
       - 'veilforge/vq_sculpt_detail_patch.py'
       - 'veilforge/vq_mesh_baker.py'
+      - 'veilforge/vq_uv_atlas.py'
+      - 'veilforge/tests/test_vq_uv_atlas.py'
+      - 'veilforge/VQ_M31_UV_ATLAS.md'
       - 'veilforge/vq_engine_health.py'
       - 'veilforge/vq_m30_android_pack.py'
       - 'veilforge/vq_m30_android_qa.py'
@@ -238,6 +241,29 @@ jobs:
           print("VQ_M30_TRUE_HIGH_TO_LOW_BAKE_PASS",bake["texels_sampled"],
                 "texels",bake["meaningful_normal_variation_texels"],
                 "nonflat; health",health["modules_checked"])
+          PY
+      - name: Validate real asset UV chart packing and M31 bake compatibility
+        run: |
+          set -euo pipefail
+          python3 veilforge/factory.py \
+            --catalog veilforge/catalog.json --id treasure_chest \
+            --out inspection_output/vq-smoke/m31/chest-source
+          python3 veilforge/vq_uv_atlas.py \
+            --obj inspection_output/vq-smoke/m31/chest-source/treasure_chest.obj \
+            --out inspection_output/vq-smoke/m31/chest-unique.obj \
+            --size 512 --padding 2
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("inspection_output/vq-smoke/m31")
+          r=json.loads((root/"chest-unique_atlas_report.json").read_text())
+          assert r["source_triangles"]==372
+          assert r["texture_size"]==512
+          assert r["gutter_pixels"]==2
+          assert r["original_source_unmodified"] is True
+          assert r["geometry_invariants_preserved"] is True
+          assert r["manual_artistic_review_required"] is True
+          print("VQ_M31_UNIQUE_UV_ATLAS_GATE_PASS",r["charts"],"charts")
           PY
       - name: Sign immutable VQ model inspection report under GitHub OIDC
         uses: actions/attest@v4

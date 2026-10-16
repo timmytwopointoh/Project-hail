@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "engine": "VEYLQUORIN / VEILFORGE",
-  "version": "M29",
+  "version": "M31",
   "mission": "Universal reusable game asset creation, editing and verification; not an individual game.",
   "definition_of_done": "All applicable quality gates pass with reproducible source, target-game import, visual reference signoff, representative hardware and recorded provenance. Perfect aesthetics cannot be guaranteed or declared by automation.",
   "scope": {
@@ -157,8 +157,9 @@
       "name": "UV unwrap and atlas packing",
       "objective": "Generate efficient material islands, gutters and static/moving meshes UV sets.",
       "acceptance": "No UV overlaps where forbidden, padding >= specified mip-gutter, measured texel density.",
-      "status": "planned",
-      "automatic_game_approval": false
+      "status": "partial",
+      "automatic_game_approval": false,
+      "implementation_note": "Triangle-local deterministic non-overlap atlas with explicit pixels gutters and resolution guard now implemented; coherent chart unwrapping, distortion optimization and mips remain unverified."
     },
     {
       "id": "MAT-01",
@@ -392,19 +393,10 @@
     }
   ],
   "current_iteration": {
-    "milestone": "GEO-01",
-    "branch": "feature/vq-m29-adaptive-remesh-quality",
-    "build_on": "feature/vq-adaptive-sculpt-brushes",
-    "next_successors": [
-      "GEO-03",
-      "UV-01",
-      "MAT-02"
-    ],
-    "dependencies": [
-      "VQ existing brush tool",
-      "read-only OBJ inspector",
-      "real source 14-angle capture"
-    ],
-    "review_only": true
+    "milestone": "UV-02",
+    "branch": "feature/vq-m31-uv-atlas-bake",
+    "depends_on": "verified M30 source bake",
+    "technical_gate": "atlas geometry/UV invariants and high-to-low bake on an actual source-derived refinement",
+    "game_release_approved": false
   }
 }
