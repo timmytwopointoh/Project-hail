@@ -31,6 +31,7 @@ def review(root,out,source_sha,apk_sha):
                 r.get("apk_sha256")!=apk_sha or r.get("device_android_api")!=35 or
                 r.get("technical_visual_smoke_pass") is not True or
                 r.get("material_textures_uploaded") is not True or
+                r.get("screenshots_clear_of_modal_ui") is not True or
                 r.get("texture_counts",{}).get("basecolor",0)<8 or
                 r.get("texture_counts",{}).get("metallic_roughness",0)<8 or
                 r.get("artistic_quality_approved") is not False or
@@ -52,6 +53,8 @@ def review(root,out,source_sha,apk_sha):
                     if not img.is_file() or img.stat().st_size<1000 or (
                         hashlib.sha256(img.read_bytes()).hexdigest()!=v["sha256"]):
                         issues.append(f"{role}/{name}: screenshot missing/changed")
+                    if v.get("modal_overlay_fraction",1)>=.70:
+                        issues.append(f"{role}/{name}: system-UI dialog obscured actual 3D frame")
                     if (v.get("foreground_fraction",0)<.0015 or v.get("channel_stddev",0)<3):
                         issues.append(f"{role}/{name}: blank or near-empty actual render")
             if count!=len(VIEWS)*len(names) or r.get("screenshot_count")!=count:

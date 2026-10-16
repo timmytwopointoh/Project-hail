@@ -10,6 +10,8 @@ import argparse
 import json
 from pathlib import Path
 
+from android_visual_qa import dialog_overlay_fraction
+
 BACKGROUND=(17,21,29)
 PAIR=("ancient_gate_standard","ancient_gate_mobile")
 
@@ -50,6 +52,8 @@ def report(root,out):
         if first[1:]!=second[1:]:
             raise ValueError("LOD cameras must match exactly")
         with Image.open(first[0]) as a,Image.open(second[0]) as b:
+            if dialog_overlay_fraction(a)>=.70 or dialog_overlay_fraction(b)>=.70:
+                raise ValueError("Android system UI modal invalidates LOD comparison frames")
             u,v=foreground(a),foreground(b)
             similarity=iou(u,v)
             comparisons.append({"yaw":first[1],"pitch":first[2],

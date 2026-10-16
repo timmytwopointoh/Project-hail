@@ -43,6 +43,16 @@ def screenshot(path):
         raise RuntimeError("Screenshot resolution was too small")
     return pic
 
+def dialog_overlay_fraction(image):
+    """Conservative Android system-dialog detector using UI rectangle pixels.
+
+    The characteristic large bright central modal is not 3-D geometry.
+    This intentionally fails closed if a genuine scene fills the area white.
+    """
+    frame=image.convert("RGB").resize((160,90))
+    values=[frame.getpixel((x,y)) for y in range(36,63) for x in range(32,128)]
+    return sum(min(rgb)>210 and max(rgb)-min(rgb)<35 for rgb in values)/len(values)
+
 def metrics(image):
     from PIL import ImageStat
     # Static GL background is uniform; require actual colored geometry,
@@ -55,6 +65,7 @@ def metrics(image):
     stat=ImageStat.Stat(small)
     contrast=max(stat.stddev)
     return {"foreground_fraction":round(frac,5),"channel_stddev":round(contrast,3),
+            "modal_overlay_fraction":round(dialog_overlay_fraction(image),5),
             "dimensions":list(image.size)}
 
 def capture_visible_frame(path, *, attempts=8, interval=.75):
@@ -71,6 +82,18 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
     for attempt in range(1, attempts + 1):
         pic = screenshot(path)
         last = metrics(pic)
+        if last["modal_overlay_fraction"] >= .70:
+            # Save visual proof of a false-positive foreground (e.g. Android
+            # Quickstep launcher ANR overlay), then tap its "Wait" row.
+            # Neither the overlay nor its pixels may count towards an approved
+            # Android screenshot, even if FRAME_OK appeared in logcat.
+            evidence=path.parent/(path.stem+f"_blocked_modal_{attempt}.png")
+            evidence.write_bytes(path.read_bytes())
+            print(f"VEILFORGE_SYSTEM_MODAL_BLOCKED attempt={attempt} fraction={last['modal_overlay_fraction']}",flush=True)
+            adb("shell","input","tap",str(round(pic.width*.31)),
+                str(round(pic.height*.66)),timeout=20)
+            if attempt<attempts:time.sleep(interval)
+            continue
         if last["foreground_fraction"] >= .0015 and last["channel_stddev"] >= 3:
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
@@ -82,7 +105,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75):
                                + log[-1800:])
         if attempt < attempts:
             time.sleep(interval)
-    raise RuntimeError(f"Blank/near-empty emulator frame after {attempts} "
+    raise RuntimeError(f"Blank, obscured by Android system UI, or near-empty frame after {attempts} "
                        f"real screenshot attempts: {last}")
 
 
@@ -158,6 +181,7 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
         "apk_sha256":real_sha,"device_android_api":observed_api,
         "source_gltf_imported":True,"real_gles2_draws":True,
         "material_textures_uploaded":True,
+        "screenshots_clear_of_modal_ui":True,
         "texture_counts":{"basecolor":max(int(a) for a,b,t in texture_markers),
                           "metallic_roughness":max(int(b) for a,b,t in texture_markers),
                           "unique_gpu_textures":max(int(t) for a,b,t in texture_markers)},

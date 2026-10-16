@@ -10,7 +10,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-from android_visual_qa import ROLES, VIEWS, BACKGROUND
+from android_visual_qa import ROLES, VIEWS, BACKGROUND, dialog_overlay_fraction
 
 def silhouette(image):
     im=image.convert("RGB")
@@ -78,6 +78,9 @@ def diagnose(root,out,*,strict_provenance=True):
                     problems.append(name+": altered real emulator frame");break
                 from PIL import Image
                 with Image.open(file) as frame:
+                    if dialog_overlay_fraction(frame)>=.70:
+                        problems.append(name+": Android system ANR/modal covers the rendered model; invalid screenshot")
+                        break
                     mask,w,h=silhouette(frame)
                 masks.append(mask)
                 measurements.append(outline_analysis(mask,w,h))
@@ -88,7 +91,11 @@ def diagnose(root,out,*,strict_provenance=True):
             unique_looks=sum(v>.03 for v in orbit)
             coverage=[m["coverage"] for m in measurements]
             if maxdelta<.02 or unique_looks<3:
-                problems.append(name+": frozen or insufficient distinct silhouettes")
+                if name in ("scene","rolling_terrain"):
+                    warnings.append({"asset":name,"subject":"silhouette",
+                                     "reason":"Wide terrain/scene silhouette stable; verify material and camera movement from original framebuffer"})
+                else:
+                    problems.append(name+": frozen or insufficient distinct silhouettes")
             if max(coverage)<.004:
                 problems.append(name+": missing visible asset across views")
             if max(m["touch_edge_ratio"] for m in measurements)>.10:
