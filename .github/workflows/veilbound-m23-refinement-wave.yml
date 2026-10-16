@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - feature/veilbound-m23-extreme-refinement
+      - feature/veilbound-m23b-visible-digit-gap
     paths:
       - .github/workflows/veilbound-m23-refinement-wave.yml
       - veilbound/scripts/human_mutation_worker.py
       - veilbound/scripts/human_wave_manager.py
+      - veilbound/scripts/m23_hand_silhouette_audit.py
       - veilbound/tools/HumanVariantCLI.java
       - veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java
       - veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java
@@ -73,6 +75,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install preview silhouette audit
+        run: python3 -m pip install --quiet Pillow
       - name: Compile full-resolution candidate mesh exporter
         run: |
           set -euo pipefail
@@ -122,6 +126,16 @@ jobs:
           print("M23_CANDIDATE_ARTIFACTS_PASS",os.environ["TEAM"],
                 "five_slots=5 orbit_views=14 hand_closeups=6 review_only=true")
           PY
+      - name: Reject finger fusion in actual left/right rendered hand silhouettes
+        env:
+          TEAM: ${{ matrix.team }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/m23-wave/${TEAM}"
+          python3 veilbound/scripts/m23_hand_silhouette_audit.py \
+            --selected "$OUT/selected" \
+            --out "$OUT/selected/visual_digit_gate.json" \
+            --fail-on-reject
       - name: Upload true candidate mesh, previews and worker journaling
         if: always()
         uses: actions/upload-artifact@v4
@@ -182,6 +196,11 @@ jobs:
           PY
           cat inspection_output/wave-ranking/manager_human_review.md >> "$GITHUB_STEP_SUMMARY"
           echo "M23 requires manual multi-angle review before any geometry is accepted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail closed if any visual candidate team was rejected
+        if: always()
+        run: |
+          test "${{ needs.anatomy-preflight.result }}" = "success"
+          test "${{ needs.geometry-managers.result }}" = "success"
       - name: Retain shortlist and learning journal, without game edits
         if: always()
         uses: actions/upload-artifact@v4
