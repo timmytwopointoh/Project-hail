@@ -62,6 +62,7 @@ class ProposalGuardTests(unittest.TestCase):
             "new java.net.Socket(\"host\", 4);",
             "Class.forName(\"java.lang.Runtime\");",
             "Files.write(output, bytes);",
+            "static { System.out.println(1); }",
         )
         for line in banned:
             with self.subTest(line=line):
