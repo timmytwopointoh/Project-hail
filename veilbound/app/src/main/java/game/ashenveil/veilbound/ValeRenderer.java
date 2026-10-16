@@ -867,7 +867,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             parts=p;torso=new Mesh(p.torso.vertices);
             leftArm=new Mesh(p.leftArm.vertices);rightArm=new Mesh(p.rightArm.vertices);
             leftLeg=new Mesh(p.leftLeg.vertices);rightLeg=new Mesh(p.rightLeg.vertices);
-            mantle=new Mesh(p.mantle.vertices);
+            mantle=new Mesh(p.mantle==null?new float[0]:p.mantle.vertices);
         }
     }
     private static final class Mesh {
