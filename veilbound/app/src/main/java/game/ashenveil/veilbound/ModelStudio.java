@@ -27,6 +27,10 @@ public final class ModelStudio {
     private float yaw=.50f,pitch=.12f,zoom=4.50f,panX=0,panY=0;
     private boolean autoTurn=false,ultraMesh=true;
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
+    /** Ignore malformed touch/clock values instead of poisoning camera state or jumping to bounds. */
+    private static float finiteDelta(float value){
+        return Float.isNaN(value)||Float.isInfinite(value)?0f:value;
+    }
     public synchronized Snapshot snapshot(){return new Snapshot(this);}
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
@@ -54,19 +58,22 @@ public final class ModelStudio {
         autoTurn=false;
     }
     public synchronized void orbit(float dx,float dy){
+        dx=finiteDelta(dx);dy=finiteDelta(dy);
         yaw+=clamp(dx,-1.4f,1.4f);
         pitch=clamp(pitch+dy,-1.15f,1.18f);
         while(yaw>6.283185f)yaw-=6.283185f;
         while(yaw<0)yaw+=6.283185f;
     }
     public synchronized void dolly(float amount){
+        amount=finiteDelta(amount);
         zoom=clamp(zoom* (float)Math.exp(clamp(amount,-1.15f,1.15f)),1.05f,24f);
     }
     public synchronized void pan(float horizontal,float vertical){
+        horizontal=finiteDelta(horizontal);vertical=finiteDelta(vertical);
         panX=clamp(panX+horizontal,-4.2f,4.2f);
         panY=clamp(panY+vertical,-3.2f,3.2f);
     }
     public synchronized void tick(float dt){
-        if(autoTurn)yaw=(yaw+dt*.29f)%6.283185f;
+        if(autoTurn)yaw=(yaw+finiteDelta(dt)*.29f)%6.283185f;
     }
 }
