@@ -11,6 +11,9 @@ import json
 import sys
 from pathlib import Path
 
+# Support direct script invocation AND importlib-based test loading.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ai_worker import JAVA, ROLES
 
 PASS = "proposed_change_passed_java_tests"
