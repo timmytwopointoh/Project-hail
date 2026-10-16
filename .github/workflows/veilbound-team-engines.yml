@@ -40,8 +40,10 @@ jobs:
           javac -d "${RUNNER_TEMP}/veilbound-engine" \
             veilbound/app/src/main/java/game/ashenveil/veilbound/{ArtKit,DetailArtKit,CinematicArtKit,ShapeEngine,BellwardenAnatomy,HeroPose,CombatMotion,CharacterRig,WorldState,ModelStudio,EnvironmentKit,SurfaceAtlas,MaterialTextures,ObjMeshLoader,BootAssets}.java \
             veilbound/tools/TeamEngineCLI.java \
-            veilbound/tests/game/ashenveil/veilbound/ShapeEngineTest.java
+            veilbound/tests/game/ashenveil/veilbound/ShapeEngineTest.java \
+            veilbound/tests/game/ashenveil/veilbound/BellwardenAnatomyTest.java
           java -cp "${RUNNER_TEMP}/veilbound-engine" game.ashenveil.veilbound.ShapeEngineTest
+          java -cp "${RUNNER_TEMP}/veilbound-engine" game.ashenveil.veilbound.BellwardenAnatomyTest
       - name: Execute isolated specialist engine
         env:
           TEAM: ${{ matrix.team }}
