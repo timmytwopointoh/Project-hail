@@ -216,7 +216,7 @@ public final class WardenHud extends View {
         text(c,"◀  BACK",35,47,17,GOLD,true,false);
         text(c,"THE MODEL ATELIER",500,39,28,PALE,true,true);
         text(c,ModelStudio.ITEMS[m.item],500,78,19,GOLD,true,true);
-        if(m.item==ModelStudio.ITEMS.length-1){
+        if(m.item==ModelStudio.ITEMS.length-1 && m.vesperAsset){
             text(c,"IMPORT GLB",125,158,13,GOLD,true,true);
             text(c,"IDLE",288,158,13,m.pose==0?PALE:GOLD,true,true);
             text(c,"T-POSE",430,158,13,m.pose==1?PALE:GOLD,true,true);
@@ -318,7 +318,7 @@ public final class WardenHud extends View {
                     Log.i("VEILBOUND_STATE","mode=title studio_exit_via_touch");
                     invalidate();return true;
                 }
-                if(y>120&&y<213 && lab.snapshot().item==ModelStudio.ITEMS.length-1){
+                if(y>120&&y<213 && lab.snapshot().item==ModelStudio.ITEMS.length-1 && lab.snapshot().vesperAsset){
                     if(x<205){if(importAction!=null)importAction.run();}
                     else if(x<355)lab.selectVesperPose(0);
                     else if(x<500)lab.selectVesperPose(1);
