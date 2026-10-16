@@ -130,10 +130,18 @@ def build(source,out,region):
     for index,f in enumerate(selected):
         cell=index//2
         row=cell//grid;col=cell%grid
+        # IMPORTANT: cells need both *border gutters* and a *diagonal
+        # gutter*. Two unrelated source faces may NOT share a UV diagonal:
+        # raster texel centers can land exactly on it, causing ambiguous
+        # overlaps in VQ's strict M30 baker. Here each triangle has a true
+        # positive-width island separation and still fills >60% of UV0.
+        margin=.025
         if index%2:
-            pattern=((1.,1.),(0.,1.),(1.,0.))
+            pattern=((1-margin,1-margin),(2*margin,1-margin),
+                     (1-margin,2*margin))
         else:
-            pattern=((0.,0.),(1.,0.),(0.,1.))
+            pattern=((margin,margin),(1-2*margin,margin),
+                     (margin,1-2*margin))
         for k,(vi,ni) in enumerate(f):
             p,rgb=verts[vi]
             group=key(p)
@@ -170,7 +178,7 @@ def build(source,out,region):
         "source_faces":len(faces),"selected_real_human_faces":count,
         "low_faces":count,"high_faces":count,
         "atlas_grid_cells":[grid,grid],
-        "atlas_method":"per-face two-triangles-per-cell diagnostic, not production seam-aware unwrapping",
+        "atlas_method":"per-face two-triangles-per-cell with diagonal and exterior texel-safe UV gutters; diagnostic only, not production seam-aware unwrapping",
         "actual_skin_geometry_was_displaced":True,
         "displaced_corners":touched,
         "max_microsculpt_world_units":round(max_disp,8),
