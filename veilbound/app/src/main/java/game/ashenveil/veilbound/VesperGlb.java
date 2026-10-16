@@ -24,10 +24,13 @@ public final class VesperGlb {
     private static final int MAX_JOINTS = 64;
     private static final int FRAMES = 8;
     public static final class Result {
-        public final ArtKit.Model[] idle, walk;
+        public final ArtKit.Model[] idle, walk, tPose, legUp, dance;
+        public final boolean extraPoses;
         public final int joints, triangles;
-        Result(ArtKit.Model[] i, ArtKit.Model[] w, int j, int t) {
-            idle=i;walk=w;joints=j;triangles=t;
+        Result(ArtKit.Model[] i, ArtKit.Model[] w, ArtKit.Model[] t,
+               ArtKit.Model[] l, ArtKit.Model[] d, boolean poses, int j, int triangles) {
+            idle=i;walk=w;tPose=t;legUp=l;dance=d;extraPoses=poses;
+            joints=j;this.triangles=triangles;
         }
     }
     private static final class Primitive {
@@ -276,11 +279,13 @@ public final class VesperGlb {
             }
             JSONArray anims=doc.getJSONArray("animations");
             if(anims.length()<1)throw new IOException("No character animations");
-            Clip idle=null,walk=null;
+            Clip idle=null,walk=null,tPose=null,legUp=null,dance=null;
             for(int i=0;i<anims.length();i++){
                 JSONObject a=anims.getJSONObject(i);
                 String name=a.optString("name","");
-                if(!name.equals("Idle_Bouncy_Ears") && !name.equals("Walk_Springy"))continue;
+                if(!name.equals("Idle_Bouncy_Ears") && !name.equals("Walk_Springy")
+                   && !name.equals("T_Pose_Review") && !name.equals("Cute_Leg_Up")
+                   && !name.equals("Cute_Dance_Shuffle"))continue;
                 Clip clip=new Clip();
                 JSONArray samplers=a.getJSONArray("samplers"),channels=a.getJSONArray("channels");
                 for(int j=0;j<channels.length();j++){
@@ -299,7 +304,11 @@ public final class VesperGlb {
                         throw new IOException("Invalid animation timeline");
                     clip.tracks.add(tr);
                 }
-                if(name.equals("Idle_Bouncy_Ears"))idle=clip;else walk=clip;
+                if(name.equals("Idle_Bouncy_Ears"))idle=clip;
+                else if(name.equals("Walk_Springy"))walk=clip;
+                else if(name.equals("T_Pose_Review"))tPose=clip;
+                else if(name.equals("Cute_Leg_Up"))legUp=clip;
+                else dance=clip;
             }
             if(idle==null || walk==null)throw new IOException("Vesper idle/walk clips missing");
             ArtKit.Model[] idleFrames=new ArtKit.Model[FRAMES],walkFrames=new ArtKit.Model[FRAMES];
@@ -308,7 +317,22 @@ public final class VesperGlb {
                 idleFrames[i]=pose(primitiveList,rest,rot,parent,jointNodes,inverse,idle,t,tris);
                 walkFrames[i]=pose(primitiveList,rest,rot,parent,jointNodes,inverse,walk,t,tris);
             }
-            return new Result(idleFrames,walkFrames,joints.length(),tris);
+            // Optional review poses remain separate from gameplay's proven idle/walk.
+            // Older 2-clip synthetic fixtures and V3 exports continue to import.
+            boolean hasPoses=tPose!=null && legUp!=null && dance!=null;
+            ArtKit.Model[] tFrames=new ArtKit.Model[1],legFrames=new ArtKit.Model[1],
+                           danceFrames=new ArtKit.Model[6];
+            tFrames[0]=pose(primitiveList,rest,rot,parent,jointNodes,inverse,
+                            tPose!=null?tPose:idle,0.5f,tris);
+            legFrames[0]=pose(primitiveList,rest,rot,parent,jointNodes,inverse,
+                              legUp!=null?legUp:idle,0.5f,tris);
+            for(int k=0;k<danceFrames.length;k++){
+                float t=dance!=null?k*(2f/danceFrames.length):k/(float)danceFrames.length;
+                danceFrames[k]=pose(primitiveList,rest,rot,parent,jointNodes,inverse,
+                                    dance!=null?dance:idle,t,tris);
+            }
+            return new Result(idleFrames,walkFrames,tFrames,legFrames,danceFrames,
+                              hasPoses,joints.length(),tris);
         }catch(JSONException error){
             throw new IOException("Malformed Vesper GLB JSON",error);
         }
