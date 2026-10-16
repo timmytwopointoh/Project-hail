@@ -1,4 +1,4 @@
-# Third-party component inventory (initial review; NOT clearance)
+# Third-party component inventory (initial review; NOT clearance)\n\nProject claimant: Timothy Harris (GitHub: timmytwopointoh).
 
 Project-hail includes original project-specific code and external tooling.
 A repository ownership claim does not include intellectual-property rights
