@@ -1,0 +1,36 @@
+# Lightweight default-branch registration for the VEILFORGE test queue.
+# The implementation and assets remain isolated on a reviewed feature branch.
+# GitHub requires a workflow file on the default branch to show Run workflow.
+# Choose feature/engine-queue-ten-20261016 in the Run workflow branch selector
+# to execute the actual resource-bounded worker/emulator queue.
+name: VEILFORGE - Unified 10-Slot Queue
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_budget:
+        description: 'Total independent queue jobs (select the feature branch)'
+        required: true
+        type: choice
+        default: '10'
+        options: ['2', '4', '6', '8', '10']
+      emulator_limit:
+        description: 'Android emulator workers (select the feature branch)'
+        required: true
+        type: choice
+        default: '4'
+        options: ['0', '1', '2', '3', '4']
+
+permissions:
+  contents: read
+
+jobs:
+  select-feature-branch:
+    name: Use the isolated VEILFORGE queue branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain where the reviewed queue implementation runs
+        run: |
+          echo '## VEILFORGE unified queue' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Select branch feature/engine-queue-ten-20261016 in Run workflow to execute the actual bounded queue.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The main branch contains only this safe registration stub; no game assets or engine sources are modified.' >> "$GITHUB_STEP_SUMMARY"
