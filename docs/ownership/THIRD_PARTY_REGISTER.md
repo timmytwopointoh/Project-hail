@@ -1,6 +1,6 @@
 # Third-party component inventory (initial review; NOT clearance)\n\nProject claimant: Timothy Harris (GitHub: timmytwopointoh).
 
-Project-hail includes original project-specific code and external tooling.
+VEYLQUORIN (VQ; formerly VEILFORGE) uses Project-hail's existing original project-specific code and external tooling.
 A repository ownership claim does not include intellectual-property rights
 in the external materials. Licenses and obligations MUST be checked before
 distribution, publication, commercial game shipment or licensing the engine.

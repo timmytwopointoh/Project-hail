@@ -1,0 +1,115 @@
+name: VQ - Universal 3D Model Tools
+
+on:
+  push:
+    branches: ['brand/veylquorin-20261016']
+    paths:
+      - 'veilforge/vq_model_tools.py'
+      - 'veilforge/tests/test_vq_model_tools.py'
+      - 'veilforge/queue.py'
+      - 'veilforge/provenance.py'
+      - 'veilforge/steward.py'
+      - '.github/workflows/veilforge-unified-queue.yml'
+      - 'veilforge/VQ_MODEL_TOOLS.md'
+      - '.github/workflows/vq-model-tools.yml'
+  workflow_dispatch:
+    inputs:
+      catalog_model:
+        description: 'One real asset to build and inspect (model chat can use CLI for any triangulated OBJ)'
+        required: true
+        type: choice
+        default: 'ancient_tree'
+        options:
+          - 'ancient_tree'
+          - 'ceremonial_sword'
+          - 'cargo_cart'
+          - 'treasure_chest'
+          - 'ancient_gate_standard'
+          - 'ancient_gate_mobile'
+          - 'forest_tree_mobile'
+          - 'rolling_terrain'
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: vq-universal-model-tools-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  model-technical-inspection:
+    name: VQ real OBJ / glTF / UV inspection and fourteen visual angles
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real source-mesh software preview renderer
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Exercise existing engine and new quality/inspection regression tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
+      - name: Freeze and fingerprint the claimed owner's exact GitHub source revision
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/vq-smoke/provenance
+          python3 veilforge/provenance.py snapshot --root . \
+            --out inspection_output/vq-smoke/provenance/source_manifest.json
+          python3 veilforge/provenance.py verify --root . \
+            --snapshot inspection_output/vq-smoke/provenance/source_manifest.json
+      - name: Produce an original source mesh with existing VEILFORGE compatibility engine
+        env:
+          VQ_CATALOG_MODEL: ${{ inputs.catalog_model || 'ancient_tree' }}
+        run: |
+          set -euo pipefail
+          mkdir -p inspection_output/vq-smoke/source
+          python3 veilforge/factory.py \
+            --catalog veilforge/catalog.json --id "$VQ_CATALOG_MODEL" \
+            --out inspection_output/vq-smoke/source
+          echo "MODEL_ID=$VQ_CATALOG_MODEL" >> "$GITHUB_ENV"
+      - name: Run VQ universal model-inspection tool on actual OBJ and glTF
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_model_tools.py \
+            --obj "inspection_output/vq-smoke/source/$MODEL_ID.obj" \
+            --gltf "inspection_output/vq-smoke/source/$MODEL_ID.gltf" \
+            --out inspection_output/vq-smoke/inspection
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-smoke/inspection")
+          r=json.loads((root/"vq_model_report.json").read_text())
+          assert r["engine"]=="VEYLQUORIN" and r["short_name"]=="VQ"
+          assert r["technical_geometry_smoke_passed"] is True
+          assert r["gltf"]["structural_smoke_passed"] is True
+          assert len(r["visual"]["views"])==14
+          assert r["production_approved"] is False
+          assert r["reference_likeness_verified"] is False
+          assert (root/"views/contact_sheet.png").stat().st_size>1000
+          print("VQ_MODEL_TECHNICAL_SMOKE_PASS",r["source_obj"],"angles",len(r["visual"]["views"]))
+          PY
+          cat inspection_output/vq-smoke/inspection/vq_model_report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign immutable VQ model inspection report under GitHub OIDC
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/vq-smoke/inspection/vq_model_report.json
+      - name: Sign source-provenance manifest for this exact model experiment
+        uses: actions/attest@v4
+        with:
+          subject-path: inspection_output/vq-smoke/provenance/source_manifest.json
+      - name: Archive source models, fourteen views, masks and all technical reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vq-3d-model-tools-results-${{ github.sha }}
+          path: inspection_output/vq-smoke/
+          if-no-files-found: warn
+          retention-days: 30

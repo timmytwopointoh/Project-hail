@@ -22,7 +22,8 @@
     "veilforge/UNIFIED_QUEUE.md",
     "docs/ownership/RIGHTS_AND_PROVENANCE.md",
     "docs/ownership/THIRD_PARTY_REGISTER.md",
-    "docs/ownership/BRAND_NAME_CLEARANCE.md"
+    "docs/ownership/BRAND_NAME_CLEARANCE.md",
+    "veilforge/BRANDING.md"
   ],
   "next_priority": "Establish signed source provenance and audit 10-slot worker+emulator queue before activating any expensive recurring inference",
   "handoff": {
@@ -33,10 +34,15 @@
       "No independent proof of copyright ownership or authorship",
       "No continuous background ChatGPT session",
       "Third-party model licenses are under review",
-      "VEILFORGE commercial brand name has not been trademark-cleared; similarly named web projects exist"
+      "VEYLQUORIN full name and VQ abbreviation are not trademark-cleared; VQ has existing third-party uses",
+      "Code/workflow identifiers remain VEILFORGE for backwards compatibility until audited migration"
     ],
     "last_verified_provenance_commit": "7b4ec7eb1f9889b3b9757c3aaa3c8c548e63040f",
     "last_verified_provenance_status": "signed_github_attestation_step_succeeded",
     "provenance_evidence_timestamp_note": "2026-10-16 UTC; precise time is in run manifest"
-  }
+  },
+  "display_name": "VEYLQUORIN",
+  "short_name": "VQ",
+  "legacy_engine_id": "VEILFORGE",
+  "brand_status": "provisional_pending_trademark_clearance"
 }

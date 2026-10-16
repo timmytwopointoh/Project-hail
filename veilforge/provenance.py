@@ -78,6 +78,8 @@ def make_snapshot(root: Path, *, when:datetime|None=None,
     serial=json.dumps(files,sort_keys=True,separators=(",",":"),ensure_ascii=False)
     return {
         "schema_version":SCHEMA, "engine":"VEILFORGE",
+        "engine_display_name":state.get("display_name","VEILFORGE"),
+        "short_name":state.get("short_name"),
         "record_type":"repository_source_manifest",
         "claimed_owner":CLAIMANT,
         "github_account":ACCOUNT,

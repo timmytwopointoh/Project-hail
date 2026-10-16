@@ -165,6 +165,33 @@ def evidence_ok(job: dict, folder: Path, source_sha: str, apk_sha: str) -> list[
                             errors.append("Corrupt PBR texture: "+uri)
                 if {i.get("uri") for i in g.get("images",[])}!=expected_images:
                     errors.append("glTF materials do not reference verified textures")
+            # VQ's independent model tool supplies 14 source-mesh orbit frames.
+            # The manager must verify both their presence and their SHA256 digests
+            # before treating an asset worker as technically complete.
+            vq_dir=folder/"vq_model_inspection"
+            vq_path=vq_dir/"vq_model_report.json"
+            if not vq_path.is_file():
+                errors.append("Missing independent VQ 14-angle geometry inspection")
+            else:
+                vq=json.loads(vq_path.read_text(encoding="utf-8"))
+                if (vq.get("engine")!="VEYLQUORIN" or
+                    vq.get("source_sha256")!=m["obj_sha256"] or
+                    vq.get("technical_geometry_smoke_passed") is not True or
+                    vq.get("production_approved") is not False or
+                    vq.get("gltf",{}).get("structural_smoke_passed") is not True or
+                    len(vq.get("visual",{}).get("views",[]))!=14):
+                    errors.append("VQ independent source/UV/glTF QA did not pass")
+                for i,view in enumerate(vq.get("visual",{}).get("views",[])):
+                    if (view.get("view_index")!=i or
+                        view.get("yaw")!=i*25):
+                        errors.append("VQ camera index/yaw mismatch")
+                        continue
+                    for name,digest in (("image","image_sha256"),("mask","mask_sha256")):
+                        file= vq_dir/"views"/str(view.get(name,""))
+                        if (not file.resolve().is_relative_to((vq_dir/"views").resolve())
+                            or not file.is_file() or sha(file)!=view.get(digest)):
+                            errors.append("VQ source orbit image missing or modified")
+                            break
         except (KeyError,ValueError,TypeError,OSError) as error:
             errors.append(f"Invalid asset evidence: {error}")
     else:

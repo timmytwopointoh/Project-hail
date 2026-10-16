@@ -1,6 +1,6 @@
-# VEILFORGE M27 — Shared ten-slot development and emulator queue
+# VEYLQUORIN (VQ) M27 — Shared ten-slot development and emulator queue
 
-**Boundary:** These are new, optional VEILFORGE infrastructure files. Existing
+**Boundary:** These are new, optional VQ infrastructure files (legacy VEILFORGE paths retained for running CI). Existing
 VEILBOUND game source, Android visual QA, local AI coding worker manager, and
 the existing VEILFORGE asset factory are preserved. No game assets are
 silently promoted or merged.
