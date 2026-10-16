@@ -113,48 +113,74 @@ public final class HumanVariantCLI {
     }
 
     /** Cropped software projections of the REAL mesh. Never call these Android captures. */
+    /**
+     * Pose-aware true hand camera: compute framing from ACTUAL selected
+     * triangle vertices. Old M23 camera had a hardcoded palm position, so
+     * T-pose hands were cropped offscreen and a misleading finger-only
+     * screenshot passed the PNG existence checks.
+     */
     private static void renderHand(ArtKit.Model mesh,int view,int side,Path file)
             throws Exception{
         final int width=640,height=720;
-        final float[] direction=camera(view);
-        final float cx=side*.554f,cz=.115f,cy=1.235f,zoom=1160f;
-        final float origin=cx*direction[2]-cz*direction[0];
-        BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
-        Graphics2D g=image.createGraphics();
-        g.setColor(new Color(215,216,218));
-        g.fillRect(0,0,width,height);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                           RenderingHints.VALUE_ANTIALIAS_ON);
-        ArrayList<Face> faces=new ArrayList<>();
-        float[] v=mesh.vertices;
+        float[] direction=camera(view),v=mesh.vertices;
+        float maxAbsX=0;
+        for(int i=0;i<v.length;i+=9)
+            maxAbsX=Math.max(maxAbsX,Math.abs(v[i]));
+        boolean extended=maxAbsX>1.08f;
+        float xMin=extended?.93f:.392f,xMax=extended?1.61f:.93f;
+        float yMin=extended?1.62f:.96f,yMax=extended?2.17f:1.63f;
+        ArrayList<Integer> triangles=new ArrayList<>();
+        float left=Float.MAX_VALUE,right=-Float.MAX_VALUE,
+              bottom=Float.MAX_VALUE,top=-Float.MAX_VALUE;
         for(int i=0;i<v.length;i+=27){
-            boolean inHand=true;
+            boolean belongs=true;
             for(int k=0;k<3;k++){
                 int j=i+k*9;
-                if(v[j+1]<.970f||v[j+1]>1.58f||
-                   v[j]*side<.395f||v[j]*side>.795f){
-                    inHand=false;break;
+                float sx=v[j]*side,y=v[j+1];
+                if(sx<xMin||sx>xMax||y<yMin||y>yMax){
+                    belongs=false;break;
                 }
             }
-            if(!inHand)continue;
-            float nx=(v[i+3]+v[i+12]+v[i+21])/3f;
-            float ny=(v[i+4]+v[i+13]+v[i+22])/3f;
-            float nz=(v[i+5]+v[i+14]+v[i+23])/3f;
-            float toward=nx*direction[0]+nz*direction[2];
-            if(toward<-.02f)continue;
+            if(!belongs)continue;
+            triangles.add(i);
+            for(int k=0;k<3;k++){
+                int j=i+k*9;
+                float horizontal=v[j]*direction[2]-v[j+2]*direction[0];
+                left=Math.min(left,horizontal);right=Math.max(right,horizontal);
+                bottom=Math.min(bottom,v[j+1]);top=Math.max(top,v[j+1]);
+            }
+        }
+        if(triangles.size()<20)
+            throw new IllegalArgumentException(
+                "No complete real hand triangles selected in "+(extended?"T":"neutral")+
+                " pose for side "+side+" view "+view);
+        float centerX=(left+right)*.5f,centerY=(top+bottom)*.5f;
+        float xspan=Math.max(right-left,.05f),yspan=Math.max(top-bottom,.05f);
+        float zoom=Math.min(1700f,Math.min(width*.78f/xspan,height*.76f/yspan));
+        BufferedImage image=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=image.createGraphics();
+        g.setColor(new Color(215,216,218));g.fillRect(0,0,width,height);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                            RenderingHints.VALUE_ANTIALIAS_ON);
+        ArrayList<Face> faces=new ArrayList<>(triangles.size());
+        for(int i:triangles){
+            float nx=(v[i+3]+v[i+12]+v[i+21])/3f,
+                  ny=(v[i+4]+v[i+13]+v[i+22])/3f,
+                  nz=(v[i+5]+v[i+14]+v[i+23])/3f;
             int[] xx=new int[3],yy=new int[3];
             double depth=0;
             float red=0,green=0,blue=0;
             for(int k=0;k<3;k++){
                 int j=i+k*9;
-                float horizontal=v[j]*direction[2]-v[j+2]*direction[0];
-                xx[k]=Math.round(width*.5f+(horizontal-origin)*zoom);
-                yy[k]=Math.round(height*.5f-(v[j+1]-cy)*zoom);
+                float h=v[j]*direction[2]-v[j+2]*direction[0];
+                xx[k]=Math.round(width*.5f+(h-centerX)*zoom);
+                yy[k]=Math.round(height*.51f-(v[j+1]-centerY)*zoom);
                 depth+=v[j]*direction[0]+v[j+2]*direction[2];
                 red+=v[j+6];green+=v[j+7];blue+=v[j+8];
             }
-            float light=Math.max(.44f,Math.min(1.14f,
-                .72f+.22f*ny+.25f*toward));
+            float facing=nx*direction[0]+nz*direction[2];
+            float light=Math.max(.48f,Math.min(1.1f,
+                .77f+.19f*ny+.17f*facing));
             faces.add(new Face(xx,yy,depth/3,
                 new Color(Math.max(0,Math.min(255,Math.round(255f*red*light/3))),
                           Math.max(0,Math.min(255,Math.round(255f*green*light/3))),
@@ -167,8 +193,9 @@ public final class HumanVariantCLI {
         }
         g.setColor(new Color(45,50,55));
         g.drawString((side<0?"LEFT":"RIGHT")+" HAND / "+
-                     VIEWS[view].toUpperCase(Locale.US),14,28);
-        g.drawString("REAL MESH - OFFLINE CROPPED PROJECTION, NOT ANDROID",
+            VIEWS[view].toUpperCase(Locale.US)+" / "+
+            (extended?"EXTENDED POSE":"STANDING POSE"),14,28);
+        g.drawString("POSE-AWARE TRUE MESH CAMERA; NOT ANDROID",
                      14,height-21);
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
@@ -233,7 +260,7 @@ public final class HumanVariantCLI {
     public static void main(String[] args) throws Exception{
         if(args.length<2||args.length>4)
             throw new IllegalArgumentException(
-                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed | --m31-neutral | --m31-tpose | --m31-relaxed] [--mesh-only]");
+                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed | --m31-neutral | --m31-tpose | --m31-relaxed | --m32-neutral | --m32-tpose | --m32-relaxed] [--mesh-only]");
         boolean meshOnly="--mesh-only".equals(args[args.length-1]);
         boolean m28=args.length>=3&&"--m28".equals(args[2]);
         boolean tPose=args.length>=3&&"--m29-tpose".equals(args[2]);
@@ -246,17 +273,22 @@ public final class HumanVariantCLI {
         boolean m31T=args.length>=3&&"--m31-tpose".equals(args[2]);
         boolean m31Relaxed=args.length>=3&&"--m31-relaxed".equals(args[2]);
         boolean m31=m31Neutral||m31T||m31Relaxed;
-        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!m31&&!"--mesh-only".equals(args[2]);
-        if(args.length==4&&(!(hasDials||m28||referencePose||newPose||m31)||!meshOnly))
+        boolean m32Neutral=args.length>=3&&"--m32-neutral".equals(args[2]);
+        boolean m32T=args.length>=3&&"--m32-tpose".equals(args[2]);
+        boolean m32Relaxed=args.length>=3&&"--m32-relaxed".equals(args[2]);
+        boolean m32=m32Neutral||m32T||m32Relaxed;
+        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!m31&&!m32&&!"--mesh-only".equals(args[2]);
+        if(args.length==4&&(!(hasDials||m28||referencePose||newPose||m31||m32)||!meshOnly))
             throw new IllegalArgumentException("Unexpected M26 CLI options");
         float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
-        studyLabel=m31?"M31":newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
+        studyLabel=m32?"M32":m31?"M31":newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model source=m31?
+        ArtKit.Model source=m32?HumanAnatomy.buildM32Candidate(false):
+            m31?
             M31SkinSurfaceNormals.smooth(HumanAnatomy.buildM28Candidate(false,p,
               new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f})):
             m28||referencePose||newPose?
@@ -264,7 +296,9 @@ public final class HumanVariantCLI {
               new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f}):
             hasDials?HumanAnatomy.buildM26Candidate(false,p,dials):
             HumanAnatomy.buildM25Candidate(false,p);
-        ArtKit.Model mesh=(m31T||m31Relaxed)?M30ReferenceRig.pose(
+        ArtKit.Model mesh=(m32T||m32Relaxed)?M32ShoulderRig.pose(
+            source,m32T?M32ShoulderRig.T_POSE:M32ShoulderRig.RELAXED):
+            (m31T||m31Relaxed)?M30ReferenceRig.pose(
             source,m31T?M30ReferenceRig.T_POSE:M30ReferenceRig.RELAXED):
             newPose?M30ReferenceRig.pose(source,
             m30T?M30ReferenceRig.T_POSE:M30ReferenceRig.RELAXED):
@@ -289,7 +323,9 @@ public final class HumanVariantCLI {
             views.append('"').append(view).append('"');
         }
         String json="{\"model\":\""+
-            (m31?(m31Neutral?"m31_smooth_neutral_source":
+            (m32?(m32Neutral?"m32_anatomy_neutral":
+                 m32T?"m32_corrected_tpose":"m32_anatomy_relaxed"):
+             m31?(m31Neutral?"m31_smooth_neutral_source":
                m31T?"m31_reference_tpose":"m31_reference_relaxed"):
              newPose?(m30T?"m30_tpose_skinweighted_candidate":"m30_relaxed_skinweighted_candidate"):
              referencePose?(tPose?"m29_tpose_reference_mesh":"m29_relaxed_reference_mesh"):
@@ -299,7 +335,7 @@ public final class HumanVariantCLI {
             "\",\"triangles\":"+mesh.triangleCount+
             ",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":"+(!meshOnly)+
-            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose||m31?8:0)+
+            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose||m31||m32?8:0)+
             ",\"hand_closeups_per_side\":"+(meshOnly?0:3)+
             ",\"camera_views\":["+(meshOnly?"":views.toString())+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");

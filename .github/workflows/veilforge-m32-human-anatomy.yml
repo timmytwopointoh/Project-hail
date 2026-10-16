@@ -1,0 +1,265 @@
+name: VEILFORGE M32 - Full Human Anatomy and Rig Specialists
+on:
+  push:
+    branches:
+      - feature/veilbound-m32-anatomy-perfection
+    paths:
+      - '.github/workflows/veilforge-m32-human-anatomy.yml'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/M32*.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java'
+      - 'veilbound/tools/HumanVariantCLI.java'
+      - 'veilbound/tests/game/ashenveil/veilbound/M32AnatomyPerfectionTest.java'
+      - 'veilforge/vq_model_tools.py'
+      - 'veilforge/vq_brushes.py'
+      - 'veilforge/vq_refinement_pipeline.py'
+      - 'veilforge/vq_adaptive_remesh.py'
+      - 'veilforge/m32_shoulder_brush.json'
+      - 'veilforge/m32_anatomy_remesh.json'
+      - 'docs/veilbound/M32_ANATOMY_SKILL_MAP.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m32-vq-anatomy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  anatomy-director:
+    name: Original baseline, real geometry, clavicle rig and protected material tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile M32 with historic M20-M31 geometry
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m32
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m32 \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" "$SRC/MaterialMapping.java" \
+            "$SRC/ShapeEngine.java" "$SRC/ContinuousHuman.java" \
+            "$SRC/HumanHandSculpt.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/M30ReferenceRig.java" "$SRC/M31SkinSurfaceNormals.java" \
+            "$SRC/M32ShoulderRig.java" "$SRC/M32AnatomySurface.java" \
+            "$SRC/HumanAnatomy.java" "$SRC/ModelStudio.java" \
+            "$TEST/M30ReferenceRigTest.java" \
+            "$TEST/M31SkinSurfaceNormalsTest.java" \
+            "$TEST/M32AnatomyPerfectionTest.java" \
+            "$TEST/ModelStudioTest.java" \
+            veilbound/tools/HumanVariantCLI.java
+          java -Xmx2500m -cp /tmp/m32 game.ashenveil.veilbound.M30ReferenceRigTest
+          java -Xmx2500m -cp /tmp/m32 game.ashenveil.veilbound.M31SkinSurfaceNormalsTest
+          java -Xmx2500m -cp /tmp/m32 game.ashenveil.veilbound.M32AnatomyPerfectionTest
+          java -cp /tmp/m32 game.ashenveil.veilbound.ModelStudioTest
+          python3 -m unittest discover -s veilforge/tests -v
+          test -s docs/veilbound/M32_ANATOMY_SKILL_MAP.md
+
+  specialty-workers:
+    name: ${{ matrix.specialist }} / actual human mesh / source views / VQ
+    needs: anatomy-director
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - specialist: shoulder
+            flag: --m32-tpose
+          - specialist: face
+            flag: --m32-neutral
+          - specialist: hands
+            flag: --m32-relaxed
+          - specialist: feet
+            flag: --m32-neutral
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile real full body, hand and foot source geometry
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m32-export
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          javac -d /tmp/m32-export \
+            "$SRC/ArtKit.java" "$SRC/SurfaceAtlas.java" "$SRC/MaterialMapping.java" \
+            "$SRC/ShapeEngine.java" "$SRC/ContinuousHuman.java" \
+            "$SRC/HumanHandSculpt.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" \
+            "$SRC/M28FaceSculpt.java" "$SRC/M28SkinContinuity.java" \
+            "$SRC/M29ReferencePose.java" "$SRC/M29SkinAtlas.java" \
+            "$SRC/M30ReferenceRig.java" "$SRC/M31SkinSurfaceNormals.java" \
+            "$SRC/M32ShoulderRig.java" "$SRC/M32AnatomySurface.java" \
+            "$SRC/HumanAnatomy.java" veilbound/tools/HumanVariantCLI.java
+      - name: Generate physical 14-angle geometry and 3 face/6 hand closeups
+        env:
+          SPECIALIST: ${{ matrix.specialist }}
+          FLAG: ${{ matrix.flag }}
+        run: |
+          set -euo pipefail
+          ROOT="inspection_output/m32-$SPECIALIST"
+          mkdir -p "$ROOT"
+          export ROOT
+          java -Xmx2500m -Djava.awt.headless=true -cp /tmp/m32-export \
+            game.ashenveil.veilbound.HumanVariantCLI \
+            1,1,1,1,1,1,1,1,1,1,1,1 "$ROOT" "$FLAG"
+          python3 veilforge/engine.py inspect \
+            --obj "$ROOT/human_candidate.obj" --out "$ROOT/geometry.json"
+          python3 -m pip install --disable-pip-version-check --quiet Pillow
+          python3 veilforge/human_angle_review.py \
+            --root "$ROOT" --out "$ROOT/angle_review.json"
+          python3 veilforge/vq_model_tools.py \
+            --obj "$ROOT/human_candidate.obj" \
+            --out "$ROOT/vq-inspection" --render-faces 1800
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,os
+          p=Path(os.environ["ROOT"])
+          g=json.loads((p/"geometry.json").read_text())
+          v=json.loads((p/"vq-inspection/vq_model_report.json").read_text())
+          a=json.loads((p/"angle_review.json").read_text())
+          assert g["triangles"]>10000
+          assert g["nonmanifold_edges"]==0 and g["degenerate_triangles"]==0
+          assert len(v["visual"]["views"])==14
+          assert not v["production_approved"] and not v["photorealism_verified"]
+          assert a["technical_pass"] and not a["artistic_approval"]
+          assert len(list(p.glob("*_hand_*.png")))==6
+          print("M32_VQ_SPECIALIST_REAL_MESH_PASS",os.environ["SPECIALIST"],
+                "triangles",g["triangles"],"remaining_open_edges",g["boundary_edges"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m32-vq-human-${{ matrix.specialist }}
+          path: inspection_output/m32-${{ matrix.specialist }}/
+          retention-days: 21
+          if-no-files-found: warn
+
+  strain-and-reference-director:
+    name: Compare M31 and M32 T-pose strain and source-reference body spans
+    needs: specialty-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m32-vq-human-*
+          path: inspection_output/m32-workers
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Measure actual T-pose reference and art acceptance barriers
+        run: |
+          set -euo pipefail
+          ROOT=inspection_output/m32-workers
+          OUT=inspection_output/m32-director
+          mkdir -p "$OUT"
+          python3 veilforge/human_reference_fit.py \
+            --obj "$ROOT/m32-vq-human-shoulder/human_candidate.obj" \
+            --out "$OUT/m32_tpose_reference_fit.json"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          out=Path("inspection_output/m32-director")
+          fit=json.loads((out/"m32_tpose_reference_fit.json").read_text())
+          assert fit["source_vertices"]>10000
+          assert fit["photorealism_verified"] is False
+          regions={"face": "cheek/jaw/eye support",
+                   "shoulder":"clavicle, scapula and humerus separation",
+                   "hands":"knuckle/palm/digit continuity",
+                   "feet":"arches, heel and toe separation"}
+          reviews={}
+          for name in regions:
+              d=Path("inspection_output/m32-workers")/("m32-vq-human-"+name)
+              g=json.loads((d/"geometry.json").read_text())
+              report=json.loads((d/"vq-inspection/vq_model_report.json").read_text())
+              reviews[name]={"geometry_nonmanifold_edges":g["nonmanifold_edges"],
+                             "open_edges":g["boundary_edges"],
+                             "vq_technical_pass":report["technical_geometry_smoke_passed"],
+                             "human_visual_approval":False,
+                             "focus":regions[name]}
+          summary={"milestone":"M32","engine":"VEILFORGE/VQ",
+                   "reference_fit":fit,
+                   "worker_review":reviews,
+                   "shoulder_pose_technical_pass":True,
+                   "source_image_likeness_verified":False,
+                   "anatomical_perfection_verified":False,
+                   "photo_realistic_approved":False,
+                   "android_device_evidence":"separate native workflow",
+                   "historical_knight_preserved":True,
+                   "auto_promote":False}
+          (out/"M32_ANATOMY_DIRECTOR_REPORT.json").write_text(json.dumps(summary,indent=2)+"\n")
+          print("M32_ANATOMY_DIRECTOR_REVIEW_REQUIRED",fit["model_armspan_over_height"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m32-anatomy-director-lesson-and-reference-fit
+          path: inspection_output/m32-director/
+          retention-days: 21
+          if-no-files-found: warn
+
+  vq-sculpt-and-remesh-experiment:
+    name: Bounded VQ bilateral shoulder sculpt and conforming remesh — review only
+    needs: specialty-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m32-vq-human-face
+          path: inspection_output/m32-vq-source
+      - name: Refine actual unposed character without modifying M32 game source
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet Pillow
+          ROOT=inspection_output/m32-shoulder-refinement
+          python3 veilforge/vq_refinement_pipeline.py \
+            --obj inspection_output/m32-vq-source/human_candidate.obj \
+            --brush veilforge/m32_shoulder_brush.json \
+            --refine veilforge/m32_anatomy_remesh.json \
+            --out "$ROOT"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("inspection_output/m32-shoulder-refinement")
+          a=json.loads((p/"refinement_evidence.json").read_text())
+          assert a["source_triangles"]>50000
+          assert a["brushed_triangles"]==a["source_triangles"]
+          assert a["remeshed_triangles"]>a["source_triangles"]
+          assert a["adaptive_interior_edges"]>0
+          assert a["brush_and_refine_technical_gates_passed"] is True
+          assert a["artist_approval"] is False and a["game_ready"] is False
+          print("M32_VQ_ADAPTIVE_HUMAN_SCULPT_REVIEW",a["adaptive_interior_edges"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m32-vq-shoulder-refinement-review-only
+          path: inspection_output/m32-shoulder-refinement/
+          retention-days: 21
+          if-no-files-found: warn

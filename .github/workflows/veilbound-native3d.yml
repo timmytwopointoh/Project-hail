@@ -57,6 +57,8 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/M29ReferencePose.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M30ReferenceRig.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M31SkinSurfaceNormals.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M32ShoulderRig.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M32AnatomySurface.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25SkinPolish.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M24BodyRetarget.java \
@@ -94,6 +96,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/M29ReferenceSkinTest.java \
             veilbound/tests/game/ashenveil/veilbound/M30ReferenceRigTest.java \
             veilbound/tests/game/ashenveil/veilbound/M31SkinSurfaceNormalsTest.java \
+            veilbound/tests/game/ashenveil/veilbound/M32AnatomyPerfectionTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
@@ -129,6 +132,7 @@ jobs:
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.M29ReferenceSkinTest
           java -Xmx1800m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M30ReferenceRigTest
           java -Xmx1800m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M31SkinSurfaceNormalsTest
+          java -Xmx2200m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M32AnatomyPerfectionTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest

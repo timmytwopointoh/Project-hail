@@ -186,6 +186,63 @@
       },
       "decision": "needs_revision",
       "note": "Lower cheeks, mouth and jaw are still bulbous/faceted; more patches or global polygon count will not resolve anatomical surface topology."
+    },
+    {
+      "id": "M32-A-ARMPIT-CREASE",
+      "stage": "S4",
+      "defect": "lumpy_shoulders",
+      "severity": 5,
+      "confidence": 0.94,
+      "evidence": {
+        "source_run": "38897287730",
+        "artifact": "m32-vq-human-shoulder",
+        "views": [
+          "front.png",
+          "side.png",
+          "three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "M32 shoulder pivot/clavicle rig passes strict numerical strain but visible front/side T-pose still has unnatural underarm indentation and rectangular upper-arm capsule. Need real scapulohumeral weights, connected clavicle/deltoid edge loops and additional deformable chest topology; a numeric green does not count as anatomical acceptance."
+    },
+    {
+      "id": "M32-B-ANGULAR-JAW",
+      "stage": "S2",
+      "defect": "puppet_jaw",
+      "severity": 5,
+      "confidence": 0.96,
+      "evidence": {
+        "source_run": "38897287730",
+        "artifact": "m32-vq-human-face",
+        "views": [
+          "face_front.png",
+          "face_side.png",
+          "face_three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Actual front/side closeups still show simplified low-resolution jaw, nostril markings and protruding eye/eyelid assemblies despite connected-surface micro sculpts; requires true facial retopology, not more isolated detail stamps."
+    },
+    {
+      "id": "M32-D-BLOCK-FOOT",
+      "stage": "S3",
+      "defect": "stump_ankles",
+      "severity": 5,
+      "confidence": 0.93,
+      "evidence": {
+        "source_run": "38897287730",
+        "artifact": "m32-vq-human-feet",
+        "views": [
+          "front.png",
+          "side.png",
+          "three_quarter.png"
+        ],
+        "kind": "actual_offline_mesh_projection"
+      },
+      "decision": "needs_revision",
+      "note": "Subtle arch and toe-web geometry changes do not yet overcome rounded block-like feet, simplified heel and toe silhouettes. Need anatomical foot construction and toe segmentation approved at multiple camera angles."
     }
   ],
   "safety": {

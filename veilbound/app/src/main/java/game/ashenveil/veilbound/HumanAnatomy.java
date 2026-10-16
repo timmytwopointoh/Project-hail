@@ -79,6 +79,14 @@ public final class HumanAnatomy {
     public static ArtKit.Model buildM31Candidate(boolean lite){
         return M31SkinSurfaceNormals.smooth(buildM28Candidate(lite));
     }
+    /**
+     * M32 experimental human anatomy. New facial, muscle, finger-joint and
+     * foot sculpt adjustments are applied only to the separate review mesh.
+     * Source M31/M30 and the original playable historical knight stay intact.
+     */
+    public static ArtKit.Model buildM32Candidate(boolean lite){
+        return M32AnatomySurface.sculpt(buildM31Candidate(lite));
+    }
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }

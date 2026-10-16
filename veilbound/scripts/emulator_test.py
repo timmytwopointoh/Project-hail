@@ -586,14 +586,23 @@ def main():
         def expected_camera(item,angle):
             yaw={"front":0.0,"side":1.5707963,"back":3.14159265,
                  "three_quarter":5.497787}[angle]
-            for retry in range(22):
+            # Slow emulators occasionally drop ADB-tapped HUD view controls
+            # while a 60k-triangle body is uploaded. Re-inject a camera-only
+            # control when the REAL logged camera yaw stays behind, never
+            # accept the HUD caption or a static screenshot as proof.
+            for retry in range(45):
                 line=latest_studio_log()
                 match=re.search(r"item=(\d+).*?yaw=([-0-9.]+)",line)
-                if match and int(match.group(1))==item and (
-                        abs(float(match.group(2))-yaw)<.12):
-                    return
-                time.sleep(.36)
-            raise AssertionError("M31 camera target failed: item="+str(item)+
+                if match and int(match.group(1))==item:
+                    observed=float(match.group(2))
+                    if abs(observed-yaw)<.12:return
+                    if retry in (10,24,36):
+                        if angle=="front":
+                            touch(w*.921,h*.946)  # camera reset, not gameplay
+                        else:
+                            touch(w*.50,h*.758)  # another real 3D angle step
+                time.sleep(.42)
+            raise AssertionError("Studio camera target failed: item="+str(item)+
                                  " angle="+angle+" latest="+latest_studio_log())
         previous_frame=OUT/"01_m29_relaxed_side.png"
         for item,label,angles in (
@@ -638,6 +647,50 @@ def main():
             "genuine_m30_rig":True,"existing_m29_skin_shader":True,
             "calibrated_photo_match":False,"production_photorealism_approved":False,
             "original_knight_preserved":True}
+        # M32 is a separate candidate. Test real CPU-joint rig and geometry
+        # inside the same APK, with FULL model pixel and camera-yaw proof.
+        m32_shots=[]
+        previous=previous_frame
+        for item,label,angles in (
+                (22,"neutral",("front","side","three_quarter")),
+                (23,"tpose",("front","side","back","three_quarter")),
+                (24,"relaxed",("front","side"))):
+            touch(w*.65,h*.865)   # next MODEL in Testing Grounds
+            for attempt in range(45):
+                model_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                              timeout=20).decode("utf-8","replace")
+                if "M32_ANATOMY_PERFECTION_READY item="+str(item) in model_log:
+                    break
+                time.sleep(.45)
+            else:
+                raise AssertionError("M32 "+label+
+                    " anatomy/model loading failed in native Android")
+            previous_frame=previous
+            for angle in angles:
+                if angle!="front":
+                    touch(w*.50,h*.758)
+                expected_camera(item,angle)
+                name="01_m32_"+label+"_"+angle+".png"
+                frame=OUT/name
+                for redraw in range(18):
+                    time.sleep(.50)
+                    shot(name)
+                    if studio_center_delta(previous_frame,frame)>.28:
+                        break
+                else:
+                    raise AssertionError("M32 "+label+" "+angle+
+                      " did not update the actual model pixels")
+                report["screenshots"].append(name)
+                m32_shots.append(name)
+                previous_frame=frame
+            previous=previous_frame
+        atelier["m32_anatomy_perfection"]={
+            "three_real_3d_meshes":True,
+            "captured_3d_angles":len(m32_shots),
+            "scapular_and_shoulder_rig_reviewed":False,
+            "hands_and_feet_artistic_review_required":True,
+            "photo_realism_approved":False,
+            "replaces_playable_knight":False}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as

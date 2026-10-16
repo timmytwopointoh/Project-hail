@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "center": [
+    0.414,
+    1.9,
+    0.06
+  ],
+  "radius": 0.36,
+  "target_edge_length": 0.027,
+  "max_edges": 150,
+  "triangle_budget": 61200,
+  "materials": [
+    "default"
+  ],
+  "crease_angle_deg": 57
+}
