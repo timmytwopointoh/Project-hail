@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "description": "VEILFORGE M3 deterministic asset recipes. Each family is an extensible builder. Units meters, Y-up. All entries original geometry, manual-review-only.",
+  "assets": [
+    {
+      "id": "ancient_gate_standard",
+      "category": "architecture",
+      "detail": "standard",
+      "seed": 101,
+      "tags": [
+        "ruins",
+        "modular",
+        "stone"
+      ]
+    },
+    {
+      "id": "ancient_gate_mobile",
+      "category": "architecture",
+      "detail": "mobile",
+      "seed": 101,
+      "tags": [
+        "ruins",
+        "mobile",
+        "lod"
+      ]
+    },
+    {
+      "id": "rolling_terrain",
+      "category": "terrain",
+      "detail": "standard",
+      "seed": 301,
+      "tags": [
+        "landscape",
+        "ground",
+        "open-surface"
+      ]
+    },
+    {
+      "id": "ancient_tree",
+      "category": "vegetation",
+      "detail": "standard",
+      "seed": 77,
+      "tags": [
+        "tree",
+        "nature",
+        "branches"
+      ]
+    },
+    {
+      "id": "forest_tree_mobile",
+      "category": "vegetation",
+      "detail": "mobile",
+      "seed": 78,
+      "scale": 0.85,
+      "tags": [
+        "tree",
+        "mobile",
+        "lod"
+      ]
+    },
+    {
+      "id": "treasure_chest",
+      "category": "props",
+      "detail": "standard",
+      "seed": 191,
+      "tags": [
+        "container",
+        "loot",
+        "wood"
+      ]
+    },
+    {
+      "id": "ceremonial_sword",
+      "category": "weapons",
+      "detail": "standard",
+      "seed": 93,
+      "tags": [
+        "weapon",
+        "blade",
+        "steel"
+      ]
+    },
+    {
+      "id": "cargo_cart",
+      "category": "vehicles",
+      "detail": "standard",
+      "seed": 515,
+      "tags": [
+        "cart",
+        "transport",
+        "wheels"
+      ]
+    }
+  ]
+}

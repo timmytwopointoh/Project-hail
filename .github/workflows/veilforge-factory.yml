@@ -1,0 +1,134 @@
+name: VEILFORGE - Universal Game Asset Factory
+on:
+  push:
+    branches: ['feature/veilforge-*']
+    paths:
+      - 'veilforge/**'
+      - '.github/workflows/veilforge-factory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-universal-${{ github.ref }}
+  cancel-in-progress: true
+
+# Manager of managers, six specialized model families, dynamic recipe-derived
+# worker assignment, four true geometry previews, binary glTF, deterministic QA.
+# Never edits a game, merges generated code or promotes assets without review.
+jobs:
+  library-manager:
+    name: Validate library and allocate scoped asset jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit and factory geometry tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 -m compileall -q veilforge
+      - id: plan
+        name: Assign independently isolated asset workers from validated catalog
+        run: |
+          set -euo pipefail
+          python3 veilforge/library_manager.py plan \
+            --catalog veilforge/catalog.json \
+            --out inspection_output/library-manager \
+            --github-output "${GITHUB_OUTPUT}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-library-manager
+          path: inspection_output/library-manager/
+          if-no-files-found: error
+          retention-days: 14
+
+  asset-producers:
+    name: Factory asset / ${{ matrix.id }}
+    needs: library-manager
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.library-manager.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install visualization dependency
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Produce original geometry, physical-material declarations and inspectable views
+        env:
+          ID: ${{ matrix.id }}
+        run: |
+          set -euo pipefail
+          OUT="inspection_output/library/${ID}"
+          python3 veilforge/factory.py --catalog veilforge/catalog.json --id "${ID}" --out "${OUT}"
+          python3 veilforge/preview.py --catalog veilforge/catalog.json --id "${ID}" --out "${OUT}/previews"
+          python3 veilforge/engine.py inspect \
+            --obj "${OUT}/${ID}.obj" \
+            --out "${OUT}/mesh_quality.json"
+          python3 - "${OUT}" <<'PY'
+          from pathlib import Path
+          import json,sys
+          folder=Path(sys.argv[1])
+          row=json.loads((folder/"asset_manifest.json").read_text())
+          assert row["triangles"]>100
+          assert row["triangles"]<=row["budget"]
+          assert row["mesh_quality"]["degenerate_triangles"]==0
+          assert len(list((folder/"previews").glob("view_*.png")))==4
+          assert (folder/(row["id"]+".gltf")).is_file()
+          assert (folder/(row["id"]+".bin")).is_file()
+          print("VEILFORGE_CATEGORY_WORKER_PASS",row["id"],row["category"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: veilforge-library-${{ matrix.id }}
+          path: inspection_output/library/${{ matrix.id }}/
+          if-no-files-found: warn
+          retention-days: 14
+
+  library-review:
+    name: Independently audit entire game-asset catalog
+    needs: [library-manager, asset-producers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: veilforge-library-*
+          path: inspection_output/library-collected
+      - name: Require full evidence, no false promotion or invented previews
+        run: |
+          set -euo pipefail
+          python3 veilforge/library_manager.py review \
+            --catalog veilforge/catalog.json \
+            --collected inspection_output/library-collected \
+            --out inspection_output/library-review
+          cat inspection_output/library-review/library_review.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Archive manager summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-library-final-review
+          path: inspection_output/library-review/
+          if-no-files-found: warn
+          retention-days: 14
