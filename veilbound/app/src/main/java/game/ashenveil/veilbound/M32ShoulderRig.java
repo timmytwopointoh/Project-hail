@@ -26,6 +26,40 @@ public final class M32ShoulderRig {
                  (1f-smooth((y-clavicleY+.015f)/.18f));
         return Math.max(0f,Math.min(1f,cx*cy));
     }
+    /**
+     * Review-only pose-space corrective along the pectoral/deltoid web.
+     * The M30 rotation alone created a dark armpit notch even when the
+     * triangle strain was safe. Keep the correction local to x≈.34,
+     * upper chest y≈2 and lift the inner shoulder skin OUTWARD rather
+     * than dragging the ribs, pelvis or shorts with the arm bone.
+     */
+    private static void underarmContour(float[] v){
+        final float centerX=.355f;
+        final float centerY=M24BodyRetarget.y(.355f,1.90f);
+        final float radiusX=.115f,radiusY=.115f;
+        for(int i=0;i<v.length;i+=9){
+            if(!M25SkinPolish.isBodySkin(v[i+6],v[i+7],v[i+8]))continue;
+            float x=v[i],y=v[i+1],ax=Math.abs(x);
+            float side=x<0f?-1f:1f;
+            float px=(ax-centerX)/radiusX,py=(y-centerY)/radiusY;
+            if(px*px+py*py>12f)continue;
+            float m=.018f*(float)Math.exp(-(px*px+py*py));
+            // x' = x + side*m(x,y) with analytic normal transform.
+            float gx=-2f*m*px/radiusX;
+            float gy=side*(-2f*m*py/radiusY);
+            float div=1f+gx;
+            if(div<.7f||!Float.isFinite(div))
+                throw new IllegalArgumentException("Armpit corrective folded");
+            float nx=v[i+3]/div,
+                  ny=v[i+4]-v[i+3]*gy/div,
+                  nz=v[i+5];
+            float n=(float)Math.sqrt(nx*nx+ny*ny+nz*nz);
+            if(!Float.isFinite(n)||n<1e-7f)
+                throw new IllegalArgumentException("Invalid clavicle normal");
+            v[i]=x+side*m;v[i+3]=nx/n;v[i+4]=ny/n;v[i+5]=nz/n;
+        }
+    }
+
     public static ArtKit.Model pose(ArtKit.Model bind,int type){
         if(type!=T_POSE&&type!=RELAXED)
             throw new IllegalArgumentException("Unknown M32 pose");
@@ -61,6 +95,7 @@ public final class M32ShoulderRig {
                 throw new IllegalArgumentException("Invalid shoulder-normal transformation");
             v[i+3]=rx/norm;v[i+4]=ry/norm;v[i+5]=nz/norm;
         }
+        if(type==T_POSE)underarmContour(v);
         return new ArtKit.Model(v);
     }
 }
