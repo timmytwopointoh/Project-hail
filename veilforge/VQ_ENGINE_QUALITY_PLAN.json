@@ -1,0 +1,410 @@
+{
+  "schema_version": 1,
+  "engine": "VEYLQUORIN / VEILFORGE",
+  "version": "M29",
+  "mission": "Universal reusable game asset creation, editing and verification; not an individual game.",
+  "definition_of_done": "All applicable quality gates pass with reproducible source, target-game import, visual reference signoff, representative hardware and recorded provenance. Perfect aesthetics cannot be guaranteed or declared by automation.",
+  "scope": {
+    "outputs": [
+      "characters",
+      "creatures",
+      "architecture",
+      "terrain",
+      "vegetation",
+      "vehicles",
+      "props",
+      "equipment",
+      "animations",
+      "VFX source data",
+      "materials",
+      "scenes",
+      "collision/navigation"
+    ],
+    "excluded": [
+      "automatic edits to VEILBOUND or ECHOFORM games",
+      "claiming photorealism from technical tests",
+      "unlicensed asset copying",
+      "unlimited recursive self-modification"
+    ]
+  },
+  "release_gates": [
+    "source_hash_and_license",
+    "topology_and_attributes",
+    "UV_tangent_material",
+    "full_asset_import_and_export",
+    "14_real_view_source_inspection",
+    "real_android_gles_texture_and_camera_qa",
+    "reference_appearance_human_signoff",
+    "performance_budget_on_target_devices_when_relevant",
+    "no_unreviewed_auto_merge"
+  ],
+  "priority_order": [
+    "P0",
+    "P1",
+    "P2"
+  ],
+  "status_legend": {
+    "planned": "not implemented",
+    "partial": "component exists but acceptance criteria incomplete",
+    "in_progress": "current milestone targeted",
+    "verified": "full defined gate actually completed"
+  },
+  "milestones": [
+    {
+      "id": "ARCH-01",
+      "priority": "P0",
+      "domain": "core",
+      "name": "Verified asset IO & provenance",
+      "objective": "Ensure safe input, immutable source hashes, per-run manifests, license/provenance and failure-closed handoffs.",
+      "acceptance": "Source-hash equality, malicious/path traversal tests and signed workflow evidence.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "ARCH-02",
+      "priority": "P0",
+      "domain": "core",
+      "name": "Non-destructive operation stacks",
+      "objective": "Composable sculpt, smooth, stamp, adaptive refine, undo/replay and layer toggles.",
+      "acceptance": "Deterministic tests; source file unchanged; roundtrip replay/disable and per-layer audit.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-01",
+      "priority": "P0",
+      "domain": "geometry",
+      "name": "Conforming adaptive edge subdivision",
+      "objective": "Selectively subdivide geometric edges with no T-junctions across face and UV seams.",
+      "acceptance": "Conforming 1/2/3 edge-split cases on both sides, geometry/topology counts unchanged except triangles.",
+      "status": "in_progress",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-02",
+      "priority": "P0",
+      "domain": "geometry",
+      "name": "Repair bad topology by region",
+      "objective": "Diagnose duplicate, degenerate, nonmanifold and boundary sources; targeted conservative healing.",
+      "acceptance": "No unexplained boundary/nonmanifold increases and hole changes represented in review manifest.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-03",
+      "priority": "P0",
+      "domain": "geometry",
+      "name": "Brush mask safety and smoothing",
+      "objective": "Surface-aware brush masks, hard seam pinning, no shrink/inversion, cross-family tests.",
+      "acceptance": "Sculpt/smooth/stamp QA on character, architecture, terrain and props; no face flips.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-04",
+      "priority": "P1",
+      "domain": "geometry",
+      "name": "Edge-loop retopology",
+      "objective": "Deformation-aware retopology for faces, joints, fabric and organic bodies.",
+      "acceptance": "Manually reviewed edge-loop flow and rig-safe mesh on three body types.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-05",
+      "priority": "P1",
+      "domain": "geometry",
+      "name": "High-to-low detail transfer",
+      "objective": "Create controlled LOD meshes with normal/detail baking, safe silhouette preservation.",
+      "acceptance": "Three mesh tiers with zero missing material regions and measured view error.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-06",
+      "priority": "P1",
+      "domain": "geometry",
+      "name": "True sculpt mode in headless DCC",
+      "objective": "Blender-compatible mesh modifiers and sculpt scene exports with reproducible profiles.",
+      "acceptance": "CI actually imports assets to Blender and exports comparable QA geometry.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "GEO-07",
+      "priority": "P2",
+      "domain": "geometry",
+      "name": "Geometry copy/transfer with constraints",
+      "objective": "Feature-aware stamp and eventual cross-mesh mesh-part transfer preserving topology.",
+      "acceptance": "Transfer only when transforms, materials and seam boundaries pass audited rules.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "UV-01",
+      "priority": "P0",
+      "domain": "materials",
+      "name": "UV integrity and seam audits",
+      "objective": "Check UV coverage, collapsed islands, stretch, mirrored triangles and texel consistency.",
+      "acceptance": "UV distortions, seam continuity and black seam pixel regressions are tested.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "UV-02",
+      "priority": "P1",
+      "domain": "materials",
+      "name": "UV unwrap and atlas packing",
+      "objective": "Generate efficient material islands, gutters and static/moving meshes UV sets.",
+      "acceptance": "No UV overlaps where forbidden, padding >= specified mip-gutter, measured texel density.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MAT-01",
+      "priority": "P0",
+      "domain": "materials",
+      "name": "Texture-rich glTF export",
+      "objective": "Color-space-aware albedo/metallic/roughness/normal/AO textures with secure packaged sources.",
+      "acceptance": "Actual Android GLES source texture import, image hashes and material channel invariants.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MAT-02",
+      "priority": "P1",
+      "domain": "materials",
+      "name": "Tangent basis and normal/AO baker",
+      "objective": "Compute stable tangent frame across seams and bake normal/AO from high-poly samples.",
+      "acceptance": "glTF tangent conventions, mirrored UV tests and real rendered normal-illumination differences.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MAT-03",
+      "priority": "P1",
+      "domain": "materials",
+      "name": "Physically correct shader probes",
+      "objective": "Standard metal/roughness BRDF, light probes and predictable exposure/tonemapping.",
+      "acceptance": "Reference scenes in three light rigs; numerical shader and screenshot comparisons.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MAT-04",
+      "priority": "P2",
+      "domain": "materials",
+      "name": "Photoreal surface libraries",
+      "objective": "Scanned/licensed skin, stone, wood, metal, cloth materials with tiling controls.",
+      "acceptance": "Documented licenses and representative reference-based appearance approval.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "CHAR-01",
+      "priority": "P0",
+      "domain": "characters",
+      "name": "Anatomy and facial sculpt feedback",
+      "objective": "14-angle face, body, hands & feet measurements with review-conditioned correction.",
+      "acceptance": "Human reviewer signs off facial landmarks, five fingers and reference likeness.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "CHAR-02",
+      "priority": "P1",
+      "domain": "characters",
+      "name": "Skin pore and wrinkle layers",
+      "objective": "UV-consistent skin pores, wrinkles, age/pose region masks and roughness variation.",
+      "acceptance": "Macro/micro closeups on multiple skin tones/lights without glittering or patch seams.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "CHAR-03",
+      "priority": "P1",
+      "domain": "characters",
+      "name": "Rigging and skin weights",
+      "objective": "Production skeletons, facial blend shapes, weights and joint deformation tests.",
+      "acceptance": "Joint ROM tests detect clipping, pinching, attachment and volume loss.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "CHAR-04",
+      "priority": "P2",
+      "domain": "characters",
+      "name": "Hair, fur and cloth solvers",
+      "objective": "Real-time hair cards/strands and cloth interaction with rigs.",
+      "acceptance": "Stable motion and collision under target Android performance budgets.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "WORLD-01",
+      "priority": "P1",
+      "domain": "world",
+      "name": "Universal parametric asset catalog",
+      "objective": "Modular geometry generators for houses, roads, terrain, vegetation, interiors and VFX anchors.",
+      "acceptance": "Real source geometry and reusable scene instances for every supported asset family.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "WORLD-02",
+      "priority": "P2",
+      "domain": "world",
+      "name": "World physics and navigation packages",
+      "objective": "Collision LOD, navmesh generation, destructible surfaces, portals, occlusion.",
+      "acceptance": "Physics/nav validation with importer and multi-scene AI path tests.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "WORLD-03",
+      "priority": "P2",
+      "domain": "world",
+      "name": "Terrain/vegetation/water detail",
+      "objective": "Biome maps, erosion, instancing, foliage wind and water surface outputs.",
+      "acceptance": "Terrain seams and vegetation LOD tested on real GPU scenes.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "PERF-01",
+      "priority": "P0",
+      "domain": "performance",
+      "name": "Constrained CPU/GPU geometry budgets",
+      "objective": "Hard per-tier triangle/vertex, texture memory and job runtime budgets.",
+      "acceptance": "Refinement rejects over-budget recipes before writing partial output.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "PERF-02",
+      "priority": "P1",
+      "domain": "performance",
+      "name": "LOD and streaming quality",
+      "objective": "Runtime thresholds, glTF extensions, texture mipmaps and asset bundle streaming.",
+      "acceptance": "Visual pop, FPS, VRAM and streaming stalls measured across device classes.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-01",
+      "priority": "P0",
+      "domain": "quality",
+      "name": "CI unit/property tests",
+      "objective": "Seeded regression cases for geometry invariants, material URLs, hashes and planners.",
+      "acceptance": "Full test suite green, adversarial corrupt mesh and malformed input tests.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-02",
+      "priority": "P0",
+      "domain": "quality",
+      "name": "VQ fourteen-angle visual source checks",
+      "objective": "Hash captured source render frames, silhouette and material features across views.",
+      "acceptance": "Independent 14-angle images sourced from actual geometry, no invented screenshots.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-03",
+      "priority": "P0",
+      "domain": "quality",
+      "name": "Real Android emulator visual acceptance",
+      "objective": "Four Android workers import candidate model scenes, sample textures and report frames.",
+      "acceptance": "Real 14-angle/device captures, no modal overlays, verified APK and source hashes.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-04",
+      "priority": "P1",
+      "domain": "quality",
+      "name": "Appearance change and reference regression",
+      "objective": "Compare approved golden views, artifact identity, perceptual similarity and localized defect masks.",
+      "acceptance": "Review artifacts show actual before/after, configurable justified thresholds.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-05",
+      "priority": "P1",
+      "domain": "quality",
+      "name": "Motion and temporal artifacts",
+      "objective": "Compare posed models over multiple frames and camera moves.",
+      "acceptance": "No limb clipping, normal popping, hair clipping, silhouette collapse or frame capture failures.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "QA-06",
+      "priority": "P2",
+      "domain": "quality",
+      "name": "Real-device performance lab",
+      "objective": "Use physical device GPU/CPU/RAM/frame time measurements for target classes.",
+      "acceptance": "Stable P95 frame time and documented scene budget on real devices.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MGR-01",
+      "priority": "P0",
+      "domain": "operations",
+      "name": "Worker DAG and repair decisions",
+      "objective": "Bounded parallel workers, failure categories, deduplicated tasks, no surprise merges.",
+      "acceptance": "10 worker cap, no overlap, manifests and deterministic handoff of repair recommendations.",
+      "status": "partial",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MGR-02",
+      "priority": "P1",
+      "domain": "operations",
+      "name": "Closed-loop candidate optimizer",
+      "objective": "Use approved defect observations to rank bounded refinement candidates.",
+      "acceptance": "Measured improvement accepted by geometry+emulator+artist, never metrics alone.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "MGR-03",
+      "priority": "P1",
+      "domain": "operations",
+      "name": "Reusable DCC plug-in SDK",
+      "objective": "Versioned APIs for tools, recipe schemas and approved license attachments.",
+      "acceptance": "Independent third-party tool adapter installed and contract tested without modifying games.",
+      "status": "planned",
+      "automatic_game_approval": false
+    },
+    {
+      "id": "RELEASE-01",
+      "priority": "P0",
+      "domain": "release",
+      "name": "Quality gates and baseline protection",
+      "objective": "No promotion without geometry, glTF, visual, animation, hardware as appropriate, and artist signoff.",
+      "acceptance": "Source branch protected, complete evidence, explicit approval artifact, no game mutations.",
+      "status": "partial",
+      "automatic_game_approval": false
+    }
+  ],
+  "current_iteration": {
+    "milestone": "GEO-01",
+    "branch": "feature/vq-m29-adaptive-remesh-quality",
+    "build_on": "feature/vq-adaptive-sculpt-brushes",
+    "next_successors": [
+      "GEO-03",
+      "UV-01",
+      "MAT-02"
+    ],
+    "dependencies": [
+      "VQ existing brush tool",
+      "read-only OBJ inspector",
+      "real source 14-angle capture"
+    ],
+    "review_only": true
+  }
+}
