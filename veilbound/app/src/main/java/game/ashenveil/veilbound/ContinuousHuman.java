@@ -132,7 +132,7 @@ public final class ContinuousHuman {
                 // finger order on the left; otherwise its little finger
                 // incorrectly sits beside the thumb.
                 int anatomicalFinger=side>0?finger:3-finger;
-                float spread=(finger-1.5f)*.067f;
+                // M23b: the former .067f spacing gave only THREE visible columns in\n                // independently rendered front closeups despite passing SDF probes.\n                // Widen the real geometry spacing to survive .039f grid sampling.\n                float spread=(finger-1.5f)*.084f;
                 float fx=handCenter+spread;
                 float tipY=tips[anatomicalFinger];
                 // Three articulated anatomical sections per finger, with
@@ -200,9 +200,9 @@ public final class ContinuousHuman {
         float center=side*.554f;
         float[] samples=new float[9];
         for(int finger=0;finger<4;finger++)
-            samples[finger]=f.sample(center+(finger-1.5f)*.067f,.614f,.097f);
+            samples[finger]=f.sample(center+(finger-1.5f)*.084f,.614f,.097f);
         for(int gap=0;gap<3;gap++)
-            samples[4+gap]=f.sample(center+(gap-1f)*.067f,.614f,.097f);
+            samples[4+gap]=f.sample(center+(gap-1f)*.084f,.614f,.097f);
         samples[7]=f.sample(center+side*.183f,.690f,.151f);
         samples[8]=f.sample(center+side*.150f,.685f,.150f);
         return samples;
