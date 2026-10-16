@@ -40,8 +40,9 @@ public final class HumanAnatomy {
                 r(x,1.66f,.17f,.195f,.12f,.022f),
                 r(x,1.76f,.16f,.195f,.115f,.01f),
                 r(x,1.83f,.11f,.12f,.08f,0));
-            // Broad, tapering human upper arm and deltoid.
-            float armX=side*.56f;
+            // Less detached shoulders: the deltoid starts at clavicle
+            // breadth, then tapers inward before reaching the elbow.
+            float armX=side*.525f;
             loft(p,n,SKIN,r(armX,.91f,.015f,.095f,.09f,0),
                 r(armX,1.08f,.015f,.125f,.115f,.01f),
                 r(armX,1.26f,0,.14f,.14f,.01f),
@@ -93,13 +94,19 @@ public final class HumanAnatomy {
         loft(p,m,SKIN,r(0,1.96f,0,.12f,.115f,0),
             r(0,2.07f,0,.125f,.12f,0),
             r(0,2.18f,0,.115f,.11f,0));
-        // Anatomically scaled skull, angular jawline and cranium.
-        loft(p,n,SKIN,r(0,2.18f,.045f,.10f,.10f,.01f),
-            r(0,2.22f,.06f,.155f,.12f,.02f),
-            r(0,2.31f,.055f,.18f,.16f,.02f),
-            r(0,2.43f,.045f,.19f,.165f,.02f),
-            r(0,2.54f,.015f,.18f,.17f,.01f),
-            r(0,2.62f,0,.135f,.125f,0),
+        // M19: chin -> mandible -> cheekbone -> temple -> cranium.
+        // Multiple narrower rings define a recognizable angular male facial
+        // silhouette instead of a smooth inflated helmet-like head.
+        loft(p,n,SKIN,r(0,2.18f,.046f,.088f,.084f,.008f),
+            r(0,2.205f,.066f,.113f,.102f,.016f),
+            r(0,2.24f,.067f,.135f,.118f,.026f),
+            r(0,2.29f,.058f,.165f,.142f,.025f),
+            r(0,2.345f,.049f,.186f,.153f,.018f),
+            r(0,2.395f,.040f,.180f,.158f,.012f),
+            r(0,2.445f,.031f,.174f,.166f,.014f),
+            r(0,2.50f,.015f,.177f,.168f,.011f),
+            r(0,2.56f,.004f,.164f,.157f,.007f),
+            r(0,2.615f,0,.125f,.116f,0),
             r(0,2.65f,0,.055f,.055f,0));
         // Facial anatomy: jaw, nose bridge, brows and low-contrast hair.
         p.add(ShapeEngine.bevelPlate(new float[]{-.06f,2.37f,
