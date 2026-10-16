@@ -199,7 +199,8 @@ def evidence_ok(job: dict, folder: Path, source_sha: str, apk_sha: str) -> list[
 
 
 def review(plan_path: Path, root: Path, out: Path,
-           source_sha: str, apk_sha: str) -> dict:
+           source_sha: str, apk_sha: str,
+           baseline_scene: Path | None = None) -> dict:
     plan_data=json.loads(plan_path.read_text(encoding="utf-8"))
     selected=plan_data["matrix"]["include"]
     if (plan_data.get("global_active_job_cap")!=MAX_ACTIVE or
@@ -223,6 +224,29 @@ def review(plan_path: Path, root: Path, out: Path,
             problems.extend(task["id"]+": "+msg for msg in issues)
         else:
             successes.append(task["id"])
+    # The Android probe must contain the SAME deterministic mesh revisions
+    # that the concurrently assigned asset workers just produced. A green
+    # Android screenshot of unrelated old geometry is not sufficient.
+    if baseline_scene is not None:
+        if not baseline_scene.is_file():
+            problems.append("Missing frozen scene-pack source provenance")
+        else:
+            scene=json.loads(baseline_scene.read_text(encoding="utf-8"))
+            sources=scene.get("source_provenance",{})
+            for task in selected:
+                if task["kind"]!="asset":
+                    continue
+                name=task["asset"]
+                manifest=root/("veilforge-queue-"+task["id"])/"asset_manifest.json"
+                if not manifest.is_file():
+                    continue
+                worker=json.loads(manifest.read_text(encoding="utf-8"))
+                entry=sources.get(name)
+                if not entry or worker.get("obj_sha256")!=entry.get("geometry_sha256") or (
+                    worker.get("gltf_sha256")!=entry.get("source_gltf_sha256")):
+                    problems.append(task["id"]+": source geometry differs from Android APK baseline")
+                    if task["id"] in successes:
+                        successes.remove(task["id"])
     result={
         "engine":"VEILFORGE", "schema_version":1,
         "source_commit":source_sha, "apk_sha256":apk_sha or None,
@@ -268,13 +292,14 @@ def main() -> None:
     b.add_argument("--out",type=Path,required=True)
     b.add_argument("--source-sha",required=True)
     b.add_argument("--apk-sha",default="")
+    b.add_argument("--baseline-scene",type=Path)
     x=p.parse_args()
     if x.cmd=="plan":
         r=plan(x.backlog,x.catalog,x.out,x.max_jobs,x.emulator_limit,x.github_output)
         print("VEILFORGE_QUEUE_PLANNED",r["selected_count"],
               "workers",r["asset_worker_count"],"emulators",r["emulator_count"])
     else:
-        r=review(x.plan,x.root,x.out,x.source_sha,x.apk_sha)
+        r=review(x.plan,x.root,x.out,x.source_sha,x.apk_sha,x.baseline_scene)
         print("VEILFORGE_QUEUE_REVIEW",r["technical_qa_passed"],
               "verified",len(r["technically_verified"]))
         if not r["technical_qa_passed"]:
