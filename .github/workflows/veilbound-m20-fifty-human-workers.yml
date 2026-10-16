@@ -1,0 +1,118 @@
+name: VEILBOUND - 50 Human Geometry Candidates
+on:
+  push:
+    branches: ['feature/veilbound-m20-50-worker-anatomy-forge']
+    paths:
+      - 'veilbound/scripts/human_mutation_worker.py'
+      - 'veilbound/scripts/human_wave_manager.py'
+      - 'veilbound/tools/HumanVariantCLI.java'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java'
+      - '.github/workflows/veilbound-m20-fifty-human-workers.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilbound-m20-fifty-anatomy-${{ github.ref }}
+  cancel-in-progress: true
+
+# Ten independent manager runners each execute five bounded numeric geometry
+# agents (50 logical slots). Real Qwen developer agents run separately in the
+# role-scoped coding workflow and NEVER auto-merge these candidates.
+jobs:
+  anatomy-team:
+    name: Human anatomy manager / ${{ matrix.team }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        team: [front_silhouette, side_silhouette, head_cranium, jaw_profile,
+               shoulders, torso, pelvis, hands_forearms, thighs_calves, feet]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile original fused human and calibrated four-view software camera
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/human-java"
+          javac -d "${RUNNER_TEMP}/human-java" \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ArtKit.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/SurfaceAtlas.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/MaterialMapping.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/ContinuousHuman.java \
+            veilbound/tools/HumanVariantCLI.java
+      - name: Five independent anatomy candidates - 320 bounded micro-mutations
+        env:
+          TEAM: ${{ matrix.team }}
+        run: |
+          set -euo pipefail
+          BASE="inspection_output/human-wave/${TEAM}"
+          mkdir -p "${BASE}"
+          for SLOT in 0 1 2 3 4; do
+            python3 veilbound/scripts/human_mutation_worker.py \
+              --team "${TEAM}" --slot "${SLOT}" --out "${BASE}"
+          done
+          CSV="$(python3 veilbound/scripts/human_mutation_worker.py \
+            --team "${TEAM}" --select --out "${BASE}" | tail -n 1)"
+          java -Xmx1200m -Djava.awt.headless=true -cp "${RUNNER_TEMP}/human-java" \
+            game.ashenveil.veilbound.HumanVariantCLI "${CSV}" "${BASE}/selected"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          folder=Path("inspection_output/human-wave")/os.environ["TEAM"]
+          report=json.loads((folder/"manager_review.json").read_text())
+          assert report["micro_edits_evaluated"]==320
+          assert all((folder/"selected"/(name+".png")).is_file() for name in
+                     ("front","side","back","three_quarter"))
+          assert (folder/"selected"/"human_candidate.obj").stat().st_size>15000
+          print("ANATOMY_TEAM_PASS",os.environ["TEAM"],
+                "slots=5 micro_candidates=320 screenshots=4 verified_mesh=true")
+          PY
+      - name: Archive actual 3D angles and independently audited candidate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m20-human-${{ matrix.team }}-candidate
+          path: inspection_output/human-wave/${{ matrix.team }}/
+          if-no-files-found: warn
+          retention-days: 10
+  manager-review:
+    name: Manager of managers / rank 50 candidates
+    needs: [anatomy-team]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m20-human-*-candidate
+          path: inspection_output/collected-wave
+      - name: Audit all 50 slots; fail rather than pretend a candidate is acceptable
+        run: |
+          set -euo pipefail
+          python3 veilbound/scripts/human_wave_manager.py \
+            inspection_output/collected-wave
+          cat inspection_output/wave-ranking/manager_human_review.md >> "${GITHUB_STEP_SUMMARY}"
+      - name: Publish a reviewer-controlled shortlist, never auto-merge
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m20-human-50-worker-leaderboard
+          path: inspection_output/wave-ranking/
+          if-no-files-found: warn
+          retention-days: 14
