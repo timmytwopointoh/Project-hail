@@ -254,3 +254,70 @@ jobs:
           path: inspection_output/m31-director/
           retention-days: 21
           if-no-files-found: warn
+
+  m31-gltf-skin-export:
+    name: Preserve M31 source and export isolated glTF / skin PBR candidate
+    needs: reference-geometry-workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m31-actual-geometry-neutral
+          path: inspection_output/m31-export-source
+      - name: Produce and audit review-only VEILFORGE asset package
+        run: |
+          set -euo pipefail
+          ROOT=inspection_output/m31-skin-glTF
+          RAW=inspection_output/m31-export-source/human_candidate.obj
+          mkdir -p "$ROOT"
+          test -s "$RAW"
+          python3 veilforge/engine.py inspect --obj "$RAW" --out "$ROOT/raw-topology.json"
+          python3 veilforge/topology.py --obj "$RAW" \
+            --out "$ROOT/m31-repaired-review.obj" --mode human
+          python3 veilforge/engine.py material --type skin --size 512 --out "$ROOT/skin"
+          python3 veilforge/gltf_export.py \
+            --obj "$ROOT/m31-repaired-review.obj" \
+            --out "$ROOT/m31-human-review.gltf" --profile skin \
+            --material-dir "$ROOT/skin"
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          source=Path("inspection_output/m31-export-source/human_candidate.obj")
+          root=Path("inspection_output/m31-skin-glTF")
+          t=json.loads((root/"m31-repaired-review_topology_report.json").read_text())
+          gltf=json.loads((root/"m31-human-review.gltf").read_text())
+          assert gltf["asset"]["version"]=="2.0"
+          assert gltf["extras"]["manually_approved"] is False
+          assert t["manual_visual_review_required"] is True
+          assert t["ready_for_game"] is False
+          assert t["after"]["nonmanifold_edges"]==0
+          assert t["after"]["degenerate_triangles"]==0
+          assert (root/"m31-human-review.bin").stat().st_size>1000
+          mat=list((root/"skin").rglob("*.png"))
+          assert len(mat)>=4, "Incomplete skin PBR source"
+          report={
+            "engine":"VEILFORGE","iteration":"M31",
+            "source_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),
+            "triangles":t["after"]["triangles"],
+            "open_edges":t["after"]["boundary_edges"],
+            "nonmanifold_edges":t["after"]["nonmanifold_edges"],
+            "material_maps":len(mat),"material_origin":"procedural-not-photoscanned",
+            "glTF_conforms":"2.0","ready_for_game":False,
+            "reference_appearance_approved":False,
+            "original_knight_preserved":True
+          }
+          (root/"M31_EXPORT_REVIEW.json").write_text(json.dumps(report,indent=2)+"\n")
+          print("VEILFORGE_M31_GLTF_PBR_REVIEW_PASS",json.dumps(report))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m31-gltf-and-skin-pbr-review-only
+          path: inspection_output/m31-skin-glTF/
+          retention-days: 21
+          if-no-files-found: warn
