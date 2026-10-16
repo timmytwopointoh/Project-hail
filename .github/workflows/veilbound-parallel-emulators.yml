@@ -119,6 +119,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
       - name: Launch independent Android emulator and exercise actual game
+        env:
+          VEILBOUND_EXPECTED_API: ${{ matrix.api }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -132,15 +134,7 @@ jobs:
           disable-animations: false
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: |
-            bash -ec '
-              observed_api="$(adb shell getprop ro.build.version.sdk | tr -d "\\r")"
-              if [ "$observed_api" != "${{ matrix.api }}" ]; then
-                echo "Wrong Android API: requested ${{ matrix.api }}, emulator reports $observed_api" >&2
-                exit 3
-              fi
-              bash veilbound/scripts/emulator_test.sh
-            '
+          script: bash veilbound/scripts/emulator_shard_test.sh
       - name: Preserve actual APK fingerprint per emulator (also after failure)
         if: always()
         run: |
