@@ -44,8 +44,12 @@ public final class M29ReferencePose {
             // Taper the X influence inward only near the shoulder, keeping
             // the fingers coherently rotated while hips remain planted.
             float lowerBodyGuard=1f-smooth((y-1.48f)/.17f);
-            float threshold=.265f+.135f*lowerBodyGuard;
-            float band=.085f-.040f*lowerBodyGuard;
+            // The inner skin of the forearm reaches x≈.41; keeping it
+            // fixed created hanging strip artifacts along the wrist. A
+            // narrow .34→.415 blend protects x≈.30 thigh/torso skin while
+            // moving the entire radial cross-section with the fingers.
+            float threshold=.265f+.075f*lowerBodyGuard;
+            float band=.085f-.010f*lowerBodyGuard;
             float arm=smooth((ax-threshold)/band)*
                       smooth((y-.80f)/.12f)*
                       // Stop the high-deltoid movement before the fixed chest/neck
