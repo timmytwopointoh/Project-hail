@@ -586,14 +586,23 @@ def main():
         def expected_camera(item,angle):
             yaw={"front":0.0,"side":1.5707963,"back":3.14159265,
                  "three_quarter":5.497787}[angle]
-            for retry in range(22):
+            # Slow emulators occasionally drop ADB-tapped HUD view controls
+            # while a 60k-triangle body is uploaded. Re-inject a camera-only
+            # control when the REAL logged camera yaw stays behind, never
+            # accept the HUD caption or a static screenshot as proof.
+            for retry in range(45):
                 line=latest_studio_log()
                 match=re.search(r"item=(\d+).*?yaw=([-0-9.]+)",line)
-                if match and int(match.group(1))==item and (
-                        abs(float(match.group(2))-yaw)<.12):
-                    return
-                time.sleep(.36)
-            raise AssertionError("M31 camera target failed: item="+str(item)+
+                if match and int(match.group(1))==item:
+                    observed=float(match.group(2))
+                    if abs(observed-yaw)<.12:return
+                    if retry in (10,24,36):
+                        if angle=="front":
+                            touch(w*.921,h*.946)  # camera reset, not gameplay
+                        else:
+                            touch(w*.50,h*.758)  # another real 3D angle step
+                time.sleep(.42)
+            raise AssertionError("Studio camera target failed: item="+str(item)+
                                  " angle="+angle+" latest="+latest_studio_log())
         previous_frame=OUT/"01_m29_relaxed_side.png"
         for item,label,angles in (
