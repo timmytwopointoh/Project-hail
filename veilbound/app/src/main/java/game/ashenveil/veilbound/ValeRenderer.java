@@ -39,6 +39,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh[] studioM29Tpose,studioM29Relaxed;
     private final Mesh[][] studioM31ReviewMeshes=new Mesh[3][2];
     private final Mesh[][] studioM32ReviewMeshes=new Mesh[3][2];
+    private final Mesh[][] studioM35ReviewMeshes=new Mesh[3][2];
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -507,6 +508,27 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * M30's corrected arm weights retain M28's skin coordinates and skin
      * normals come from the M31 seam-conscious source smoother.
      */
+    /**
+     * New actual adult mouth only in opt-in studio test items. Two facial
+     * expressions share the rest of the anatomical source and a third model
+     * retains corrected T-pose; all source meshes loaded only on demand.
+     */
+    private Mesh getM35MouthMesh(int item,boolean ultra){
+        int pose=item-25,detail=ultra?1:0;
+        if(pose<0||pose>=3)throw new IllegalArgumentException("M35 studio slot");
+        if(studioM35ReviewMeshes[pose][detail]==null){
+            ArtKit.Model anatomy=HumanAnatomy.buildM35Candidate(!ultra,pose==1);
+            ArtKit.Model candidate=pose==2?M32ShoulderRig.pose(
+                anatomy,M32ShoulderRig.T_POSE):anatomy;
+            studioM35ReviewMeshes[pose][detail]=new Mesh(candidate.vertices);
+            Log.i("VEILBOUND_STUDIO","M35_ANATOMICAL_MOUTH_READY item="+item+
+                " triangles="+candidate.triangleCount+
+                " mouth_open="+(pose==1)+
+                " correct_tpose="+(pose==2)+
+                " game_hero_untouched=true");
+        }
+        return studioM35ReviewMeshes[pose][detail];
+    }
     /** M32 opt-in anatomical reference pose; never overwrites historic hero. */
     private Mesh getM32ReviewMesh(int item,boolean ultra){
         int pose=item-22,detail=ultra?1:0;
@@ -574,7 +596,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         float horizontal=m.zoom*(float)Math.cos(pitch);
         float targetY=(m.item==2?2.72f:(m.item==6?3.50f:
             m.item==7?.47f:m.item==8?1.25f:m.item==9?1.42f:
-            m.item==10?1.07f:m.item==12?1.52f:(m.item==14||m.item==16)?3.42f:2.12f))+m.panY;
+            m.item==10?1.07f:m.item==12?1.52f:(m.item==14||m.item==16||m.item==25||m.item==26)?3.42f:2.12f))+m.panY;
         float targetX=m.panX;
         cx=targetX+(float)Math.sin(yaw)*horizontal;
         cy=targetY+(float)Math.sin(pitch)*m.zoom;
@@ -639,6 +661,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 25:
+            case 26:
+            case 27:
+                chosen=getM35MouthMesh(m.item,m.ultraMesh);
+                break;
             case 22:
             case 23:
             case 24:
@@ -687,7 +714,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=24)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=27)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
