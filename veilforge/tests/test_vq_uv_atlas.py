@@ -93,6 +93,26 @@ class UVAtlasTests(unittest.TestCase):
             self.assertEqual(baked["low_source_sha256"],atlas_report["candidate_sha256"])
             self.assertFalse(baked["android_emulator_verified"])
             self.assertFalse(baked["production_approved"])
+    def test_uv_projection_rejects_unrelated_geometry_outside_cage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);build(root/"meshes")
+            low=root/"atlas.obj"
+            unwrap(root/"meshes/source_low.obj",low,texture_size=256,padding=2)
+            high=root/"meshes/source_high.obj"
+            altered=root/"invalid_high.obj"
+            data=high.read_text()
+            # Shift the very first real vertex outside the limited projection
+            # cage while leaving its UV and index topology unchanged.
+            for line in data.splitlines():
+                if line.startswith("v "):
+                    parts=line.split()
+                    parts[2]="0.500000000"
+                    data=data.replace(line," ".join(parts),1)
+                    break
+            altered.write_text(data)
+            with self.assertRaisesRegex(ValueError,"projection cage|UV charts"):
+                transfer(low,altered,root/"must_fail.obj",cage_distance=.06)
+            self.assertFalse((root/"must_fail.obj").exists())
     def test_reject_invalid_budget_padding_and_source_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);build(root/"source")

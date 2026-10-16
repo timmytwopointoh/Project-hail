@@ -14,6 +14,7 @@ on:
       - 'veilforge/vq_sculpt_detail_patch.py'
       - 'veilforge/vq_mesh_baker.py'
       - 'veilforge/vq_uv_atlas.py'
+      - 'veilforge/vq_uv_transfer.py'
       - 'veilforge/tests/test_vq_uv_atlas.py'
       - 'veilforge/VQ_M31_UV_ATLAS.md'
       - 'veilforge/vq_engine_health.py'
@@ -264,6 +265,42 @@ jobs:
           assert r["geometry_invariants_preserved"] is True
           assert r["manual_artistic_review_required"] is True
           print("VQ_M31_UNIQUE_UV_ATLAS_GATE_PASS",r["charts"],"charts")
+          PY
+      - name: Project actual high-resolution sculpt onto new padded low UV atlas and bake geometry normals
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_uv_atlas.py \
+            --obj inspection_output/vq-smoke/m30/geometry/source_low.obj \
+            --out inspection_output/vq-smoke/m31/low_chart_atlas.obj \
+            --size 256 --padding 2
+          python3 veilforge/vq_uv_transfer.py \
+            --low inspection_output/vq-smoke/m31/low_chart_atlas.obj \
+            --high inspection_output/vq-smoke/m30/geometry/source_high.obj \
+            --out inspection_output/vq-smoke/m31/high_chart_correspondence.obj \
+            --cage-distance .06
+          python3 veilforge/vq_mesh_baker.py \
+            --low inspection_output/vq-smoke/m31/low_chart_atlas.obj \
+            --high inspection_output/vq-smoke/m31/high_chart_correspondence.obj \
+            --out inspection_output/vq-smoke/m31/baked --size 256
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/vq-smoke/m31")
+          low=json.loads((root/"low_chart_atlas_atlas_report.json").read_text())
+          high=json.loads((root/"high_chart_correspondence_transfer_report.json").read_text())
+          bake=json.loads((root/"baked/bake_manifest.json").read_text())
+          assert low["source_triangles"]==32
+          assert high["high_faces"]==3200
+          assert high["parent_charts_used"]>=25
+          assert low["candidate_sha256"]==bake["low_source_sha256"]
+          assert high["projected_high_sha256"]==bake["high_source_sha256"]
+          assert bake["meaningful_normal_variation_texels"]>=400
+          assert bake["textured_coverage_fraction"]>=.60
+          assert low["original_source_unmodified"] is True
+          assert high["game_approved"] is False
+          print("VQ_M31_HIGH_LOW_UV_BAKE_PASS",
+                low["charts"],"charts",high["high_faces"],"hi faces",
+                bake["meaningful_normal_variation_texels"],"curved texels")
           PY
       - name: Sign immutable VQ model inspection report under GitHub OIDC
         uses: actions/attest@v4

@@ -63,3 +63,34 @@ Implement geometry-aware projection-cage baking between different high/low
 topologies; move from triangle-local charts to contiguous low-distortion UV
 islands, bake seam gutters, and verify full multi-material glTF + renderer
 screenshots with the four Android workers.
+
+## M31 compatible high-resolution UV correspondence
+
+`vq_uv_transfer.py` maps a separate high-resolution OBJ onto its related
+padded low-poly UV charts by projecting *each high triangle* onto exactly one
+low face. UV corners interpolate with 3D barycentric coordinates; original
+high-poly positions, normals and face material references are unchanged.
+
+This is deliberately **strict**: a high triangle must fit entirely inside a
+single low parent chart, share the material name and remain within a bounded
+surface-normal offset (the default is 0.06 model units). Ambiguous stacked
+parents, chart crossings and distant/unrelated high geometry are rejected.
+The current exhaustive, bounded implementation limits its input to 1,800
+low faces and 20,000 high faces; scaling requires a spatial index.
+
+The M31 workflow now exercises actual M30 high-poly sculpted geometry
+(3,200 triangles) projected onto a newly generated low UV atlas (32
+triangles), then runs the existing geometry-derived normal/height baker.
+That verifies a real multi-resolution source-to-texture handoff without
+pretending a generic raycast cage exists.
+
+```bash
+python3 veilforge/vq_uv_transfer.py \
+  --low build/source_low_unique.obj \
+  --high build/source_high.obj \
+  --out build/source_high_uv_matched.obj --cage-distance .06
+python3 veilforge/vq_mesh_baker.py \
+  --low build/source_low_unique.obj \
+  --high build/source_high_uv_matched.obj \
+  --out build/normal_baked --size 256
+```
