@@ -24,7 +24,7 @@ TESTS = Path("veilbound/tests/game/ashenveil/veilbound")
 ROLES = {
     "combat": ["WorldState.java"],
     "animation": ["HeroPose.java", "CombatMotion.java", "CharacterRig.java"],
-    "models": ["HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
+    "models": ["M26SculptDials.java", "HumanAnatomy.java", "M25FaceSculpt.java", "M24BodyRetarget.java", "M24AnimationLab.java", "HumanHandSculpt.java", "HumanSkeleton.java", "ContinuousHuman.java", "ShapeEngine.java", "BellwardenAnatomy.java", "CinematicArtKit.java", "DetailArtKit.java", "ObjMeshLoader.java"],
     "materials": ["ArtKit.java", "M25SkinPolish.java", "MaterialTextures.java", "SurfaceAtlas.java", "MaterialMapping.java"],
     "world": ["EnvironmentKit.java"],
     "studio": ["ModelStudio.java"],
@@ -78,7 +78,7 @@ def run_java_checks(replacement):
         classes.mkdir()
         pure = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
                 "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
+                "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M26SculptDials", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
         suites = ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay",
                   "EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
                   "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader",

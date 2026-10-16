@@ -1,0 +1,250 @@
+name: VEILFORGE M26 - Sculpt Learning Curriculum
+on:
+  push:
+    branches:
+      - feature/veilforge-m26-sculpt-learning-curriculum
+    paths:
+      - .github/workflows/veilforge-m26-sculpt-learning.yml
+      - veilforge/sculpt_learning.py
+      - veilforge/sculpt_curriculum.json
+      - veilforge/feedback/sculpt_lessons.json
+      - veilforge/tests/test_sculpt_learning.py
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/HumanAnatomy.java
+      - veilbound/app/src/main/java/game/ashenveil/veilbound/M26SculptDials.java
+      - veilbound/tools/HumanVariantCLI.java
+      - veilbound/tests/game/ashenveil/veilbound/M26SculptLearningTest.java
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: veilforge-m26-curriculum-${{ github.ref }}
+  cancel-in-progress: true
+
+# Four specialist worker lanes * 3 real edited source meshes + an unchanged
+# baseline per lane. All output is an unapproved, isolated candidate artifact.
+jobs:
+  director-preflight:
+    name: Skill map, protected game baseline, lessons and geometry contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate learned skill map and validate lesson provenance
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s veilforge/tests -v
+          python3 veilforge/sculpt_learning.py map --out inspection_output/m26-plan
+          test -s inspection_output/m26-plan/SCULPT_SKILL_MAP.md
+          test -f docs/veilbound/M25_LEARNING_JOURNAL.md
+      - name: Compile actual geometry and check 8 independent review-only sculpt dials
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/veilforge-m26
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/veilforge-m26 \
+            "$SRC/ArtKit.java" "$SRC/ShapeEngine.java" \
+            "$SRC/ContinuousHuman.java" "$SRC/HumanHandSculpt.java" \
+            "$SRC/M25FaceSculpt.java" "$SRC/M25SkinPolish.java" \
+            "$SRC/M24BodyRetarget.java" "$SRC/M26SculptDials.java" "$SRC/HumanSkeleton.java" \
+            "$SRC/HumanAnatomy.java" "$TEST/M26SculptLearningTest.java"
+          java -cp /tmp/veilforge-m26 game.ashenveil.veilbound.M26SculptLearningTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m26-curriculum-and-skill-map
+          path: inspection_output/m26-plan/
+          retention-days: 21
+
+  sculpt-specialists:
+    needs: director-preflight
+    name: M26 specialist / ${{ matrix.focus }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        focus: [face, surface, feet, full]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile VEILFORGE's actual candidate sculpt exporter
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m26-export
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          javac -d /tmp/m26-export \
+            "$SRC/ArtKit.java" "$SRC/MaterialMapping.java" "$SRC/SurfaceAtlas.java" \
+            "$SRC/ShapeEngine.java" "$SRC/ContinuousHuman.java" \
+            "$SRC/HumanHandSculpt.java" "$SRC/M25FaceSculpt.java" \
+            "$SRC/M25SkinPolish.java" "$SRC/M24BodyRetarget.java" \
+            "$SRC/M26SculptDials.java" "$SRC/HumanSkeleton.java" "$SRC/HumanAnatomy.java" \
+            veilbound/tools/HumanVariantCLI.java
+      - name: Generate bounded sculpt experiments from grounded M24/M25 lessons
+        env:
+          FOCUS: ${{ matrix.focus }}
+        run: |
+          set -euo pipefail
+          ROOT="inspection_output/m26-$FOCUS"
+          mkdir -p "$ROOT"
+          python3 veilforge/sculpt_learning.py propose \
+            --focus "$FOCUS" --out "$ROOT/sculpt_proposals.json"
+          BASE="1,1,1,1,1,1,1,1,1,1,1,1"
+          # Immutable M25 control is exported without wasting camera renders.
+          java -Xmx2g -Djava.awt.headless=true -cp /tmp/m26-export \
+            game.ashenveil.veilbound.HumanVariantCLI \
+            "$BASE" "$ROOT/baseline" --mesh-only
+          for STRENGTH in cautious balanced assertive; do
+            DIALS="$(python3 veilforge/sculpt_learning.py print-csv \
+              --plan "$ROOT/sculpt_proposals.json" --candidate "$STRENGTH")"
+            mkdir -p "$ROOT/$STRENGTH"
+            if [[ "$STRENGTH" = "balanced" ]]; then
+              java -Xmx2g -Djava.awt.headless=true -cp /tmp/m26-export \
+                game.ashenveil.veilbound.HumanVariantCLI \
+                "$BASE" "$ROOT/$STRENGTH" "$DIALS"
+            else
+              java -Xmx2g -Djava.awt.headless=true -cp /tmp/m26-export \
+                game.ashenveil.veilbound.HumanVariantCLI \
+                "$BASE" "$ROOT/$STRENGTH" "$DIALS" --mesh-only
+            fi
+            python3 veilforge/sculpt_learning.py compare \
+              --focus "$FOCUS" \
+              --before "$ROOT/baseline/human_candidate.obj" \
+              --after "$ROOT/$STRENGTH/human_candidate.obj" \
+              --plan "$ROOT/sculpt_proposals.json" --candidate "$STRENGTH" \
+              --out "$ROOT/learning_audit_$STRENGTH.json"
+          done
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path("inspection_output")/("m26-"+os.environ["FOCUS"])
+          checks=[json.loads((p/("learning_audit_"+stage+".json")).read_text())
+                  for stage in ("cautious","balanced","assertive")]
+          assert len(checks)==3 and all(x["numeric_geometry_gates_passed"] for x in checks)
+          assert all(x["human_visual_review_required"] and
+                     x["accepted_for_game"] is False for x in checks)
+          assert len(list((p/"balanced").glob("orbit_*.png")))==10
+          assert all((p/"balanced"/("face_"+a+".png")).stat().st_size>1500
+                     for a in ("front","side","three_quarter"))
+          print("M26_SCULPT_WORKER_EVIDENCE_PASS",os.environ["FOCUS"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m26-sculpt-${{ matrix.focus }}
+          path: inspection_output/m26-${{ matrix.focus }}/
+          retention-days: 14
+          if-no-files-found: warn
+
+  asset-interchange:
+    name: Confirm VEILFORGE geometry review and skin/glTF candidate
+    needs: sculpt-specialists
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: m26-sculpt-full
+          path: inspection_output/m26-source
+      - name: Repair export only and publish genuine skin/glTF candidate
+        run: |
+          set -euo pipefail
+          SRC=inspection_output/m26-source/balanced/human_candidate.obj
+          OUT=inspection_output/m26-veilforge-export
+          mkdir -p "$OUT"
+          test -s "$SRC"
+          python3 veilforge/topology.py --obj "$SRC" \
+            --out "$OUT/m26_repair_candidate.obj" --mode human
+          python3 veilforge/engine.py material --type skin --size 256 \
+            --out "$OUT/skin"
+          python3 veilforge/gltf_export.py \
+            --obj "$OUT/m26_repair_candidate.obj" \
+            --out "$OUT/m26_sculpt_candidate.gltf" \
+            --material-dir "$OUT/skin" --profile skin
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("inspection_output/m26-veilforge-export")
+          topology=json.loads((p/"m26_repair_candidate_topology_report.json").read_text())
+          gltf=json.loads((p/"m26_sculpt_candidate.gltf").read_text())
+          assert topology["manual_visual_review_required"]
+          assert topology["ready_for_game"] is False
+          assert gltf["asset"]["version"]=="2.0"
+          assert gltf["extras"]["manually_approved"] is False
+          assert (p/"m26_sculpt_candidate.bin").stat().st_size>1000
+          print("M26_UNAPPROVED_GLTF_AND_TOPOLOGY_EVIDENCE_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m26-veilforge-asset-review
+          path: inspection_output/m26-veilforge-export/
+          retention-days: 14
+          if-no-files-found: warn
+
+  learning-director:
+    name: Audit all sculpt lessons; require human signoff
+    needs: [sculpt-specialists,asset-interchange]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m26-sculpt-*
+          path: inspection_output/m26-collected
+      - name: Reject missing reports and never auto-merge a winner
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("inspection_output/m26-collected")
+          all_audits=list(root.rglob("learning_audit_*.json"))
+          assert len(all_audits)==12, f"Expected 12 actual candidate comparisons, got {len(all_audits)}"
+          reports=[json.loads(p.read_text()) for p in all_audits]
+          assert {r["focus"] for r in reports}=={"face","surface","feet","full"}
+          assert all(r["numeric_geometry_gates_passed"] for r in reports)
+          assert all(r["human_visual_review_required"] and
+                     r["accepted_for_game"] is False and
+                     r["auto_promoted"] is False for r in reports)
+          output=Path("inspection_output/m26-learning-director")
+          output.mkdir(parents=True,exist_ok=True)
+          summary={"engine":"VEILFORGE","iteration":"M26",
+                   "specialist_managers":4,"candidate_evaluations":len(reports),
+                   "candidate_geometry_checks_passed":True,
+                   "source_reference_similarity_measured":False,
+                   "visual_quality_approved":False,
+                   "ready_for_game":False,
+                   "original_knight_preserved":True,
+                   "hair_refinement_budget":0,
+                   "next":"Human review 14 true views + 3 face closeups; then Android Testing Grounds"}
+          (output/"learning_director_report.json").write_text(json.dumps(summary,indent=2)+"\\n")
+          print(json.dumps(summary,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m26-learning-director-review
+          path: inspection_output/m26-learning-director/
+          retention-days: 21
+          if-no-files-found: warn

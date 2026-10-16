@@ -32,6 +32,12 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==15,"M26 learned sculpt candidate must be a separate review slot");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M26 camera angle control missing");
+        s.focusDetail();
+        ok(s.snapshot().zoom<1.3f,"M26 face focus must remain available");
+        s.nextItem(-1);
         ok(s.snapshot().item==14,"M25 face close-up must be selectable in Testing Grounds");
         ok(Math.abs(s.snapshot().zoom-1.45f)<.01f,"M25 face zoom must start close");
         s.nextReviewView();

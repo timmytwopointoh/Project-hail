@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - 'feature/veilbound-*'
+      - 'feature/veilforge-m26-sculpt-learning-curriculum'
     paths:
       - 'veilbound/**'
       - '.github/workflows/veilbound-parallel-qa.yml'

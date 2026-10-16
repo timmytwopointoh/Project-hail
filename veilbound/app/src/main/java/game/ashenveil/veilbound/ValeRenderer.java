@@ -34,6 +34,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh staticWorld,studioWorld,studioChapel,cube,octa,wardenModel,hushedModel,bossModel,swordModel,greatswordModel,lanternModel;
     private Mesh studioWarden,studioHushed,studioBoss,studioSword,studioGreatsword,studioLantern;
     private Mesh studioHuman,studioHumanLite,studioHandSculpt;
+    private Mesh studioM26Sculpt,studioM26SculptLite;
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -447,6 +448,18 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         return handle;
     }
 
+    /**
+     * The 2 extra learner variants are loaded ONLY when a reviewer opens
+     * M26, not during the title screen or historic knight model preview.
+     * This matters on Pixel 4 emulators and low-memory real devices.
+     */
+    private void initM26ReviewMeshes(){
+        float[] studyDials={.38f,.34f,.38f,.22f,.38f,.42f,.40f,.32f};
+        studioM26Sculpt=new Mesh(HumanAnatomy.buildM26Candidate(false,studyDials).vertices);
+        studioM26SculptLite=new Mesh(HumanAnatomy.buildM26Candidate(true,studyDials).vertices);
+        Log.i("VEILBOUND_STUDIO","M26_SCULPT_REVIEW_READY triangles="+
+              (studioM26Sculpt.count/3)+" approved=false lazy_loaded=true");
+    }
     private void renderStudio(){
         initStudioHighDetail();
         ArtKit.Model pending=importQueue.getAndSet(null);
@@ -525,6 +538,11 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 15:
+                if(studioM26Sculpt==null||studioM26SculptLite==null)
+                    initM26ReviewMeshes();
+                chosen=m.ultraMesh?studioM26Sculpt:studioM26SculptLite;
+                break;
             case 13:
                 // Real vertex-animated testing-ground body, cached frames.
                 // Wire inspection freezes frame 0; no per-frame GPU rebuild.
@@ -546,7 +564,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item==11||m.item==12||m.item==13||m.item==14||m.item==15)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
