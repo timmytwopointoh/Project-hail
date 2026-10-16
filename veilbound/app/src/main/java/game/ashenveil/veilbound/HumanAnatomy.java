@@ -87,6 +87,35 @@ public final class HumanAnatomy {
     public static ArtKit.Model buildM32Candidate(boolean lite){
         return M32AnatomySurface.sculpt(buildM31Candidate(lite));
     }
+    /**
+     * M35 opt-in real adult male mouth rebuild. Reuses the original neutral
+     * human body and eye anatomy, removes ONLY the old thin legacy lip strips,
+     * sculpts supporting continuous facial skin, then adds genuine separate
+     * upper/lower vermilion volume and a shallow dark oral opening.
+     *
+     * The mouth-open diagnostic does not claim production speech/jaw bones.
+     * M20-M33, gameplay, hair, 10 fingers, and original knight are unchanged.
+     */
+    public static ArtKit.Model buildM35Candidate(boolean lite,boolean mouthOpen){
+        float[] learned={.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f};
+        ArtKit.Model skin=M35MouthSculpt.sculptConnectedSkin(
+            M28SkinContinuity.refine(
+                ContinuousHuman.buildM25WithoutDigits(lite,ContinuousHuman.BASE)));
+        ArtKit.Model composed=ShapeEngine.combine(
+            skin,
+            HumanHandSculpt.build(lite,ContinuousHuman.BASE[0]),
+            M28FaceSculpt.build(lite,false),
+            M35MouthSculpt.build(lite,mouthOpen?1f:0f));
+        ArtKit.Model retargeted=M24BodyRetarget.transform(composed);
+        ArtKit.Model coloured=M25SkinPolish.apply(retargeted);
+        ArtKit.Model learnedBody=M26SculptDials.apply(coloured,learned);
+        return M32AnatomySurface.sculpt(
+            M31SkinSurfaceNormals.smooth(learnedBody));
+    }
+    public static ArtKit.Model buildM35Candidate(boolean lite){
+        return buildM35Candidate(lite,false);
+    }
+
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
