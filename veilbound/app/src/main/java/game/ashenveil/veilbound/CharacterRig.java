@@ -3,7 +3,7 @@ package game.ashenveil.veilbound;
 import java.util.Arrays;
 
 /**
- * Hero seven-part rigid armor rig extracted from existing hand-authored mesh triangles.
+ * Hero eleven-part segmented rigid armor rig extracted from existing hand-authored mesh triangles.
  * Each segment keeps its normals and painted materials. The original merged
  * meshes remain untouched for Model Atelier inspection and imported OBJ work.
  * The Bellwarden helmet and mantle have independent pivots; foes remain unchanged.
@@ -12,17 +12,25 @@ public final class CharacterRig {
     private CharacterRig() {}
     public static final class Parts {
         public final ArtKit.Model torso, leftArm, rightArm, leftLeg, rightLeg, mantle, helmet;
-        public final float shoulderX,shoulderY,hipX,hipY;
+        public final ArtKit.Model leftForearm,rightForearm,leftShin,rightShin;
+        public final float shoulderX,shoulderY,hipX,hipY,elbowY,kneeY;
         Parts(ArtKit.Model[] models,float sx,float sy,float hx,float hy){
             torso=models[0];leftArm=models[1];rightArm=models[2];
             leftLeg=models[3];rightLeg=models[4];mantle=models[5];helmet=models[6];
+            leftForearm=models[7];rightForearm=models[8];
+            leftShin=models[9];rightShin=models[10];
             shoulderX=sx;shoulderY=sy;hipX=hx;hipY=hy;
+            elbowY=1.36f;kneeY=.72f;
         }
         public int vertices(){
             return (torso.vertices.length+leftArm.vertices.length+rightArm.vertices.length
                 +leftLeg.vertices.length+rightLeg.vertices.length+
                 (mantle==null?0:mantle.vertices.length)+
-                (helmet==null?0:helmet.vertices.length))/9;
+                (helmet==null?0:helmet.vertices.length)+
+                (leftForearm==null?0:leftForearm.vertices.length)+
+                (rightForearm==null?0:rightForearm.vertices.length)+
+                (leftShin==null?0:leftShin.vertices.length)+
+                (rightShin==null?0:rightShin.vertices.length))/9;
         }
     }
     private static final class Accumulator {
@@ -47,8 +55,8 @@ public final class CharacterRig {
         final float armTop=boss?3.34f:(revenant?2.06f:2.14f);
         final float legTop=boss?1.16f:(revenant?.82f:1.20f);
         final float legEdge=boss?.26f:(revenant?.13f:.15f);
-        Accumulator[] a=new Accumulator[7];
-        for(int i=0;i<7;i++)a[i]=new Accumulator();
+        Accumulator[] a=new Accumulator[11];
+        for(int i=0;i<11;i++)a[i]=new Accumulator();
         float[] src=model.vertices;
         if(src.length%27!=0)throw new IllegalArgumentException("Non-triangular source");
         for(int i=0;i<src.length;i+=27){
@@ -65,11 +73,21 @@ public final class CharacterRig {
                 // to the entire rigid torso. Enemy rigs remain unchanged.
                 part=5;py=1.93f;pz=-.51f;
             }else if(!boss&&!revenant&&y>.65f&&y<armTop
-                    &&Math.abs(x)>.435f){
-                // M15: classify long gauntlet digits and the forearm ahead
-                // of leg assignment. Otherwise fingers below .90 are
-                // swallowed into the pelvis/thigh and never swing in combat.
-                part=x<0?1:2;px=x<0?-shoulderX:shoulderX;py=shoulderY;
+                    &&Math.abs(x)>.435f
+                    &&(y>1.20f||Math.abs(x)>.525f||z>.16f)){
+                // Classify the full hand BEFORE the thigh, including long
+                // metal fingers. Every triangle is owned by one joint.
+                boolean lower=y<1.37f;
+                part=x<0?(lower?7:1):(lower?8:2);
+                px=x<0?-shoulderX:shoulderX;
+                py=lower?1.36f:shoulderY;
+                pz=lower?.065f:0f;
+            }else if(!boss&&!revenant&&z>-.34f&&y<legTop
+                    &&Math.abs(x)>legEdge){
+                boolean lower=y<.70f;
+                part=x<0?(lower?9:3):(lower?10:4);
+                px=x<0?-hipX:hipX;py=lower?.72f:hipY;
+                pz=lower?.08f:0f;
             }else if(z>-.34f&&y<legTop&&Math.abs(x)>legEdge){
                 part=x<0?3:4;px=x<0?-hipX:hipX;py=hipY;
             }else if(z>-.34f&&y>armBottom&&y<armTop&&Math.abs(x)>armEdge){
@@ -77,8 +95,8 @@ public final class CharacterRig {
             }
             a[part].add(src,i,px,py,pz);
         }
-        ArtKit.Model[] out=new ArtKit.Model[7];
-        for(int i=0;i<7;i++)out[i]=a[i].finish();
+        ArtKit.Model[] out=new ArtKit.Model[11];
+        for(int i=0;i<11;i++)out[i]=a[i].finish();
         return new Parts(out,shoulderX,shoulderY,hipX,hipY);
     }
 }
