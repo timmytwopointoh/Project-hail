@@ -1,8 +1,7 @@
 package game.ashenveil.veilbound;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -18,14 +17,14 @@ import android.view.View;
 public final class LoadingView extends View {
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect=new RectF();
-    private final Bitmap knight;
+    private final Drawable knight;
     private int percent=0;
     private String stage="Preparing the realm";
     private boolean error=false;
 
     public LoadingView(Context context){
         super(context);
-        knight=BitmapFactory.decodeResource(getResources(),R.drawable.veilbound_icon);
+        knight=getResources().getDrawable(R.drawable.veilbound_icon);
         setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         setContentDescription("Veilbound startup loading progress");
     }
@@ -56,7 +55,9 @@ public final class LoadingView extends View {
         if(knight!=null){
             rect.set(-535,-215,-185,135);
             paint.setAlpha(235);
-            canvas.drawBitmap(knight,null,rect,paint);
+            knight.setBounds(Math.round(rect.left),Math.round(rect.top),
+                             Math.round(rect.right),Math.round(rect.bottom));
+            knight.draw(canvas);
             paint.setAlpha(255);
         }
         label(canvas,"VEILBOUND",60,-109,65,Color.rgb(222,186,137),true);
