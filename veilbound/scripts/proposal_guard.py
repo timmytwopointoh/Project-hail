@@ -17,8 +17,8 @@ MAX_RISKS = 8
 # provide a reliable finite-value test. Reject erroneous model additions
 # early and give a precise, actionable correction to the next AI attempt.
 BAD_NAN_COMPARISON = re.compile(
-    r"(?:\\b(?:Float|Double)\\s*\\.\\s*NaN\\s*(?:==|!=)|"
-    r"(?:==|!=)\\s*(?:Float|Double)\\s*\\.\\s*NaN\\b)"
+    r"(?:\b(?:Float|Double)\s*\.\s*NaN\s*(?:==|!=)|"
+    r"(?:==|!=)\s*(?:Float|Double)\s*\.\s*NaN\b)"
 )
 
 # Remove Java whitespace and comments while preserving string/char literals.
