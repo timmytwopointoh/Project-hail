@@ -14,10 +14,15 @@
   "allow_source_modification": false,
   "persistent_model_claim": false,
   "source_of_truth": [
+    "AGENTS.md",
     "veilforge/VEILFORGE_CHARTER.md",
+    "veilforge/AGENT_INSTRUCTIONS.md",
     "veilforge/ENGINE_MASTER_PLAN.json",
     "veilforge/queue_backlog.json",
-    "docs/ownership/RIGHTS_AND_PROVENANCE.md"
+    "veilforge/UNIFIED_QUEUE.md",
+    "docs/ownership/RIGHTS_AND_PROVENANCE.md",
+    "docs/ownership/THIRD_PARTY_REGISTER.md",
+    "docs/ownership/BRAND_NAME_CLEARANCE.md"
   ],
   "next_priority": "Establish signed source provenance and audit 10-slot worker+emulator queue before activating any expensive recurring inference",
   "handoff": {
@@ -27,7 +32,8 @@
       "GitHub Actions schedule requires default-branch workflow",
       "No independent proof of copyright ownership or authorship",
       "No continuous background ChatGPT session",
-      "Third-party model licenses are under review"
+      "Third-party model licenses are under review",
+      "VEILFORGE commercial brand name has not been trademark-cleared; similarly named web projects exist"
     ],
     "last_verified_provenance_commit": "7b4ec7eb1f9889b3b9757c3aaa3c8c548e63040f",
     "last_verified_provenance_status": "signed_github_attestation_step_succeeded",
