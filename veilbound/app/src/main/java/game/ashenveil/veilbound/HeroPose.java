@@ -13,6 +13,7 @@ public final class HeroPose {
         public float leftArmRoll,rightArmRoll,leftLegPitch,rightLegPitch;
         public float mantlePitch,mantleYaw,guardLean,breath;
         public float helmetYaw,helmetPitch,leftFootLift,rightFootLift,hipShift;
+        public float leftElbowPitch,rightElbowPitch,leftKneePitch,rightKneePitch;
     }
     private static float clamp(float v,float min,float max){
         return Math.max(min,Math.min(max,v));
@@ -62,6 +63,14 @@ public final class HeroPose {
         p.rightArmRoll=-23f+(-26f*anticipation+42f*contact)*ending;
         p.leftLegPitch=29f*stride*move-32f*evade;
         p.rightLegPitch=-29f*stride*move+25f*evade;
+        // Two-segment kinematics. Swing leg bends at knee while its opposite
+        // leg extends to support weight; elbows preserve a protective guard
+        // and flex through anticipation/contact without instant snapping.
+        p.leftKneePitch=5f+31f*leftStance*move+20f*evade;
+        p.rightKneePitch=5f+31f*rightStance*move+20f*evade;
+        p.leftElbowPitch=-14f-13f*rightStance*move-9f*p.guardLean;
+        p.rightElbowPitch=-28f-12f*leftStance*move+
+                         (38f*contact-9f*anticipation)*ending-11f*evade;
         // Neck-level head stabilization stops the helmet moving like a rigid
         // welded part of the torso. Attack focus and fatigue alter gaze.
         p.helmetYaw=-.39f*p.rootYaw+1.4f*(float)Math.sin(tm*.67f)*(1f-move);
