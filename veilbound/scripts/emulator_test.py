@@ -429,6 +429,33 @@ def main():
         atelier["m25_facial_refinement"]={"viewer":14,"real_angles":4,
             "sclera_iris_geometry_expected":True,
             "visual_approval_required":True,"skin_pbr_unverified":True}
+        # M26: verify a NEW opt-in sculpt candidate loaded in the actual
+        # playable-game inspection viewer without replacing the old knight.
+        touch(w*.65,h*.865)   # M25 facial reviewer -> M26 sculpting lab
+        time.sleep(1.3)
+        learned_log=adb("logcat","-d","-s","VEILBOUND_STUDIO:I","*:S",
+                        timeout=20).decode("utf-8","replace")
+        if "item=15" not in learned_log or "M26_SCULPT_REVIEW_READY" not in learned_log:
+            raise AssertionError("VEILFORGE M26 candidate not loaded in Testing Grounds")
+        m26_front=OUT/"01_m26_sculpt_front.png"
+        report["screenshots"].append(shot(m26_front.name))
+        prior=m26_front
+        for angle in ("side","back","three_quarter"):
+            touch(w*.5,h*.758)
+            time.sleep(1.1)
+            image_name="01_m26_sculpt_"+angle+".png"
+            report["screenshots"].append(shot(image_name))
+            with Image.open(prior) as aa, Image.open(OUT/image_name) as bb:
+                diff=ImageStat.Stat(ImageChops.difference(
+                    aa.convert("RGB").resize((180,105)),
+                    bb.convert("RGB").resize((180,105)))).mean
+            if sum(diff)/3<.12:
+                raise AssertionError("M26 review geometry failed to rotate at "+angle)
+            prior=OUT/image_name
+        atelier["m26_sculpt_curriculum"]={
+            "game_preview":True,"four_actual_angles":True,
+            "review_only":True,"visually_approved":False,
+            "auto_promoted":False,"original_knight_preserved":True}
         touch(w*.08,h*.08)
         # Model-hall screenshots can saturate emulator CPU; HUD telemetry is
         # sampled every ~1.4 s. Poll state instead of treating a stale log as
