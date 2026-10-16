@@ -29,11 +29,11 @@ public final class HumanHandSculpt {
         float v=(t-at)/radius;
         return (float)Math.exp(-v*v*2.6f);
     }
-    private static ShapeEngine.Ring[] finger(int side,int f,int rings){
+    private static ShapeEngine.Ring[] finger(int side,int f,int rings,float shoulderSpan){
         // Reverse which finger reaches each x coordinate on the left, so
         // each index finger stays nearest its own opposable thumb.
         int anatomical=side>0?f:3-f;
-        float center=side*.554f,fx=center+(f-1.5f)*.067f;
+        float center=side*.554f*shoulderSpan,fx=center+(f-1.5f)*.067f;
         float tip=TIPS[anatomical],base=.832f;
         ShapeEngine.Ring[] rows=new ShapeEngine.Ring[rings];
         for(int i=0;i<rings;i++){
@@ -51,9 +51,9 @@ public final class HumanHandSculpt {
         }
         return rows;
     }
-    private static ShapeEngine.Ring[] thumb(int side,int rings){
+    private static ShapeEngine.Ring[] thumb(int side,int rings,float shoulderSpan){
         ShapeEngine.Ring[] rows=new ShapeEngine.Ring[rings];
-        float center=side*.554f;
+        float center=side*.554f*shoulderSpan;
         for(int i=0;i<rings;i++){
             float t=(float)i/(rings-1);
             float y=.689f+(.862f-.689f)*t;
@@ -79,22 +79,25 @@ public final class HumanHandSculpt {
         return ShapeEngine.bevelPlate(polygon,z,.0007f,.0006f,NAIL,SKIN);
     }
     /** Actual model returned to both Android Atelier and offline OBJ exporter. */
-    public static ArtKit.Model build(boolean lite){
+    public static ArtKit.Model build(boolean lite){return build(lite,1f);}
+    public static ArtKit.Model build(boolean lite,float shoulderSpan){
+        if(!Float.isFinite(shoulderSpan)||shoulderSpan<.83f||shoulderSpan>1.17f)
+            throw new IllegalArgumentException("Shoulder span out of supported range");
         int sides=lite?12:24,rings=lite?11:21;
         ArrayList<ArtKit.Model> models=new ArrayList<>(30);
         for(int side:new int[]{-1,1}){
             for(int f=0;f<4;f++){
-                ShapeEngine.Ring[] rows=finger(side,f,rings);
+                ShapeEngine.Ring[] rows=finger(side,f,rings,shoulderSpan);
                 models.add(ShapeEngine.loft(rows,sides,SKIN));
                 int anatomical=side>0?f:3-f;
-                float cx=side*.554f+(f-1.5f)*.067f+side*.003f+
+                float cx=side*.554f*shoulderSpan+(f-1.5f)*.067f+side*.003f+
                          (f-1.5f)*.00135f;
                 // Dorsal nail rests on modeled soft tissue, no floating ivory.
                 models.add(nail(cx,TIPS[anatomical],.137f,.016f,false,side));
             }
-            ShapeEngine.Ring[] rows=thumb(side,rings);
+            ShapeEngine.Ring[] rows=thumb(side,rings,shoulderSpan);
             models.add(ShapeEngine.loft(rows,sides,SKIN));
-            models.add(nail(side*(.554f+.177f),.689f,.203f,.020f,true,side));
+            models.add(nail(side*(.554f*shoulderSpan+.177f),.689f,.203f,.020f,true,side));
         }
         return ShapeEngine.combine(models.toArray(new ArtKit.Model[0]));
     }
