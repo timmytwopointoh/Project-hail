@@ -1,0 +1,44 @@
+name: FORGE/2 Original Geometry Language + Android Viewer
+on:
+  push:
+    branches: ['app/vq-construction-language-v2']
+    paths: ['vq-studio/**', '.github/workflows/vq-construction-language-v2.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  geometry-and-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile and execute two construction languages with real mesh output
+        run: |
+          set -euo pipefail
+          mkdir -p build/forge2
+          javac -d build/forge2 \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/OfflineGeometry.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/ForgeSpec.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/ForgeLang2.java \
+            vq-studio/tests/ForgeSpecSelfTest.java \
+            vq-studio/tests/ForgeLang2SelfTest.java
+          java -cp build/forge2 com.trioncompasitor.vqstudio.ForgeSpecSelfTest
+          java -cp build/forge2 com.trioncompasitor.vqstudio.ForgeLang2SelfTest
+      - name: Android app compiles with expanded language
+        run: gradle -p vq-studio :app:assembleDebug --no-daemon --max-workers=2
+      - name: Upload prototype Android viewer APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VQ-FORGE-2-viewer-APK
+          path: vq-studio/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 21
