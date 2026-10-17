@@ -13,7 +13,13 @@ public final class OfflineProvider extends ContentProvider {
   private void allowTrion(){
     int uid=Binder.getCallingUid();
     String[] names=getContext().getPackageManager().getPackagesForUid(uid);
-    if(names==null||!Arrays.asList(names).contains("com.trioncompasitor.assistant"))
+    boolean stable=names!=null&&Arrays.asList(names)
+      .contains("com.trioncompasitor.assistant");
+    boolean preview=names!=null&&Arrays.asList(names)
+      .contains("com.trioncompasitor.assistant.deltaeditionxxx");
+    boolean debug=(getContext().getApplicationInfo().flags&
+      android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0;
+    if(!stable&&!(debug&&preview))
       throw new SecurityException("Only Trion Assistant may control VQ's private repository");
   }
   @Override public Bundle call(String method,String arg,Bundle extra){
