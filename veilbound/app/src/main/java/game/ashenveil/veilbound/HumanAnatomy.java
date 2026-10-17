@@ -141,6 +141,41 @@ public final class HumanAnatomy {
                 M26SculptDials.apply(colored,learned)));
     }
 
+    /**
+     * M37 shoulder/foot reference candidate. The shoulder centers follow
+     * a 3.5% inboard anatomical-spread target, including their attached
+     * finger shafts, and the five toe shapes are generated from a separate
+     * bounded foot SDF prior to connected surface extraction.
+     *
+     * All earlier candidates remain untouched and callable. This is not
+     * finished ankle skinning or anatomical/photographic art approval.
+     */
+    public static final float M37_SHOULDER_SPAN=.965f;
+    public static ArtKit.Model buildM37Candidate(boolean lite,float openness){
+        if(!Float.isFinite(openness)||openness<0f||openness>1f)
+            throw new IllegalArgumentException("M37 expression range 0..1");
+        float[] controls=ContinuousHuman.BASE.clone();
+        controls[0]=M37_SHOULDER_SPAN;
+        float[] learned={.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f};
+        ArtKit.Model skin=M36PerioralSkin.deform(
+            M35MouthSculpt.sculptConnectedSkin(
+                M28SkinContinuity.refine(
+                    ContinuousHuman.buildM37WithoutDigits(lite,controls))),
+            openness);
+        ArtKit.Model combined=ShapeEngine.combine(
+            skin,HumanHandSculpt.build(lite,controls[0]),
+            M28FaceSculpt.build(lite,false),
+            M35MouthSculpt.build(lite,openness));
+        ArtKit.Model colored=M25SkinPolish.apply(
+            M24BodyRetarget.transform(combined));
+        return M37FootSurface.sculpt(M32AnatomySurface.sculpt(
+            M31SkinSurfaceNormals.smooth(
+                M26SculptDials.apply(colored,learned))));
+    }
+    public static ArtKit.Model buildM37Candidate(boolean lite){
+        return buildM37Candidate(lite,0f);
+    }
+
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
