@@ -45,7 +45,7 @@ public final class ForgeSpec {
       return b.toString();
     }
   }
-  private static float valid(String s)throws Exception{
+  private static float valid(String s){
     float f=Float.parseFloat(s);
     if(!Float.isFinite(f)||Math.abs(f)>100)throw new IllegalArgumentException("Non-finite or unbounded geometry");
     return f;
