@@ -61,6 +61,7 @@ jobs:
             veilbound/app/src/main/java/game/ashenveil/veilbound/M32AnatomySurface.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M35MouthSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M36PerioralSkin.java \
+            veilbound/app/src/main/java/game/ashenveil/veilbound/M37FootSurface.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25FaceSculpt.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M25SkinPolish.java \
             veilbound/app/src/main/java/game/ashenveil/veilbound/M24BodyRetarget.java \
@@ -101,6 +102,7 @@ jobs:
             veilbound/tests/game/ashenveil/veilbound/M32AnatomyPerfectionTest.java \
             veilbound/tests/game/ashenveil/veilbound/M35MouthSculptTest.java \
             veilbound/tests/game/ashenveil/veilbound/M36PerioralSkinTest.java \
+            veilbound/tests/game/ashenveil/veilbound/M37AnatomicalFeetTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanSkeletonTest.java \
             veilbound/tests/game/ashenveil/veilbound/ContinuousHumanTest.java \
             veilbound/tests/game/ashenveil/veilbound/HumanHandsTest.java \
@@ -139,6 +141,7 @@ jobs:
           java -Xmx2200m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M32AnatomyPerfectionTest
           java -Xmx2400m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M35MouthSculptTest
           java -Xmx2400m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M36PerioralSkinTest
+          java -Xmx2400m -cp /tmp/veilbound-unit game.ashenveil.veilbound.M37AnatomicalFeetTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanSkeletonTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.ContinuousHumanTest
           java -cp /tmp/veilbound-unit game.ashenveil.veilbound.HumanHandsTest
