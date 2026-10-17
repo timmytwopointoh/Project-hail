@@ -21,7 +21,40 @@ MAX_AXIS_GAIN=1.08
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
-def rewrite(tasks_file,source_dir,out,*,source_sha):
+def specialist_approval(tasks_file, task_pack, selected, approval_file, source_sha):
+    """A REVIEW ticket is not a model-edit authorization."""
+    if approval_file is None:
+        return None
+    if len(selected)!=1:
+        raise ValueError("No single reviewed geometry issue")
+    task=selected[0]
+    frames=task.get("camera_view_evidence")
+    if task.get("screenshot_provenance_verified") is not True or not isinstance(frames,list) or len(frames)!=14:
+        raise ValueError("Missing SHA-verified Android screenshot evidence")
+    hashes=[row.get("sha256") for row in frames if isinstance(row,dict)]
+    if len(hashes)!=14 or len(set(hashes))!=14 or any(
+        not isinstance(h,str) or len(h)!=64 or any(c not in "0123456789abcdef" for c in h)
+        for h in hashes):
+        raise ValueError("Invalid Android screenshot hashes")
+    path=Path(approval_file)
+    if not path.is_file() or path.resolve()==tasks_file.resolve():
+        raise ValueError("Separate specialist review file required")
+    review=json.loads(path.read_text())
+    views=review.get("non_edge_on_view_indices")
+    if not isinstance(views,list) or len(views)<2 or len(set(views))!=len(views) or any(
+        type(i)!=int or i<0 or i>=14 for i in views):
+        raise ValueError("Specialist must identify multiple non-edge-on views")
+    if (review.get("decision")!="confirmed_geometry_defect" or
+        review.get("asset")!=task["asset"] or review.get("task_id")!=task["id"] or
+        review.get("source_commit")!=source_sha or
+        review.get("run_id")!=task_pack.get("github_actions_run_id") or
+        review.get("handoff_sha256")!=sha(tasks_file) or
+        review.get("frame_sha256")!=hashes or
+        not isinstance(review.get("reason"),str) or len(review["reason"].strip())<30):
+        raise ValueError("Specialist review does not match original Android evidence")
+    return sha(path)
+
+def rewrite(tasks_file,source_dir,out,*,source_sha,review_approval=None):
     tasks_file=Path(tasks_file);source_dir=Path(source_dir);out=Path(out)
     task_pack=json.loads(tasks_file.read_text())
     if not isinstance(source_sha,str) or len(source_sha)!=40 or any(c not in "0123456789abcdef" for c in source_sha):
@@ -42,10 +75,16 @@ def rewrite(tasks_file,source_dir,out,*,source_sha):
               t.get("minimum_foreground_coverage",1)<.006]
     if len(selected)>1:
         raise ValueError("Duplicate eligible model-rewrite tickets")
+    heuristic_count=len(selected)
+    approval_sha=specialist_approval(tasks_file,task_pack,selected,review_approval,source_sha)
+    if approval_sha is None:
+        selected=[]
     out.mkdir(parents=True,exist_ok=True)
     result={"schema_version":1,"milestone":"VQ-auto-rewrite-v1","source_commit":source_sha,
             "feedback_sha256":sha(tasks_file),"tickets_received":len(tasks),
-            "eligible_tickets":len(selected),"candidates":[],
+            "heuristic_tickets":heuristic_count,"eligible_tickets":len(selected),
+            "review_approval_sha256":approval_sha,"specialist_review_required":True,
+            "candidates":[],
             "protected_original_source":True,"auto_promotion":False,
             "android_candidate_visual_qa_passed":False,"artistic_acceptance":False}
     if selected:
@@ -147,8 +186,10 @@ def main():
     p.add_argument("--source-dir",required=True,type=Path)
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--source-sha",required=True)
+    p.add_argument("--review-approval",type=Path,default=None)
     a=p.parse_args()
-    row=rewrite(a.tasks,a.source_dir,a.out,source_sha=a.source_sha)
+    row=rewrite(a.tasks,a.source_dir,a.out,source_sha=a.source_sha,
+                review_approval=a.review_approval)
     print("VQ_AUTO_REWRITE_CANDIDATES",len(row["candidates"]),"from",
           row["tickets_received"],"emulator warning tasks")
 if __name__=="__main__":main()

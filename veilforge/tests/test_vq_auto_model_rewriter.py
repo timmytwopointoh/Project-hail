@@ -23,14 +23,41 @@ def plan(tasks):
             "all_semantic_warnings_accounted_for":True,
             "ready_for_automated_model_rewrite":False}
 
+RUN=38993296206
+
+def approved_task():
+    row=task()
+    row["screenshot_provenance_verified"]=True
+    row["camera_view_evidence"]=[
+        {"index":i,"yaw":i*25,"pitch":15,"sha256":f"{i+1:064x}"}
+        for i in range(14)]
+    return row
+
+def write_review(root,task_file,row):
+    review={"decision":"confirmed_geometry_defect",
+            "asset":row["asset"],"task_id":row["id"],
+            "source_commit":SHA,"run_id":RUN,
+            "handoff_sha256":hashlib.sha256(task_file.read_bytes()).hexdigest(),
+            "frame_sha256":[frame["sha256"] for frame in row["camera_view_evidence"]],
+            "non_edge_on_view_indices":[2,9],
+            "reason":"Synthetic unit test only; does not claim a real sword geometry defect."}
+    dest=root/"manual_review.json"
+    dest.write_text(json.dumps(review))
+    return dest
+
 class SafeAutoRewriteTests(unittest.TestCase):
     def test_real_sword_source_rewritten_copy_while_material_uv_indices_and_original_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);src=root/"sword"
             build_asset(ROOT/"catalog.json","ceremonial_sword",src)
             original=src/"ceremonial_sword.obj";first=original.read_bytes()
-            tasks=root/"tasks.json";tasks.write_text(json.dumps(plan([task()])))
-            result=rewrite(tasks,src,root/"candidates",source_sha=SHA)
+            row=approved_task()
+            tasks=root/"tasks.json";tasks.write_text(json.dumps(plan([row])))
+            plan_data=json.loads(tasks.read_text());plan_data["github_actions_run_id"]=RUN
+            tasks.write_text(json.dumps(plan_data))
+            review=write_review(root,tasks,row)
+            result=rewrite(tasks,src,root/"candidates",source_sha=SHA,
+                           review_approval=review)
             self.assertEqual(len(result["candidates"]),1)
             candidate=result["candidates"][0]
             self.assertGreater(candidate["gain"],1.0)
@@ -76,8 +103,47 @@ class SafeAutoRewriteTests(unittest.TestCase):
             build_asset(ROOT/"catalog.json","ceremonial_sword",src)
             obj=src/"ceremonial_sword.obj"
             obj.write_bytes(obj.read_bytes()+b"#tampered\n")
-            p=root/"tasks.json";p.write_text(json.dumps(plan([task()])))
+            row=approved_task()
+            p=root/"tasks.json";data=plan([row]);data["github_actions_run_id"]=RUN
+            p.write_text(json.dumps(data))
+            review=write_review(root,p,row)
             with self.assertRaisesRegex(ValueError,"manifest hash"):
-                rewrite(p,src,root/"out",source_sha=SHA)
+                rewrite(p,src,root/"out",source_sha=SHA,review_approval=review)
             self.assertFalse((root/"out/ceremonial_sword_candidate.obj").exists())
+    def test_unreviewed_real_sword_warning_does_not_create_candidate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);src=root/"sword"
+            build_asset(ROOT/"catalog.json","ceremonial_sword",src)
+            original=src/"ceremonial_sword.obj";before=original.read_bytes()
+            p=root/"tasks.json";p.write_text(json.dumps(plan([task()])))
+            result=rewrite(p,src,root/"out",source_sha=SHA)
+            self.assertEqual(result["heuristic_tickets"],1)
+            self.assertEqual(result["eligible_tickets"],0)
+            self.assertEqual(result["candidates"],[])
+            self.assertTrue(result["specialist_review_required"])
+            self.assertIsNone(result["review_approval_sha256"])
+            self.assertEqual(original.read_bytes(),before)
+            self.assertFalse((root/"out/ceremonial_sword_candidate.obj").exists())
+
+    def test_review_hash_or_camera_evidence_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);row=approved_task()
+            p=root/"tasks.json";data=plan([row]);data["github_actions_run_id"]=RUN
+            p.write_text(json.dumps(data))
+            review=write_review(root,p,row)
+            original=json.loads(review.read_text())
+            for bad in ({"handoff_sha256":"0"*64},
+                        {"frame_sha256":["0"*64]*14},
+                        {"decision":"unreviewed"}):
+                payload=dict(original);payload.update(bad)
+                review.write_text(json.dumps(payload))
+                with self.assertRaisesRegex(ValueError,"Specialist review"):
+                    rewrite(p,root/"none",root/"out",source_sha=SHA,
+                            review_approval=review)
+            row["screenshot_provenance_verified"]=False
+            p.write_text(json.dumps(plan([row])))
+            with self.assertRaisesRegex(ValueError,"SHA-verified"):
+                rewrite(p,root/"none",root/"out",source_sha=SHA,
+                        review_approval=review)
+
 if __name__=="__main__":unittest.main()

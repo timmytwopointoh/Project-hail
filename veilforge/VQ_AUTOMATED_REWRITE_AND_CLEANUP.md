@@ -2,13 +2,19 @@
 
 ## Engineering strategy
 
-Automate *candidate generation*, not approval or uncontrolled rewriting.
+Automate screenshot REVIEW proposals by default, not unrestricted model edits.
+The separate candidate stage now requires an explicit specialist review file tied
+to the exact source/run, original handoff hash and all 14 original Android frame
+hashes. A visibility heuristic alone never authorizes a geometry candidate.
 This extension consumes `veilforge-android-next-iteration-tasks`,
 which is only emitted when all four actual Android 15 emulator roles,
 154 hashed real screenshots, the independent LOD reviewer and semantic
 diagnostic reviewer have passed.
 
-A newly isolated job `bounded-auto-model-candidates` downloads exactly the
+The existing `bounded-auto-model-candidates` job intentionally receives NO
+`--review-approval` argument, so it produces zero geometry candidates in
+normal CI while preserving the candidate generator for explicit opt-in.
+It downloads exactly the
 source sword production artifact and the verified visual repair backlog;
 there is no extra Android VM, duplicate APK build or secondary asset generation.
 The task's pinned source commit must match the current GitHub workflow.
@@ -17,7 +23,7 @@ No screenshot captions, model IDs or external text can execute arbitrary code.
 ## Phase 1: controlled source-geometry rewrite
 
 `vq_auto_model_rewriter.py` currently allows exactly one cautious operation:
-for a `ceremonial_sword` `view_visibility` warning, produce a separate
+for a separately confirmed `ceremonial_sword` geometry defect, produce a separate
 `ceremonial_sword_candidate.obj` with <=8% gain on the thinner horizontal
 axis and vertex movement capped at 0.8% of the model's largest dimension.
 Other objects, including human faces, hands, feet and trees, are only
@@ -71,3 +77,17 @@ python3 veilforge/vq_auto_model_rewriter.py \
 
 **Technical pass does not establish photorealism, visual resemblance or
 physical-device FPS.** No game or original source model is modified.
+
+## Specialist REVIEW boundary — 2026-10-17
+
+The real sword yaw 0/25 Android views are edge-on; the broadside blade is
+visible elsewhere. The earlier unapproved 8% Z-axis thickness candidate is
+retained as a rejected hypothesis, not a verified fix. The REVIEW artifact
+explicitly sets `ready_for_automated_model_rewrite=false` and
+`automatic_model_edit=false`. The generator now returns an empty candidate
+report without a separately supplied `--review-approval <path>` file.
+That file must name the source SHA, run ID, task ID, asset, original handoff
+SHA-256, all 14 exact screenshot hashes, two distinct non-edge-on view indices
+and a reasoned manual decision. This checks evidence consistency; it does not
+cryptographically authenticate the reviewer. Explicitly reviewed candidates
+still require independent Android testing and human artistic signoff.
