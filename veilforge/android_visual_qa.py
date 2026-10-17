@@ -83,7 +83,7 @@ def metrics(image):
             "renderer_background_confirmed":renderer_background_confirmed(image),
             "dimensions":list(image.size)}
 
-def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
+def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None, previous_frame_sha=None):
     """Wait for the *presented* Android frame, not just the GL draw callback.
 
     A FRAME_OK log is emitted before the emulator compositor necessarily
@@ -116,6 +116,12 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
         if (last["foreground_fraction"] >= .0015 and
                 last["channel_stddev"] >= 3 and
                 last.get("renderer_background_confirmed") is True):
+            current_sha=hashlib.sha256(path.read_bytes()).hexdigest()
+            if previous_frame_sha is not None and current_sha == previous_frame_sha:
+                evidence=path.parent/(path.stem+f"_stale_presented_{attempt}.png")
+                evidence.write_bytes(path.read_bytes())
+                if attempt<attempts:time.sleep(interval)
+                continue
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
@@ -171,6 +177,7 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
         for asset in ROLES[role]:
             base=output/asset;base.mkdir(parents=True,exist_ok=True)
             shots=[];measurements=[]
+            previous_frame_sha=None
             for index,(yaw,pitch) in enumerate(VIEWS):
                 cursor=monitor.mark()
                 adb("shell","am","start","--activity-single-top",
@@ -178,11 +185,13 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                     "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
                 wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
                 dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
-                pic,result,attempts=capture_visible_frame(dest,monitor=monitor)
+                pic,result,attempts=capture_visible_frame(dest,monitor=monitor,
+                    previous_frame_sha=previous_frame_sha)
                 result.update({"index":index,"yaw":yaw,"pitch":pitch,
                                 "capture_attempts":attempts,
                                 "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
                                 "image":str(dest.relative_to(output))})
+                previous_frame_sha=result["sha256"]
                 shots.append(pic);measurements.append(result)
             changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
             del shots
