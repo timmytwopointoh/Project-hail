@@ -10,11 +10,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from android_visual_qa import ROLES,VIEWS
 
 HEX_SHA=re.compile(r"^[a-f0-9]{40}$")
+HEX_SHA256=re.compile(r"^[a-f0-9]{64}$")
 FIELD=re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 MAX_NOTES=256
 
@@ -38,6 +40,26 @@ def handoff(report_path,out,*,source_sha,run_id):
         if not isinstance(info,dict) or info.get("role")!=expected[asset] or (
             info.get("views")!=len(VIEWS)):
             raise ValueError("Asset role/view evidence is incomplete: "+asset)
+        views=info.get("view_evidence")
+        if not isinstance(views,list) or len(views)!=len(VIEWS):
+            raise ValueError("Missing exact per-angle screenshot evidence: "+asset)
+        coverages=[]
+        for index,(item,(yaw,pitch)) in enumerate(zip(views,VIEWS)):
+            expected_image=f"{asset}/{index:02d}_yaw{yaw}_pitch{pitch}.png"
+            if not isinstance(item,dict) or item.get("index")!=index or (
+                item.get("yaw"),item.get("pitch"))!=(yaw,pitch) or (
+                item.get("image")!=expected_image):
+                raise ValueError("Invalid per-angle camera/path provenance: "+asset)
+            digest=item.get("sha256")
+            if not isinstance(digest,str) or not HEX_SHA256.fullmatch(digest):
+                raise ValueError("Invalid screenshot digest: "+asset)
+            coverage=item.get("coverage")
+            if type(coverage) not in (int,float) or not math.isfinite(coverage) or not 0<=coverage<=1:
+                raise ValueError("Invalid per-angle coverage: "+asset)
+            coverages.append(coverage)
+        if (round(min(coverages),4)!=info.get("min_coverage") or
+            round(max(coverages),4)!=info.get("max_coverage")):
+            raise ValueError("Per-angle coverage contradicts semantic summary: "+asset)
     raw_warnings=doc.get("warnings")
     source_queue=doc.get("repair_queue")
     if not isinstance(raw_warnings,list) or not isinstance(source_queue,list) or (
@@ -71,6 +93,8 @@ def handoff(report_path,out,*,source_sha,run_id):
             "source_reason":reason,
             "suggested_next_action":"Inspect the actual source screenshot angles and camera/framing/culling, then implement and retest only a measured defect.",
             "screenshots_in_evidence":len(VIEWS),
+            "source_views":row["view_evidence"],
+            "lowest_coverage_view":min(row["view_evidence"],key=lambda v:v["coverage"]),
             "minimum_foreground_coverage":row.get("min_coverage"),
             "maximum_foreground_coverage":row.get("max_coverage"),
             "source_commit":source_sha,"github_actions_run_id":run_id,
@@ -101,7 +125,12 @@ def handoff(report_path,out,*,source_sha,run_id):
         f"Open visual review tasks: {len(tasks)}","",
         "All tasks require examining real screenshots. No geometry edits/merges are authorized.",""]
     for task in tasks:
+        worst=task["lowest_coverage_view"]
         lines.append(f"- {task['id']} ({task['priority']}, {task['emulator_role']}): {task['source_reason']}")
+        lines.append(f"  - Lowest measured view: {worst['image']} "
+                     f"(yaw {worst['yaw']}, pitch {worst['pitch']}, "
+                     f"coverage {worst['coverage']:.5f}, SHA256 {worst['sha256']}). "
+                     "All 14 screenshot hashes and angles are in the JSON task.")
     if not tasks:lines.append("- No unreviewed semantic warnings for this run.")
     (out/"next_iteration_tasks.md").write_text("\n".join(lines)+"\n",encoding="utf-8")
     return pack

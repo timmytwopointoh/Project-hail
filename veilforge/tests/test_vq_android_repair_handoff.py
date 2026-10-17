@@ -20,7 +20,14 @@ def valid_report():
         "frames_scanned":sum(len(v)*len(VIEWS) for v in ROLES.values()),
         "assets":{
             asset:{"role":role,"views":len(VIEWS),"min_coverage":.004,
-                   "max_coverage":.11,"distinct_orbits":12}
+                   "max_coverage":.11,"distinct_orbits":12,
+                   "view_evidence":[
+                       {"index":i,"yaw":yaw,"pitch":pitch,
+                        "image":f"{asset}/{i:02d}_yaw{yaw}_pitch{pitch}.png",
+                        "sha256":hashlib.sha256(f"{asset}/{i}".encode()).hexdigest(),
+                        "coverage":.004 if i==0 else (.11 if i==1 else .02),
+                        "touch_edge_ratio":0.0}
+                       for i,(yaw,pitch) in enumerate(VIEWS)]}
             for role,names in ROLES.items() for asset in names
         },
         "problems":[],"warnings":[],"repair_queue":[],
@@ -35,6 +42,7 @@ class HandoffTests(unittest.TestCase):
             root=Path(root);p=root/"source.json";data=valid_report()
             asset=next(iter(data["assets"]))
             data["assets"][asset]["min_coverage"]=.0006
+            data["assets"][asset]["view_evidence"][0]["coverage"]=.0006
             w={"asset":asset,"subject":"view_visibility",
                "reason":"At least one view has very little foreground; check culling/camera"}
             data["warnings"]=[w]
@@ -49,6 +57,11 @@ class HandoffTests(unittest.TestCase):
             self.assertEqual(task["priority"],"high")
             self.assertEqual(task["emulator_role"],data["assets"][asset]["role"])
             self.assertEqual(task["screenshots_in_evidence"],len(VIEWS))
+            self.assertEqual(len(task["source_views"]),len(VIEWS))
+            self.assertEqual(task["lowest_coverage_view"]["yaw"],VIEWS[0][0])
+            self.assertEqual(task["lowest_coverage_view"]["coverage"],.0006)
+            self.assertEqual(task["source_views"][0]["sha256"],
+                             data["assets"][asset]["view_evidence"][0]["sha256"])
             self.assertEqual(task["source_commit"],SHA)
             self.assertEqual(task["github_actions_run_id"],RUN)
             self.assertEqual(task["input_report_sha256"],hashlib.sha256(p.read_bytes()).hexdigest())
@@ -91,6 +104,24 @@ class HandoffTests(unittest.TestCase):
             self.create(data,p)
             with self.assertRaisesRegex(ValueError,"absent from original"):
                 handoff(p,root/"out",source_sha=SHA,run_id=RUN)
+    def test_per_angle_screenshot_provenance_must_be_complete_and_consistent(self):
+        with tempfile.TemporaryDirectory() as root:
+            root=Path(root);p=root/"angles.json"
+            asset=next(iter(valid_report()["assets"]))
+            for change in ("missing","wrong_yaw","unsafe_path","bad_hash",
+                           "coverage_mismatch","nan_coverage"):
+                data=valid_report()
+                views=data["assets"][asset]["view_evidence"]
+                if change=="missing":views.pop()
+                elif change=="wrong_yaw":views[1]["yaw"]=999
+                elif change=="unsafe_path":views[1]["image"]="../outside.png"
+                elif change=="bad_hash":views[1]["sha256"]="bad"
+                elif change=="coverage_mismatch":views[1]["coverage"]=.2
+                else:views[1]["coverage"]=float("nan")
+                self.create(data,p)
+                with self.subTest(change=change),self.assertRaises(ValueError):
+                    handoff(p,root/"out",source_sha=SHA,run_id=RUN)
+
     def test_duplicate_warning_and_invalid_provenance_rejected(self):
         with tempfile.TemporaryDirectory() as root:
             root=Path(root);p=root/"dup.json";data=valid_report()

@@ -74,3 +74,29 @@ independent semantic/LOD checks complete. Require zero adjacent exact
 duplicate accepted frames and preserve original screenshot evidence.
 This improves *camera provenance*, not artistic appearance, photorealism,
 or physical-device performance. Do not merge or promote automatically.
+
+## 2026-10-17 candidate: exact 14-angle screenshot evidence in review tasks
+
+Parent: `1a9986d3f63da9ebd30879e3642c38d7897de531`, factory run `39044408914` (18/18 successful),
+4 Android 15 emulators and 154 real screenshots. Previous review handoff
+contained only per-asset minimum/maximum foreground fractions and the artifact
+name; locating the specific worst-angle screenshot required manual artifact
+search. The source sword screenshot contact sheet from original run
+`38993296206` shows the yaw0 view is a genuine narrow edge-on presentation,
+not sufficient evidence to edit sword geometry.
+
+Isolated branch: `feature/veilforge-angle-evidence-provenance-20261017-h10`.
+Bounded change: semantic QA records exact per-angle camera yaw/pitch, screenshot
+relative path, SHA256 and measured foreground coverage; handoff verifies all
+14 ordered paths/hashes and that their minimum/maximum agree with the existing
+semantic summary. Each REVIEW proposal embeds all 14 view references and its
+lowest-coverage view. Existing screenshot hashing, independent semantic/LOD
+thresholds, static `queue_backlog.json`, model source, renderer, games and
+no-auto-promotion rules remain unchanged. The added evidence is still a
+heuristic, not a claim of artistic quality or a model defect.
+
+Status: UNVALIDATED until the full Android factory run completes. Acceptance:
+139+ unit tests, 18/18 jobs, 4 real Android 15 emulators, 154 screenshot
+views, independent semantic/LOD PASS, every task's 14 screenshot hashes
+match their archived emulator artifact and every lowest-view coverage matches
+its independent semantic frame analysis. Preserve failed candidate evidence.

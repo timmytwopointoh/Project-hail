@@ -67,9 +67,15 @@ def diagnose(root,out,*,strict_provenance=True):
             views=entry.get("views",[])
             if len(views)!=len(VIEWS):
                 problems.append(name+": incomplete Android screenshot set");continue
-            measurements=[];masks=[]
+            measurements=[];masks=[];evidence=[]
             for index,(meta,(yaw,pitch)) in enumerate(zip(views,VIEWS)):
-                file=path.parent/meta.get("image","")
+                expected_image=f"{name}/{index:02d}_yaw{yaw}_pitch{pitch}.png"
+                digest=meta.get("sha256")
+                if (meta.get("image")!=expected_image or
+                    not isinstance(digest,str) or len(digest)!=64 or
+                    any(c not in "0123456789abcdef" for c in digest)):
+                    problems.append(name+": invalid screenshot path/hash metadata");break
+                file=path.parent/expected_image
                 if (meta.get("yaw"),meta.get("pitch"))!=(yaw,pitch):
                     problems.append(name+": mismatched camera specification");break
                 if not file.is_file():
@@ -83,7 +89,12 @@ def diagnose(root,out,*,strict_provenance=True):
                         break
                     mask,w,h=silhouette(frame)
                 masks.append(mask)
-                measurements.append(outline_analysis(mask,w,h))
+                measured=outline_analysis(mask,w,h)
+                measurements.append(measured)
+                evidence.append({"index":index,"yaw":yaw,"pitch":pitch,
+                                 "image":expected_image,"sha256":digest,
+                                 "coverage":measured["coverage"],
+                                 "touch_edge_ratio":measured["touch_edge_ratio"]})
             if len(measurements)!=len(VIEWS):continue
             # A frozen viewer often has identical silhouettes for all angles.
             orbit=[1-iou(masks[0],other) for other in masks[1:]]
@@ -105,6 +116,7 @@ def diagnose(root,out,*,strict_provenance=True):
                 warnings.append({"asset":name,"subject":"view_visibility",
                                  "reason":"At least one view has very little foreground; check culling/camera"})
             assets[name]={"role":role,"views":len(measurements),
+                          "view_evidence":evidence,
                           "min_coverage":round(min(coverage),4),
                           "max_coverage":round(max(coverage),4),
                           "distinct_orbits":unique_looks,
