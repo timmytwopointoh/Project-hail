@@ -116,6 +116,31 @@ public final class HumanAnatomy {
         return buildM35Candidate(lite,false);
     }
 
+    /**
+     * M36 opt-in expression-aware human. Original M35 neutral is identical;
+     * only an open mouth additionally deforms the actual connected cheek and
+     * chin skin. Existing M35, historical knight and animation remain intact.
+     */
+    public static ArtKit.Model buildM36Candidate(boolean lite,float openness){
+        if(!Float.isFinite(openness)||openness<0f||openness>1f)
+            throw new IllegalArgumentException("M36 expression range 0..1");
+        float[] learned={.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f};
+        ArtKit.Model skin=M36PerioralSkin.deform(
+            M35MouthSculpt.sculptConnectedSkin(
+                M28SkinContinuity.refine(
+                    ContinuousHuman.buildM25WithoutDigits(lite,ContinuousHuman.BASE))),
+            openness);
+        ArtKit.Model combined=ShapeEngine.combine(
+            skin,HumanHandSculpt.build(lite,ContinuousHuman.BASE[0]),
+            M28FaceSculpt.build(lite,false),
+            M35MouthSculpt.build(lite,openness));
+        ArtKit.Model colored=M25SkinPolish.apply(
+            M24BodyRetarget.transform(combined));
+        return M32AnatomySurface.sculpt(
+            M31SkinSurfaceNormals.smooth(
+                M26SculptDials.apply(colored,learned)));
+    }
+
     public static ArtKit.Model buildWithSculptedHands(boolean lite){
         return buildWithSculptedHands(lite,ContinuousHuman.BASE);
     }
