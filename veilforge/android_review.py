@@ -41,6 +41,8 @@ def review(root,out,source_sha,apk_sha):
             if tuple(x.get("asset") for x in assets)!=names:
                 issues.append(f"{role}: expected captured assets differ")
             count=0
+            # Independent stale-frame detection across distinct assets.
+            first_asset_by_sha={}
             for a in assets:
                 name=a["asset"]
                 if len(a.get("views",[]))!=len(VIEWS):
@@ -55,6 +57,16 @@ def review(root,out,source_sha,apk_sha):
                                       f"yaw={v.get('yaw')} pitch={v.get('pitch')} "
                                       "(stale camera presentation)")
                     previous_sha=v.get("sha256")
+                    digest=v.get("sha256")
+                    if isinstance(digest,str) and len(digest)==64:
+                        prior=first_asset_by_sha.setdefault(
+                            digest,(name,v.get("yaw"),v.get("pitch")))
+                        if prior[0]!=name:
+                            issues.append(
+                                f"{role}: cross-asset identical screenshot: "
+                                f"{prior[0]} yaw={prior[1]} pitch={prior[2]} "
+                                f"and {name} yaw={v.get('yaw')} pitch={v.get('pitch')} "
+                                "(stale asset presentation)")
                     img=path.parent/v["image"]
                     if not img.is_file() or img.stat().st_size<1000 or (
                         hashlib.sha256(img.read_bytes()).hexdigest()!=v["sha256"]):

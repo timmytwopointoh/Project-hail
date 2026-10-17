@@ -82,3 +82,12 @@ presented frame outside asset loop, enforce existing .0006 change threshold
 on every first frame, archive/retry duplicates. New regression tests added.
 All other technical gates and 14 yaw/pitch angles unchanged. Full rerun
 and independent SHA audit REQUIRED before marking sword camera verified.
+
+
+H14 2026-10-17: feature/veilforge-cross-asset-evidence-gate-20261017-h14
+Base 14b26b973d29473db45a8c652222a0883d0b3a00 (run 39071961941).
+Confirmed stale chest-to-sword screenshot in rejected run 39071499467.
+Independent Android reviewer now rejects identical hashes across assets
+within one emulator role. Synthetic tests include a positive 154-frame
+fixture and a negative cross-asset replay. No model or camera edits.
+Full four-emulator, semantic and LOD verification pending; no merge.

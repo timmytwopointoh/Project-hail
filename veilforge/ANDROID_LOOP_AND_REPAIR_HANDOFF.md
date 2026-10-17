@@ -110,3 +110,22 @@ Acceptance requires a fresh 4-emulator 154-frame run with **0/143**
 adjacent duplicates and unchanged semantic/LOD and source-hash gates.
 This fix does not edit models, weaken semantic heuristics, certify
 photorealism or imply real-phone FPS or human artistic acceptance.
+
+## H14 independent cross-asset Android screenshot check (2026-10-17)
+
+A previously successful Android run 39071499467 had a verified stale
+frame: the last treasure-chest PNG was byte-identical to the first sword
+PNG. The capture path now retries that situation, but the independent
+reviewer had only checked repeated views within a single asset.
+
+H14 adds a role-scoped, cross-asset SHA-256 collision check to
+android_review.py. It reports the asset names and yaw/pitch angles.
+New synthetic tests verify that 154 distinct frames pass and a copied
+chest-to-sword frame fails. No models, cameras, games or acceptance
+thresholds change.
+
+Before H14, the latest verified run 39071961941 passed 18 jobs, four
+Android 15 emulators and 154 frames. Its four screenshot manifests had
+zero cross-asset accepted collisions. Full H14 emulator and independent
+semantic/LOD verification is pending. Preserve rejected evidence.
+These are integrity gates, not artistic approval or real-phone benchmarks.
