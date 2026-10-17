@@ -1,0 +1,15 @@
+# Worker Coordination — VEILFORGE / VQ / VEILBOUND
+
+This repository participates in a shared multi-chat model, game, emulator, and Android development pipeline. **First read** the current coordination issue at https://github.com/timmytwopointoh/Project-hail/issues/29 for current tested changes and GitHub Actions storage status. ECHOFORM lives separately: https://github.com/timmytwopointoh/New-game-/issues/4.
+
+## Storage and test integrity
+- Never delete or overwrite original game/models, reference images, VQ recovery and backup files, candidate provenance, cross-worker dependencies, or durable repair tasks to save Actions storage.
+- Use isolated branches and copy-on-write candidates. Do not merge generated assets into any game without quality acceptance.
+- Before editing workflows, inspect the latest source branch, the live workflow, and current test status. Retention improvements from PR #27 and PR #28 were merged into separate specific feature branches; other branches may still use old rules.
+- Keep automatic smoke tests for actual runtime/model changes. Do not launch the four-device Android visual farm or the full native3D emulator for docs, schedule or retention-only edits.
+- Reuse one APK across emulator workers when possible. Avoid archiving the same APK both as successful unverified and verified builds.
+- For fresh *temporary* artifacts, prefer 3 days for intermediary files, 7–14 days for screenshots, and up to 21 days for selected repair evidence. Preserve recovery backups and model references under their own policy.
+- A protected storage-reclaim workflow was audited on maintenance/storage-reclaim-20261017. Its deletion allowlist applies only to superseded screenshot/inspection bundles and protects newest two per name/branch, newest successful output, and artifacts younger than three hours. **Do not broaden this allowlist** to VQ backups, unapproved candidates, repair plans, or tested native3D APKs.
+- A passed emulator QA means that particular technical gate passed, **not** that a humanoid is photorealistic or artistically final.
+
+Read the handoff issue before claiming cross-chat synchronization. Other ChatGPT conversations do not automatically receive messages from this repository.
