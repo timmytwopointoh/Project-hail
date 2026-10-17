@@ -30,9 +30,11 @@ jobs:
             const protectedName=/(approved|validated|keeper|golden|pinned|source|recipe|technique|knowledge|learning|backup|milestone|release)/i;
             // This is deliberately narrow; unknown artifacts and knowledge reports are retained.
             const disposable=/(apk|screenshots?|captures?|model[-_]preview|model[-_]candidate|render[-_]?preview|emulator[-_]?evidence|candidate[-_]UNVERIFIED|android[-_]?scene|phone[-_]test[-_]build)/i;
+            // Repeated emulator/native3D inspection ZIPs are disposable after newer evidence exists.
+            const temporaryInspection=/^veilbound-(?:native3d-inspection-report|emulator-android(?:34|35)_pixel\d+(?:_a)?-inspection)$/i;
             const groups=new Map();
             for(const a of artifacts){
-              if(a.expired||protectedName.test(a.name)||!disposable.test(a.name))continue;
+              if(a.expired||protectedName.test(a.name)||!(disposable.test(a.name)||temporaryInspection.test(a.name)))continue;
               const r=runById.get(a.workflow_run?.id);
               if(!r||r.status!=='completed')continue;
               if(!groups.has(a.name))groups.set(a.name,[]);
