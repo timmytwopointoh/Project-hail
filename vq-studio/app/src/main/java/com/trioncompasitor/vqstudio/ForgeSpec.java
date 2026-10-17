@@ -53,7 +53,7 @@ public final class ForgeSpec {
   private static Part part(String id,String type,float x,float y,float z,float w,float h,float d){
     if(!id.matches("[a-zA-Z][a-zA-Z0-9_]{0,39}"))
       throw new IllegalArgumentException("Use named geometry parts, not arbitrary code");
-    if(!Arrays.asList("box","ellipsoid","taper","cylinder").contains(type))
+    if(!Arrays.asList("box","ellipsoid","taper","cylinder","capsule","ring").contains(type))
       throw new IllegalArgumentException("Unsupported geometric tool: "+type);
     if(w<=.005f||h<=.005f||d<=.005f||w>30||h>30||d>30)
       throw new IllegalArgumentException("Every part needs positive bounded dimensions");
@@ -94,6 +94,8 @@ public final class ForgeSpec {
     if(request==null||request.trim().isEmpty()||request.length()>5000)
       throw new IllegalArgumentException("Describe a model or provide a FORGE/1 plan");
     if(request.startsWith("FORGE/1\n"))return parse(request);
+    if(request.startsWith("FORGE/2\n"))return ForgeLang2.parse(request);
+    if(ForgeLang2.isExpandedFamily(request))return ForgeLang2.compile(request);
     String s=request.toLowerCase(Locale.ROOT);
     ArrayList<Part> p=new ArrayList<>();
     float scale=s.matches("(?s).*\\b(tiny|miniature|small)\\b.*")?.7f:
@@ -168,6 +170,7 @@ public final class ForgeSpec {
     void make(Part p,int revision){
       out.append("g ").append(p.name).append('\n');
       if(p.type.equals("box")){box(p);return;}
+      if(p.type.equals("ring")){ring(p,revision);return;}
       int segments=revision==1?10:20,rings=revision==1?6:12;
       int[][] grid=new int[rings+1][segments];
       for(int j=0;j<=rings;j++){
@@ -180,6 +183,11 @@ public final class ForgeSpec {
             z=p.z+(float)Math.sin(phi)*(float)Math.sin(a)*p.d*.5f;
           }else{
             float f=j/(float)rings;float radius=p.type.equals("taper")?(.85f-.79f*f):1f;
+            if(p.type.equals("capsule")){
+              float cap=Math.min(p.h*.48f,Math.min(p.w,p.d)*.5f);
+              float inset=Math.min(f*p.h,(1-f)*p.h);
+              if(inset<cap){float t=(cap-inset)/cap;radius=(float)Math.sqrt(Math.max(.00001f,1f-t*t));}
+            }
             x=p.x+(float)Math.cos(a)*p.w*.5f*radius;
             y=p.y-p.h*.5f+f*p.h;
             z=p.z+(float)Math.sin(a)*p.d*.5f*radius;
@@ -191,6 +199,29 @@ public final class ForgeSpec {
         int n=(k+1)%segments;
         tri(grid[j][k],grid[j+1][k],grid[j+1][n]);
         tri(grid[j][k],grid[j+1][n],grid[j][n]);
+      }
+    }
+    /** True parametric torus, not a reused wheel or image asset. */
+    void ring(Part p,int revision){
+      int around=revision==1?16:32,across=revision==1?6:10;
+      float tube=Math.min(p.h*.5f,Math.min(p.w,p.d)*.24f);
+      float rx=p.w*.5f-tube,rz=p.d*.5f-tube;
+      if(rx<=.005f||rz<=.005f)throw new IllegalArgumentException("Ring requires space around its center hole");
+      int[][] v=new int[around][across];
+      for(int i=0;i<around;i++){
+        double a=2*Math.PI*i/around;
+        for(int j=0;j<across;j++){
+          double t=2*Math.PI*j/across;
+          float x=p.x+(rx+tube*(float)Math.cos(t))*(float)Math.cos(a);
+          float y=p.y+tube*(float)Math.sin(t);
+          float z=p.z+(rz+tube*(float)Math.cos(t))*(float)Math.sin(a);
+          v[i][j]=vertex(x,y,z);
+        }
+      }
+      for(int i=0;i<around;i++)for(int j=0;j<across;j++){
+        int ni=(i+1)%around,nj=(j+1)%across;
+        tri(v[i][j],v[ni][j],v[ni][nj]);
+        tri(v[i][j],v[ni][nj],v[i][nj]);
       }
     }
     void box(Part p){
