@@ -30,8 +30,8 @@ public final class M37FootSurface {
     // must not accidentally compare world Y to unscaled source foot Y.
     private static final Zone[] ZONES={
         // Medial arch is higher than the lateral longitudinal arch.
-        new Zone(1,.165f,.080f,.145f,.077f,.069f,.110f,.014f),
-        new Zone(1,.262f,.079f,.160f,.067f,.066f,.110f,.0038f),
+        new Zone(1,.155f,.028f,.145f,.070f,.062f,.115f,.020f),
+        new Zone(1,.269f,.035f,.151f,.065f,.059f,.105f,.0030f),
         // Keep the distal metatarsal heads fuller under the ball.
         new Zone(1,.204f,.074f,.311f,.107f,.052f,.071f,-.0035f),
         // Subtle metatarsal extensor slope on upper foot (not a boot toe).
