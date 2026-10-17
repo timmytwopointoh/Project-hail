@@ -12,11 +12,11 @@ PACKAGE = ROOT / "veilbound/app/src/main/java/game/ashenveil/veilbound"
 TESTS = ROOT / "veilbound/tests/game/ashenveil/veilbound"
 PURE = ["WorldState", "CombatMotion", "CharacterRig", "EnvironmentKit",
         "ModelStudio", "ArtKit", "DetailArtKit", "CinematicArtKit",
-        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M26SculptDials", "M28FaceSculpt", "M28SkinContinuity", "M29SkinAtlas", "M29ReferencePose", "M30ReferenceRig", "M31SkinSurfaceNormals", "M32ShoulderRig", "M32AnatomySurface", "M35MouthSculpt", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
+        "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "HeroPose", "ShapeEngine", "BellwardenAnatomy", "HumanAnatomy", "M26SculptDials", "M28FaceSculpt", "M28SkinContinuity", "M29SkinAtlas", "M29ReferencePose", "M30ReferenceRig", "M31SkinSurfaceNormals", "M32ShoulderRig", "M32AnatomySurface", "M35MouthSculpt", "M36PerioralSkin", "M25FaceSculpt", "M25SkinPolish", "M24BodyRetarget", "M24AnimationLab", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"]
 SUITES = {
     "combat": ["WorldRules", "CombatMotion", "CharacterRig", "CombatGameplay"],
     "assets": ["EnvironmentKit", "ModelStudio", "ArtKit", "DetailArtKit",
-               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "M24BodyRetarget", "M24AnimationLab", "M25Refinement", "M25AttachmentAudit", "M26SculptLearning", "M28Anatomy", "M29ReferenceSkin", "M30ReferenceRig", "M31SkinSurfaceNormals", "M32AnatomyPerfection", "M35MouthSculpt", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
+               "CinematicArtKit", "SurfaceAtlas", "ObjMeshLoader", "MaterialTextures", "ShapeEngine", "BellwardenAnatomy", "ForgedPlate", "ArticulatedJoint", "HumanAnatomy", "M24BodyRetarget", "M24AnimationLab", "M25Refinement", "M25AttachmentAudit", "M26SculptLearning", "M28Anatomy", "M29ReferenceSkin", "M30ReferenceRig", "M31SkinSurfaceNormals", "M32AnatomyPerfection", "M35MouthSculpt", "M36PerioralSkin", "HumanHandSculpt", "HumanSkeleton", "ContinuousHuman", "MaterialMapping", "BootAssets"],
 }
 
 def command(*args):
