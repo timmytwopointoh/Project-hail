@@ -15,7 +15,7 @@ REQUIRED=[
 "engine.py","factory.py","vq_brushes.py","vq_adaptive_remesh.py",
 "vq_multimaterial_export.py","vq_refinement_pipeline.py",
 "vq_mesh_baker.py","vq_uv_atlas.py","vq_uv_transfer.py","vq_sculpt_detail_patch.py","vq_model_tools.py",
-"vq_quality_plan.py","vq_emulator_efficiency.py","vq_android_repair_handoff.py","provenance.py","vq_engine_health.py"]
+"vq_quality_plan.py","vq_emulator_efficiency.py","vq_android_repair_handoff.py","vq_auto_model_rewriter.py","provenance.py","vq_engine_health.py"]
 def audit(root,out):
     root=Path(root).resolve()
     directory=root/"veilforge"

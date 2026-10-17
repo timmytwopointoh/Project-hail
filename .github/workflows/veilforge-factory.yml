@@ -457,3 +457,63 @@ jobs:
           path: inspection_output/semantic-review/
           if-no-files-found: warn
           retention-days: 14
+
+  bounded-auto-model-candidates:
+    name: Produce isolated candidate geometry from verified emulator findings
+    needs: [library-review, asset-producers, extended-visual-review]
+    if: always() && needs.library-review.result == 'success' && needs.extended-visual-review.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install the source renderer dependency once
+        run: python3 -m pip install --quiet pillow==11.3.0
+      - name: Download validated next-iteration visual tasks
+        uses: actions/download-artifact@v4
+        with:
+          name: veilforge-android-next-iteration-tasks
+          path: inspection_output/candidate-feedback
+      - name: Download only the verified source OBJ and manifest for the allowlisted sword
+        uses: actions/download-artifact@v4
+        with:
+          name: veilforge-library-ceremonial_sword
+          path: inspection_output/candidate-source
+      - name: Generate bounded copy-on-write model candidate and all 14 before/after source angles
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_auto_model_rewriter.py \
+            --tasks inspection_output/candidate-feedback/next_iteration_tasks.json \
+            --source-dir inspection_output/candidate-source \
+            --out inspection_output/auto-model-candidates \
+            --source-sha "${{ github.sha }}"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path("inspection_output/auto-model-candidates/auto_rewrite_candidates.json")
+          data=json.loads(p.read_text())
+          assert data["source_commit"]=="${{ github.sha }}"
+          assert data["auto_promotion"] is False
+          assert data["android_candidate_visual_qa_passed"] is False
+          assert data["artistic_acceptance"] is False
+          assert len(data["candidates"])<=1
+          if data["candidates"]:
+              row=data["candidates"][0]
+              assert row["source_file_modified"] is False
+              assert row["original_14_views"]==row["candidate_14_views"]==14
+              assert (p.parent/"ceremonial_sword_candidate.obj").is_file()
+          print("VEILFORGE_BOUNDED_REWRITE_CANDIDATES",len(data["candidates"]),
+                "from",data["tickets_received"],"real emulator findings")
+          PY
+      - name: Preserve all candidate mesh, source views and provenance for independent review
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: veilforge-unapproved-auto-model-candidates
+          path: inspection_output/auto-model-candidates/
+          if-no-files-found: warn
+          retention-days: 21
