@@ -30,9 +30,26 @@ public final class OfflineProvider extends ContentProvider {
       case "submit":
         String prompt=extra==null?"":extra.getString("prompt","");
         try{
-          String id=r.submit(prompt);out.putString("state","queued");out.putString("id",id);
+          String details=extra==null?"":extra.getString("details","");
+          String id=r.submit(prompt,details);out.putString("state","queued");out.putString("id",id);
+          return out;
+        }catch(VQActiveLearning.NeedsDetails e){
+          out.putString("state","needs_details");
+          out.putString("question",e.question);return out;
+        }catch(IllegalArgumentException e){
+          out.putString("state","needs_details");
+          out.putString("question",e.getMessage()+"\n"+VQActiveLearning.question(prompt));
           return out;
         }catch(Exception e){out.putString("state","error");out.putString("message",e.getMessage());return out;}
+      case "feedback":
+        try{
+          String id=extra==null?"":extra.getString("id","");
+          String correction=extra==null?"":extra.getString("correction","");
+          out.putString("message",r.feedback(id,correction));
+          out.putString("state","saved");return out;
+        }catch(Exception e){
+          out.putString("state","error");out.putString("message",e.getMessage());return out;
+        }
       case "status":
         String key=extra==null?"":extra.getString("id","");
         return (key.isEmpty()?r.latest():r.get(key)).bundle();

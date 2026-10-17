@@ -76,19 +76,51 @@ public final class OfflineRepository extends SQLiteOpenHelper {
     for(byte v:digest)b.append(String.format(Locale.ROOT,"%02x",v&255));
     return b.toString();
   }
+  /** Private, per-installation neural weights. Never exported or sent to Trion. */
+  private synchronized VQPersonalizer style(){
+    SharedPreferences p=context.getSharedPreferences("vq_private_style",Context.MODE_PRIVATE);
+    String saved=p.getString("weights","");
+    if(!saved.isEmpty())return VQPersonalizer.load(saved);
+    VQPersonalizer net=new VQPersonalizer(new SecureRandom().nextLong());
+    if(!p.edit().putString("weights",net.save()).commit())
+      throw new IllegalStateException("Could not initialize private learning state");
+    return net;
+  }
+  /** Correct an existing finished model only after an explicit user action. */
+  public synchronized String feedback(String id,String direction){
+    Snapshot built=get(id);
+    if(built.id.isEmpty()||!"complete".equals(built.state))
+      throw new IllegalArgumentException("Finish and inspect a real model before training");
+    SharedPreferences p=context.getSharedPreferences("vq_private_style",Context.MODE_PRIVATE);
+    if("approve".equalsIgnoreCase(direction)){
+      if(!p.edit().putString("last_approved_sha",built.sha)
+           .putInt("approval_count",Math.min(100000,p.getInt("approval_count",0)+1)).commit())
+        throw new IllegalStateException("Could not record approval");
+      return "Model approval saved privately; no automatic game promotion";
+    }
+    VQPersonalizer net=style();
+    net.learn(built.prompt,direction);
+    if(!p.edit().putString("weights",net.save()).commit())
+      throw new IllegalStateException("Could not save local preference training");
+    return "Private neural style updated from your correction: "+direction;
+  }
   private File dir(){
     File d=new File(context.getFilesDir(),"model_repository");
     if(!d.exists()&&!d.mkdirs())throw new IllegalStateException("Could not make local repository");
     return d;
   }
   public synchronized String submit(String prompt)throws Exception{
+    return submit(prompt,null);
+  }
+  public synchronized String submit(String prompt,String details)throws Exception{
     if(prompt==null||prompt.trim().isEmpty()||prompt.length()>5000)
       throw new IllegalArgumentException("Prompt must be 1–5000 characters");
     String lower=prompt.toLowerCase(Locale.ROOT);
     boolean reuse=(lower.contains("previous")||lower.contains("last"))&&
       (lower.contains("technique")||lower.contains("construction"));
     ForgeSpec.Blueprint blueprint=reuse?
-      ForgeSpec.adapt(latestVerifiedStrategy(),prompt):ForgeSpec.compile(prompt);
+      ForgeSpec.adapt(latestVerifiedStrategy(),prompt):
+      VQActiveLearning.compile(prompt,details,style());
     String shape=blueprint.title;
     String id=UUID.randomUUID().toString().replace("-","").substring(0,20);
     ContentValues v=new ContentValues();

@@ -1,0 +1,44 @@
+name: VQ Offline Question and Per-Phone Style Test
+on:
+  push:
+    branches: ['feature/vq-ondevice-questions-personal-learning-20261017']
+    paths:
+      - 'vq-studio/**'
+      - '.github/workflows/vq-perphone-learning.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vq-personal-learning-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-private-learning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test question loop, private online training and real model mesh
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/vq-private-learning
+          javac -d /tmp/vq-private-learning \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/OfflineGeometry.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/ForgeSpec.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/ForgeLang2.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/VQPersonalizer.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/VQActiveLearning.java \
+            vq-studio/tests/VQLearningSelfTest.java
+          java -cp /tmp/vq-private-learning com.trioncompasitor.vqstudio.VQLearningSelfTest
+      - name: Check no network or generated model archives in learning source
+        run: |
+          set -euo pipefail
+          ! grep -n 'uses-permission.*INTERNET' vq-studio/app/src/main/AndroidManifest.xml
+          ! grep -nE '(java.net|HttpURLConnection|https?://)' \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/VQ{Personalizer,ActiveLearning}.java
+# Manual Android compile/emulator verification required before release. No APK artifacts.
