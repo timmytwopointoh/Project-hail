@@ -203,13 +203,16 @@ jobs:
           name: veilbound-native3d-inspection-report
           path: inspection_output/veilbound/
           if-no-files-found: warn
-      - name: Upload candidate APK
-        if: always()
+          retention-days: 7
+      # Successful runs publish only the tested APK, not the same APK twice.
+      - name: Upload candidate APK on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: veilbound-native3d-candidate-UNVERIFIED
           path: veilbound/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
+          retention-days: 3
       - name: Upload emulator-verified APK
         if: success()
         uses: actions/upload-artifact@v4
@@ -217,3 +220,4 @@ jobs:
           name: veilbound-native3d-android15-TESTED-apk
           path: veilbound/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 14
