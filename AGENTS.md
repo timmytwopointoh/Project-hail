@@ -13,3 +13,6 @@ This repository participates in a shared multi-chat model, game, emulator, and A
 - A passed emulator QA means that particular technical gate passed, **not** that a humanoid is photorealistic or artistically final.
 
 Read the handoff issue before claiming cross-chat synchronization. Other ChatGPT conversations do not automatically receive messages from this repository.
+
+## Repeatable storage relief
+Use the **Storage recovery - safeguarded audit and reclaim** GitHub Actions workflow on `main`. It is manual only and defaults to `apply=false`, which inventories candidates without deleting anything. Review the candidate count and estimated bytes in the job summary. Select `apply=true` manually to remove at most 125 superseded allowlisted artifacts per invocation. Never add protected backups, source, latest emulator-tested APKs, or repair tasks to this delete allowlist.
