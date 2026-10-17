@@ -1,0 +1,46 @@
+{
+  "schema": "vq.human.cleanroom.recipe/1.0",
+  "asset_id": "vq-human-03-selene",
+  "person": {
+    "height_m": 1.7,
+    "skin_rgb": [
+      163,
+      107,
+      79
+    ],
+    "hair_rgb": [
+      46,
+      28,
+      31
+    ],
+    "iris_rgb": [
+      88,
+      120,
+      99
+    ]
+  },
+  "geometry": {
+    "generator": "blank procedural signed-distance field",
+    "resolution_m": 0.009,
+    "source_model_inputs": []
+  },
+  "anatomy": {
+    "morphs": {
+      "shoulder_width": 0.97,
+      "hip_width": 1.045,
+      "waist_width": 0.975,
+      "calf_width": 0.98,
+      "head_width": 0.985,
+      "arm_extension": 0.8
+    },
+    "pose": "T",
+    "digits_per_hand": 5,
+    "toes_per_foot": 5
+  },
+  "acceptance": {
+    "one_watertight_body": true,
+    "zero_degenerate_faces": true,
+    "14_real_mesh_views": true,
+    "artist_review_required": true
+  }
+}
