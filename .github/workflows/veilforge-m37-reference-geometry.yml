@@ -1,0 +1,117 @@
+name: VEILFORGE M37 - Reference Shoulder and Foot Geometry
+on:
+  push:
+    branches: [feature/veilbound-m37-shoulder-foot-reference-20261016]
+    paths:
+      - '.github/workflows/veilforge-m37-reference-geometry.yml'
+      - 'veilbound/app/src/main/java/game/ashenveil/veilbound/**'
+      - 'veilbound/tests/game/ashenveil/veilbound/M37AnatomicalFeetTest.java'
+      - 'veilbound/tools/HumanVariantCLI.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m37-anatomy-source
+  cancel-in-progress: true
+
+jobs:
+  anatomy-and-model-previews:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and verify old anatomy has not regressed
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/m37-geometry
+          SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
+          TEST=veilbound/tests/game/ashenveil/veilbound
+          javac -d /tmp/m37-geometry \
+            "$SRC"/{ArtKit,ShapeEngine,ContinuousHuman,HumanHandSculpt,HumanSkeleton,M25FaceSculpt,M25SkinPolish,M24BodyRetarget,M26SculptDials,M28FaceSculpt,M28SkinContinuity,M29ReferencePose,M29SkinAtlas,M30ReferenceRig,M31SkinSurfaceNormals,M32ShoulderRig,M32AnatomySurface,M35MouthSculpt,M36PerioralSkin,M37FootSurface,HumanAnatomy,ModelStudio,MaterialMapping,SurfaceAtlas,EnvironmentKit,DetailArtKit,CinematicArtKit,ObjMeshLoader}.java \
+            "$TEST"/{M32AnatomyPerfectionTest,M35MouthSculptTest,M36PerioralSkinTest,M37AnatomicalFeetTest,ModelStudioTest,EnvironmentKitTest}.java \
+            veilbound/tools/HumanVariantCLI.java
+          java -Xmx2400m -cp /tmp/m37-geometry game.ashenveil.veilbound.M32AnatomyPerfectionTest
+          java -Xmx2400m -cp /tmp/m37-geometry game.ashenveil.veilbound.M35MouthSculptTest
+          java -Xmx2400m -cp /tmp/m37-geometry game.ashenveil.veilbound.M36PerioralSkinTest
+          java -Xmx2400m -cp /tmp/m37-geometry game.ashenveil.veilbound.M37AnatomicalFeetTest
+          java -cp /tmp/m37-geometry game.ashenveil.veilbound.ModelStudioTest
+          java -cp /tmp/m37-geometry game.ashenveil.veilbound.EnvironmentKitTest
+      - name: Export real before/after human meshes and foot detail views
+        run: |
+          set -euo pipefail
+          CONTROLS=1,1,1,1,1,1,1,1,1,1,1,1
+          mkdir -p inspection_output/m37/{before,neutral,tpose}
+          java -Xmx2600m -Djava.awt.headless=true -cp /tmp/m37-geometry \
+            game.ashenveil.veilbound.HumanVariantCLI "$CONTROLS" \
+            inspection_output/m37/before --m35-neutral
+          java -Xmx2600m -Djava.awt.headless=true -cp /tmp/m37-geometry \
+            game.ashenveil.veilbound.HumanVariantCLI "$CONTROLS" \
+            inspection_output/m37/neutral --m37-neutral
+          java -Xmx2600m -Djava.awt.headless=true -cp /tmp/m37-geometry \
+            game.ashenveil.veilbound.HumanVariantCLI "$CONTROLS" \
+            inspection_output/m37/tpose --m37-tpose
+      - name: Confirm previews contain actual changed pixels and valid PNG
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check Pillow==11.3.0
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageChops,ImageStat
+          import json,hashlib
+          root=Path("inspection_output/m37")
+          result={"milestone":"M37","visual_approval":False,
+                  "android_emulator_capture":False,"real_mesh_views":{}}
+          for label in ("before","neutral","tpose"):
+              folder=root/label
+              for name in ("front","side","three_quarter","face_front"):
+                  path=folder/(name+".png")
+                  assert path.stat().st_size>1500,path
+                  with Image.open(path) as pic: pic.verify()
+              assert (folder/"human_candidate.obj").stat().st_size>1000000
+          for name in ("feet_top.png","feet_side.png"):
+              for label in ("neutral","tpose"):
+                  path=root/label/name
+                  with Image.open(path) as pic:
+                      pic.verify()
+                  with Image.open(path) as pic:
+                      rgb=pic.convert("RGB")
+                      bg=Image.new("RGB",rgb.size,(218,220,224))
+                      difference=sum(ImageStat.Stat(ImageChops.difference(rgb,bg)).mean)
+                      assert difference>2.5,(path,difference)
+                      result["real_mesh_views"][str(path)]={"sha256":
+                        hashlib.sha256(path.read_bytes()).hexdigest(),
+                        "difference_from_plain_background":round(difference,3)}
+          with Image.open(root/"before/front.png") as a, \
+               Image.open(root/"neutral/front.png") as b:
+              assert a.size==b.size
+              delta=sum(ImageStat.Stat(ImageChops.difference(
+                  a.convert("RGB"),b.convert("RGB"))).mean)
+              assert delta>.05,delta
+              result["reference_correction_visible_pixel_delta"]=round(delta,4)
+          (root/"M37_REFERENCE_REVIEW.json").write_text(
+              json.dumps(result,indent=2)+"\n")
+          print("M37_REAL_MESH_RENDER_PASS",result["reference_correction_visible_pixel_delta"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m37-real-anatomical-human-view-projections
+          path: |
+            inspection_output/m37/**/*.png
+            inspection_output/m37/**/mesh_evidence.json
+            inspection_output/m37/M37_REFERENCE_REVIEW.json
+          retention-days: 21
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: m37-human-actual-obj
+          path: inspection_output/m37/**/human_candidate.obj
+          retention-days: 21
