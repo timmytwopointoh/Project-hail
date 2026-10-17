@@ -88,6 +88,15 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M35 MOUTH T-POSE"),
               "M35 attached mouth and T-pose inspection missing");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M36 FACE NEUTRAL"),
+            "M36 neutral skin-scaffold candidate missing");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M36 FACE OPEN"),
+            "M36 moving connected face skin not inspectable");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M36 FACE T-POSE"),
+            "M36 anatomical T-pose model not inspectable");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");
