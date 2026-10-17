@@ -97,7 +97,8 @@ def audit_archive(path):
                 "frames": frames
             }
         rejected = sorted(n for n in names if n.endswith(".png") and
-                          ("_rejected_duplicate_" in n or "_blocked_modal_" in n))
+                          ("_rejected_duplicate_" in n or "_rejected_replay_" in n or
+                           "_blocked_modal_" in n))
         return {
             "archive": path.name, "role": role,
             "source_commit": report["source_commit"],

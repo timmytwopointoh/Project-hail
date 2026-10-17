@@ -28,6 +28,13 @@ ROLES={
 }
 BACKGROUND=(17,21,29)
 
+def presented_pixel_sha256(image):
+    """Decoded-pixel identity; PNG metadata/recompression cannot hide a replay."""
+    rgb=image.convert("RGB")
+    return hashlib.sha256(
+        rgb.width.to_bytes(4,"big")+rgb.height.to_bytes(4,"big")+rgb.tobytes()
+    ).hexdigest()
+
 def adb(*args,timeout=50,binary=False):
     proc=subprocess.run(["adb",*args],check=True,stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,timeout=timeout)
@@ -90,7 +97,8 @@ def metrics(image):
             "dimensions":list(image.size)}
 
 def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None,
-                          previous_frame=None, min_view_change=.0006):
+                          previous_frame=None, min_view_change=.0006,
+                          seen_pixel_shas=None):
     """Wait for the *presented* Android frame, not just the GL draw callback.
 
     A FRAME_OK log is emitted before the emulator compositor necessarily
@@ -104,6 +112,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None,
     if previous_frame is not None and not (0 < min_view_change <= 1):
         raise ValueError("Invalid distinct-view threshold")
     duplicate_rejections = 0
+    replay_rejections = 0
     last = None
     for attempt in range(1, attempts + 1):
         if monitor is not None:
@@ -140,6 +149,23 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None,
                     continue
                 last["previous_view_change_fraction"] = round(changed, 5)
                 last["rejected_duplicate_count"] = duplicate_rejections
+            # A compositor can replay yaw0 at yaw75 after several genuine
+            # views. Retry the stale pixels here rather than letting a whole
+            # four-emulator factory run fail at the independent final audit.
+            # Only exact decoded-pixel repeats are retried; similar but
+            # legitimate edge-on or symmetric silhouettes are not rejected.
+            if seen_pixel_shas is not None:
+                prior = seen_pixel_shas.get(presented_pixel_sha256(pic))
+                if prior is not None:
+                    replay_rejections += 1
+                    evidence = path.parent/(path.stem+f"_rejected_replay_{attempt}.png")
+                    evidence.write_bytes(path.read_bytes())
+                    print(f"VEILFORGE_DELAYED_FRAME_REPLAY attempt={attempt}/{attempts} "
+                          f"prior={prior} saved={evidence}",flush=True)
+                    if attempt < attempts:
+                        time.sleep(interval)
+                    continue
+            last["rejected_replay_count"] = replay_rejections
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
@@ -197,6 +223,7 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
         # The same strict per-frame change threshold applies; rejected images
         # are archived and retried rather than silently counted as accepted.
         previous_presented_frame=None
+        accepted_pixel_shas={}
         for asset in ROLES[role]:
             base=output/asset;base.mkdir(parents=True,exist_ok=True)
             shots=[];measurements=[]
@@ -208,12 +235,14 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                 wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
                 dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
                 pic,result,attempts=capture_visible_frame(
-                    dest,monitor=monitor,previous_frame=previous_presented_frame)
+                    dest,monitor=monitor,previous_frame=previous_presented_frame,
+                    seen_pixel_shas=accepted_pixel_shas)
                 result.update({"index":index,"yaw":yaw,"pitch":pitch,
                                 "capture_attempts":attempts,
                                 "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
                                 "image":str(dest.relative_to(output))})
                 shots.append(pic);measurements.append(result)
+                accepted_pixel_shas[presented_pixel_sha256(pic)]=(f"{asset} yaw={yaw} pitch={pitch}")
                 previous_presented_frame=pic
             changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
             del shots
@@ -243,6 +272,9 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
         "screenshot_count":sum(len(x["views"]) for x in collected),
         "rejected_duplicate_screenshots":sum(
             v.get("rejected_duplicate_count",0)
+            for asset in collected for v in asset["views"]),
+        "rejected_delayed_replay_screenshots":sum(
+            v.get("rejected_replay_count",0)
             for asset in collected for v in asset["views"]),
         "assets":collected,"memory_snapshot_saved":True,
         "technical_visual_smoke_pass":True,"artistic_quality_approved":False,

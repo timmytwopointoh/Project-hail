@@ -63,6 +63,7 @@ def fixture(path, *, commit, scale=0, replay=False, tamper=False,
             if isinstance(data, bytes):
                 z.writestr(name, data)
         z.writestr(names[0]+"/00_yaw0_pitch15_rejected_duplicate_1.png", b"rejected")
+        z.writestr(names[0]+"/03_yaw75_pitch15_rejected_replay_1.png", b"replay")
 
 
 class CameraEvidenceTests(unittest.TestCase):
@@ -78,7 +79,7 @@ class CameraEvidenceTests(unittest.TestCase):
             self.assertTrue(result["mean_coverage_improved"])
             self.assertTrue(result["minimum_coverage_improved"])
             self.assertGreater(result["mean_coverage_ratio"], 1.1)
-            self.assertEqual(result["before_rejected_candidates_retained"], 1)
+            self.assertEqual(result["before_rejected_candidates_retained"], 2)
             self.assertFalse(result["artistic_quality_approved"])
             self.assertFalse(result["phone_hardware_performance_verified"])
 

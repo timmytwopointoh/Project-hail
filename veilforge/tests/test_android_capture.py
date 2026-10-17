@@ -165,6 +165,52 @@ class PresentedFrameTest(unittest.TestCase):
             self.assertNotEqual(path.read_bytes(),
                                 (path.parent/"00_yaw0_pitch15_rejected_duplicate_1.png").read_bytes())
 
+    def test_delayed_replay_retried_before_acceptance_and_archived(self):
+        from PIL import Image, ImageDraw
+        from tempfile import TemporaryDirectory
+        from android_visual_qa import presented_pixel_sha256
+        def frame(x):
+            im=Image.new("RGB",(640,360),(17,21,29))
+            ImageDraw.Draw(im).rectangle((x,110,x+35,280),fill=(110,100,85))
+            return im
+        yaw0, yaw50, yaw75 = frame(150),frame(250),frame(350)
+        seen={presented_pixel_sha256(yaw0):"sword yaw=0 pitch=15",
+              presented_pixel_sha256(yaw50):"sword yaw=50 pitch=42"}
+        visible={"foreground_fraction":.03,"channel_stddev":18,
+                 "renderer_background_confirmed":True}
+        with TemporaryDirectory() as tmp:
+            path=Path(tmp)/"03_yaw75_pitch15.png"
+            images=iter((yaw0,yaw75))
+            def take(dest):
+                im=next(images)
+                im.save(dest)
+                return im
+            with patch("android_visual_qa.screenshot",side_effect=take) as shot, \
+                 patch("android_visual_qa.metrics",return_value=visible.copy()), \
+                 patch("android_visual_qa.time.sleep") as delay:
+                pic,measured,attempt=capture_visible_frame(
+                    path,attempts=3,interval=.1,previous_frame=yaw50,
+                    seen_pixel_shas=seen)
+            self.assertEqual(attempt,2)
+            self.assertEqual(shot.call_count,2)
+            self.assertEqual(measured["rejected_replay_count"],1)
+            self.assertGreater(measured["previous_view_change_fraction"],.0006)
+            self.assertEqual(presented_pixel_sha256(pic),
+                             presented_pixel_sha256(yaw75))
+            rejected=path.parent/"03_yaw75_pitch15_rejected_replay_1.png"
+            self.assertTrue(rejected.is_file())
+            self.assertNotEqual(path.read_bytes(),rejected.read_bytes())
+            delay.assert_called_once_with(.1)
+
+    def test_live_replay_guard_is_carried_across_all_assets(self):
+        import inspect
+        from android_visual_qa import capture
+        source=inspect.getsource(capture)
+        self.assertLess(source.index("accepted_pixel_shas={}"),
+                        source.index("for asset in ROLES[role]:"))
+        self.assertIn("seen_pixel_shas=accepted_pixel_shas",source)
+        self.assertIn("accepted_pixel_shas[presented_pixel_sha256(pic)]",source)
+
     def test_zero_attempts_rejected(self):
         with self.assertRaises(ValueError):
             capture_visible_frame("actual.png",attempts=0)
