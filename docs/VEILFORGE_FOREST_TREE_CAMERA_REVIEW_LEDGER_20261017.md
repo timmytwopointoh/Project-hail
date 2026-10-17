@@ -36,3 +36,9 @@ photorealism or real-device performance. Do not auto-merge/promote.
 Static `veilforge/queue_backlog.json` is separate from dynamic
 `veilforge-android-next-iteration-tasks` REVIEW proposals.
 Branch: `feature/veilforge-forest-tree-camera-fit-20261017-h06`.
+
+## Verified Android retest
+
+Source e8b311626cc8f0cec30688481b89839c47c8f3ea; run 39026251267: 19/19 jobs and 153 tests passed, four Android 15 emulators, 154 verified views, independent semantic and LOD checks passed. APK SHA-256 b46420f221216fe0a6c25004121dd0b94d95ba03b801525e370c3a95fe0135d7. Nature artifact 12098996468; semantic 12097884095; Android gate 12098418930; LOD 12098766691; REVIEW 12098631999.
+
+Forest min coverage 0.00353 to 0.00543 (+53.8%); max 0.02547 to 0.04012 (+57.5%); mean 0.012184 to 0.019218 (+57.7%); median 0.010605 to 0.016075 (+51.6%). Four downloaded emulator archives independently rehashed: 154/154 accepted PNGs valid, zero adjacent-asset SHA collisions, 56 rejected transient screenshots retained. Fourteen unique forest view hashes; no silhouette frame contacts. Five nonblocking semantic REVIEW warnings remain. No geometry rewrite, promotion, merge, real-phone or artistic signoff.
