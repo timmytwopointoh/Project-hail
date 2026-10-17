@@ -67,7 +67,7 @@ public final class M37AnatomicalFeetTest {
             for(int i=0;i<5;i++)
                 ok(tips[i]>.32f,"Toe "+i+" not geometrically represented");
             ok(tips[0]>tips[4]+.012f,
-               "Hallux/little toe must not end at same plane");
+               "Hallux/little toe must not end at same plane: "+java.util.Arrays.toString(tips));
         }
         ArtKit.Model opened=HumanAnatomy.buildM37Candidate(lite,1f);
         ok(opened.triangleCount==newMesh.triangleCount,
