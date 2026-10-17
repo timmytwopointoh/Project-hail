@@ -1,12 +1,5 @@
 name: APK Vision Inspector
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'inspector/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - '.github/workflows/android-inspection.yml'
   workflow_dispatch:
     inputs:
       apk_path:
@@ -69,4 +62,4 @@ jobs:
           name: apk-vision-report
           path: inspection_output/
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 1
