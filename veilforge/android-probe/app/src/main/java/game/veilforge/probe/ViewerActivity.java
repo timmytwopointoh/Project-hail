@@ -100,7 +100,7 @@ public final class ViewerActivity extends Activity {
         volatile boolean loaded=false;
         int program,aPos,aNormal,aColor,aUv,aTangent,aBitangent,uMvp,uModel;
         int uBaseTexture,uMrTexture,uNormalTexture,uAOTexture;
-        int uUseAlbedo,uUseMr,uUseNormal,uUseAO,uMetallic,uRoughness;
+        int uUseAlbedo,uUseMr,uUseNormal,uUseAO,uMetallic,uRoughness,uTreeVisibilityFill;
         final HashMap<Integer,Integer> imageTextures=new HashMap<>();
         int texAlbedoCount=0,texMrCount=0,texNormalCount=0,texAOCount=0;
         int width=1,height=1;
@@ -146,7 +146,7 @@ public final class ViewerActivity extends Activity {
             "uniform sampler2D uBaseTexture; uniform sampler2D uMrTexture;\n"+
             "uniform sampler2D uNormalTexture; uniform sampler2D uAOTexture;\n"+
             "uniform float uUseAlbedo; uniform float uUseMr; uniform float uUseNormal; uniform float uUseAO;\n"+
-            "uniform float uMetallic; uniform float uRoughness;\n"+
+            "uniform float uMetallic; uniform float uRoughness; uniform float uTreeVisibilityFill;\n"+
             "void main(){vec3 original=normalize(vNormal);"+
             "vec3 sampled=texture2D(uNormalTexture,vUv).rgb*2.0-1.0;"+
             "vec3 mapped=normalize(sampled.x*normalize(vTangent)+sampled.y*normalize(vBitangent)+sampled.z*original);"+
@@ -160,7 +160,9 @@ public final class ViewerActivity extends Activity {
             "float metal=clamp(mix(uMetallic,rm.b*uMetallic,uUseMr),0.0,1.0);"+
             "vec3 halfdir=normalize(light+vec3(0.0,0.0,1.0));"+
             "float spec=pow(max(dot(n,halfdir),0.0),mix(70.0,7.0,rough));"+
-            "vec3 lit=albedo*(0.22+0.78*diffuse)*(1.0-0.15*metal)*ao;"+
+            "float diffuseLight=0.22+0.78*diffuse;"+
+            "float treeFill=0.65+0.35*diffuse;"+
+            "vec3 lit=albedo*mix(diffuseLight,treeFill,uTreeVisibilityFill)*(1.0-0.15*metal)*ao;"+
             "vec3 reflectance=mix(vec3(0.045),albedo,metal);"+
             "gl_FragColor=vec4(lit+reflectance*spec*0.8,1.0);}\n";
         void setup(){
@@ -189,6 +191,7 @@ public final class ViewerActivity extends Activity {
             uUseMr=GLES20.glGetUniformLocation(program,"uUseMr");
             uMetallic=GLES20.glGetUniformLocation(program,"uMetallic");
             uRoughness=GLES20.glGetUniformLocation(program,"uRoughness");
+            uTreeVisibilityFill=GLES20.glGetUniformLocation(program,"uTreeVisibilityFill");
         }
         // Reads glTF 2.0 accessor buffers, including indexed primitives, from ACTUAL packed scene.
         static int comps(String type)throws Exception{
@@ -493,6 +496,9 @@ public final class ViewerActivity extends Activity {
                 Matrix.rotateM(model,0,(float)Math.toDegrees(2*Math.atan2(item.rotation[1],item.rotation[3])),0,1,0);
                 Matrix.scaleM(model,0,item.scale,item.scale,item.scale);
                 Matrix.multiplyMM(mvp,0,pv,0,model,0);
+                // QA-only ambient fill for ancient_tree, never other models or scene.
+                GLES20.glUniform1f(uTreeVisibilityFill,
+                    ("ancient_tree".equals(filter)&&"ancient_tree".equals(item.asset))?1f:0f);
                 GLES20.glUniformMatrix4fv(uMvp,1,false,mvp,0);
                 GLES20.glUniformMatrix4fv(uModel,1,false,model,0);
                 for(Geometry geom:models.get(item.mesh).shapes){

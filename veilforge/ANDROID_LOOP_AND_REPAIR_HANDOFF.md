@@ -81,3 +81,31 @@ feedback handoff, not autonomous artistic self-perfection.
 
 The source modules remain under `veilforge/`, with a versioned recovery ZIP
 and instructions in ChatGPT Library `/App creation/VEILFORGE - VQ Engine`.
+
+## October 17, 2026 — scoped ancient_tree visibility experiment
+
+Pinned passing baseline: commit `85f634f58d0a5863186b22a90c1fd74292cc8c2b`,
+18/18-job factory run `38993296206` (138 tests, four Android 15
+emulators, 154 real screenshots). Immutable review-task artifact
+`12085917087` and nature-mobile screenshots artifact `12085179609`
+are the evidence, not an automatic model-edit queue.
+
+The ceremonial sword is genuinely edge-on at yaw 0 degrees, pitch 15
+degrees: no sword geometry fix is justified. The ancient_tree screenshot
+set contains two trees at every angle, but rear-facing leaves nearly
+disappear into the background. At yaw 225 degrees, pitch 15 degrees, the
+independent semantic mask has 0.00079 coverage; at yaw 50 degrees,
+pitch 42 degrees, it has 0.01858. Dark leaf pixels near (11,22,10)
+barely contrast with probe background (17,21,29).
+
+The isolated branch `feature/veilforge-ancient-tree-visibility-fill-20261017`
+tests one Android-probe-only fix: for the selected ancient_tree asset,
+lift the shadow ambient term from 0.22 to 0.65, preserving full-diffuse
+brightness and the original equation for every other asset and the
+scene. No meshes, textures, cameras, games, thresholds or QA gates change.
+This is a visibility experiment, not proof of geometry repair or
+artistic quality. Accept only after all four emulator roles, 154 views,
+independent semantic and LOD reviewers pass and same-angle evidence
+shows an improvement without regressions. No automatic merge.
+
+See `REPAIR_BRANCH_LEDGER.md` for source screenshot SHA and rejection rules.
