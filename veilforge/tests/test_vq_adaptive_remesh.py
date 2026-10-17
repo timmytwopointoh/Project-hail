@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from engine import read_obj,inspect_obj
 from vq_adaptive_remesh import refine,validate_recipe
@@ -68,6 +69,9 @@ class AdaptiveRefineTests(unittest.TestCase):
             self.assertEqual(b_vertices[:len(a_vertices)],a_vertices)
             self.assertEqual(b_uv[:len(a_uv)],a_uv)
             self.assertEqual(len(b_faces),a["candidate_triangles"])
+            self.assertTrue(a["capacity_preflight_passed"])
+            self.assertEqual(a["candidate_capacity_preflight"]["vertices"],len(b_vertices))
+            self.assertEqual(a["candidate_capacity_preflight"]["uvs"],len(b_uv))
             self.assertEqual(uv_evidence(b_vertices,b_uv,b_faces)["collapsed_uv_faces"],0)
             self.assertEqual(a["candidate_sha256"],hashlib.sha256(out.read_bytes()).hexdigest())
             self.assertTrue(all(len(v)>=6 for v in b_vertices)) # preserved vertex colors
@@ -115,6 +119,30 @@ class AdaptiveRefineTests(unittest.TestCase):
                 refine(source,recipe(triangle_budget=4),root/"fail.obj")
             with self.assertRaisesRegex(ValueError,"Never overwrite"):
                 refine(source,recipe(),source)
+    def test_vertex_and_uv_preflight_fail_without_partial_outputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            src=grid(root/"small.obj",size=2)
+            original=src.read_bytes()
+            out=root/"candidate.obj"
+            plan=recipe(max_edges=1,triangle_budget=10)
+            # One welded interior edge requires TWO face-local midpoints.
+            with patch("vq_adaptive_remesh.MAX_VERTICES",5):
+                with self.assertRaisesRegex(ValueError,"vertex budget"):
+                    refine(src,plan,out)
+            self.assertFalse(out.exists())
+            self.assertFalse((root/"candidate_remesh_report.json").exists())
+            with patch("vq_adaptive_remesh.MAX_ELEMENTS",7):
+                with self.assertRaisesRegex(ValueError,"attribute capacity"):
+                    refine(src,plan,out)
+            self.assertFalse(out.exists())
+            self.assertEqual(src.read_bytes(),original)
+            out.write_text("previous-approved-candidate")
+            with patch("vq_adaptive_remesh.MAX_VERTICES",5):
+                with self.assertRaisesRegex(ValueError,"vertex budget"):
+                    refine(src,plan,out)
+            self.assertEqual(out.read_text(),"previous-approved-candidate")
+
     def test_real_veilforge_terrain_and_material_maps(self):
         from factory import build_asset
         with tempfile.TemporaryDirectory() as tmp:
