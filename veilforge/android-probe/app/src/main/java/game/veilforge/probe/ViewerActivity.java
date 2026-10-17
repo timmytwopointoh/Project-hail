@@ -476,6 +476,16 @@ public final class ViewerActivity extends Activity {
             }
             float yawRad=(float)Math.toRadians(yaw), pitchRad=(float)Math.toRadians(Math.max(-70,Math.min(70,pitch)));
             float eyeRadius=Math.max(3.0f,radius*2.35f+1.2f);
+            // Scoped screenshot-review correction: ancient_tree has two spaced
+            // instances in the assembled scene. The generic orbit leaves both
+            // unnecessarily small; do not zoom swords (intentional edge-on)
+            // or alter the camera for any other asset.
+            // Baseline 325ca6d, run 38995400473: conservative projected
+            // max |NDC y| 0.669. This branch predicts 0.839 (16% margin);
+            // only real 14-view Android evidence can confirm improvement.
+            if("ancient_tree".equals(filter)){
+                eyeRadius=Math.max(3.0f,radius*1.95f+0.9f);
+            }
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
