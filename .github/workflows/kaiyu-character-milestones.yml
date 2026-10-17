@@ -38,7 +38,7 @@ jobs:
             --output "$KAIYU_OUT/kaiyu_game_m3.glb" \
             --report "$KAIYU_OUT/kaiyu_expression_m3_report.json"
           python3 assets/kaiyu/validate_m3.py
-          python3 assets/kaiyu/android_pack_kaiyu.py \
+          python3 assets/kaiyu/android_pack_batched.py \
             --glb "$KAIYU_OUT/kaiyu_game_m3.glb" \
             --out "$KAIYU_OUT/scene"
           python3 - <<'PY'
@@ -46,13 +46,15 @@ jobs:
           from pathlib import Path
           d=Path(os.environ['KAIYU_OUT'])
           t=json.loads((d/'kaiyu_m2_validation.json').read_text())
-          a=json.loads((d/'scene/kaiyu_android_pack_report.json').read_text())
+          a=json.loads((d/'scene/kaiyu_m12_probe_report.json').read_text())
           assert all(t['passes'].values())
           assert t['skins']==7 and t['animation_channels']==22
           m=json.loads((d/'kaiyu_m3_validation.json').read_text())
           assert m['facial_expression_states']==10 and m['animation_clips']==2 and m['skinned_groups']==7
-          assert a['triangles']>=100000 and a['embedded_albedo_images']>=1
-          assert not a['skin_playback_on_android'] and not a['quality_approved']
+          assert a['android_probe_triangles']==a['source_triangles']>=100000
+          assert a['batched_material_nodes']<a['source_mesh_nodes']
+          assert a['embedded_albedo_images']>=1
+          assert not a['android_skin_playback_verified'] and not a['reference_likeness_approved']
           print('KAIYU_M3_RIG_SKIN_MORPH_TEXTURE_PASS')
           PY
       - uses: actions/upload-artifact@v4
@@ -146,13 +148,13 @@ jobs:
       - name: Run actual Android 15 GPU and capture 14 genuine device screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 30
           target: default
           arch: x86_64
           profile: pixel_2
           disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048 -cores 2
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 3072 -cores 2
           script: python3 assets/kaiyu/android_qa_kaiyu.py --apk veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk --out inspection_output/kaiyu/android-evidence
       - uses: actions/upload-artifact@v4
         if: always()
