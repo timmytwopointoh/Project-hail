@@ -20,13 +20,48 @@ public final class OfflineRepository extends SQLiteOpenHelper {
   private final Context context;
   private final ExecutorService worker=Executors.newSingleThreadExecutor();
   private final ConcurrentHashMap<String,AtomicBoolean> cancellations=new ConcurrentHashMap<>();
-  private OfflineRepository(Context c){super(c,"vq_models.sqlite",null,1);context=c;}
+  private OfflineRepository(Context c){super(c,"vq_models.sqlite",null,2);context=c;}
   @Override public void onCreate(SQLiteDatabase db){
     db.execSQL("CREATE TABLE jobs (id TEXT PRIMARY KEY,prompt TEXT NOT NULL, shape TEXT NOT NULL, state TEXT NOT NULL, rev INTEGER NOT NULL, sha TEXT NOT NULL, triangles INTEGER NOT NULL, detail TEXT NOT NULL, updated INTEGER NOT NULL)");
     db.execSQL("CREATE TABLE revisions (job TEXT NOT NULL,rev INTEGER NOT NULL,sha TEXT NOT NULL,bytes INTEGER NOT NULL,triangles INTEGER NOT NULL,PRIMARY KEY(job,rev))");
+    createTechniqueTable(db);
+  }
+  private static void createTechniqueTable(SQLiteDatabase db){
+    db.execSQL("CREATE TABLE IF NOT EXISTS techniques (shape TEXT PRIMARY KEY, blueprint TEXT NOT NULL, parts INTEGER NOT NULL, triangles INTEGER NOT NULL, verified_sha TEXT NOT NULL, uses INTEGER NOT NULL DEFAULT 1, updated INTEGER NOT NULL)");
   }
   @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion){
+    if(oldVersion==1&&newVersion==2){createTechniqueTable(db);return;}
     throw new IllegalStateException("VQ repository requires explicit migration");
+  }
+  /** Persist only successful CONSTRUCTION INSTRUCTIONS, never cloned OBJ data. */
+  private synchronized void rememberTechnique(ForgeSpec.Blueprint blueprint,
+      int triangles,String sha){
+    SQLiteDatabase db=getWritableDatabase();
+    int count=0;
+    try(Cursor cursor=db.rawQuery("SELECT uses FROM techniques WHERE shape=?",
+        new String[]{blueprint.title})){
+      if(cursor.moveToFirst())count=cursor.getInt(0);
+    }
+    ContentValues values=new ContentValues();
+    values.put("shape",blueprint.title);
+    values.put("blueprint",blueprint.serialize());
+    values.put("parts",blueprint.parts.size());
+    values.put("triangles",triangles);
+    values.put("verified_sha",sha);
+    values.put("uses",Math.min(count+1,100000));
+    values.put("updated",System.currentTimeMillis());
+    db.insertWithOnConflict("techniques",null,values,SQLiteDatabase.CONFLICT_REPLACE);
+  }
+  /** Lessons are explicit, local, bounded and re-inspectable. */
+  public synchronized String lastTechnique(String family){
+    try(Cursor c=getReadableDatabase().rawQuery(
+        "SELECT parts,triangles,uses FROM techniques WHERE shape=?",
+        new String[]{family})){
+      if(c.moveToFirst())return "Past verified technique: "+c.getInt(0)+
+          " dimensioned components, "+c.getInt(1)+" triangles, "+c.getInt(2)+
+          " successful builds.";
+    }
+    return "No earlier verified technique for this object family.";
   }
   public static String sha(byte[] data)throws Exception{
     byte[] digest=MessageDigest.getInstance("SHA-256").digest(data);
@@ -40,9 +75,10 @@ public final class OfflineRepository extends SQLiteOpenHelper {
     return d;
   }
   public synchronized String submit(String prompt)throws Exception{
-    if(prompt==null||prompt.trim().isEmpty()||prompt.length()>500)
-      throw new IllegalArgumentException("Prompt must be 1–500 characters");
-    String shape=OfflineGeometry.supported(prompt);
+    if(prompt==null||prompt.trim().isEmpty()||prompt.length()>5000)
+      throw new IllegalArgumentException("Prompt must be 1–5000 characters");
+    ForgeSpec.Blueprint blueprint=ForgeSpec.compile(prompt);
+    String shape=blueprint.title;
     String id=UUID.randomUUID().toString().replace("-","").substring(0,20);
     ContentValues v=new ContentValues();
     v.put("id",id);v.put("prompt",prompt);v.put("shape",shape);
@@ -52,7 +88,7 @@ public final class OfflineRepository extends SQLiteOpenHelper {
     getWritableDatabase().insertOrThrow("jobs",null,v);
     AtomicBoolean cancel=new AtomicBoolean(false);
     cancellations.put(id,cancel);
-    worker.execute(()->run(id,prompt,cancel));
+    worker.execute(()->run(id,prompt,blueprint,cancel));
     return id;
   }
   private void set(String id,String state,int revision,String sha,int triangles,String detail){
@@ -61,13 +97,14 @@ public final class OfflineRepository extends SQLiteOpenHelper {
     cv.put("updated",System.currentTimeMillis());
     getWritableDatabase().update("jobs",cv,"id=?",new String[]{id});
   }
-  private void run(String id,String prompt,AtomicBoolean cancel){
+  private void run(String id,String prompt,ForgeSpec.Blueprint blueprint,AtomicBoolean cancel){
     try{
-      set(id,"working",0,"",0,"Planning supported primitive geometry");
+      set(id,"working",0,"",0,"FORGE/1 planned "+blueprint.parts.size()+
+          " parts • "+lastTechnique(blueprint.title));
       for(int rev=1;rev<=2;rev++){
         if(cancel.get())throw new InterruptedException("Stop requested");
         set(id,"working",rev-1,"",0,"Building local source revision "+rev);
-        byte[] obj=OfflineGeometry.generate(prompt,rev,cancel::get);
+        byte[] obj=ForgeSpec.build(blueprint,rev,cancel::get);
         if(cancel.get())throw new InterruptedException("Stop requested");
         MeshData mesh=MeshData.read(new ByteArrayInputStream(obj),"VQ offline revision "+rev);
         String hash=sha(obj);
@@ -85,9 +122,14 @@ public final class OfflineRepository extends SQLiteOpenHelper {
           row.put("triangles",mesh.triangles.length);
           getWritableDatabase().insertOrThrow("revisions",null,row);
           set(id,rev==2?"complete":"working",rev,hash,mesh.triangles.length,
-              rev==2?"Saved detailed OBJ • ready for review":"Base OBJ saved • refining geometry locally");
+              rev==2?"FORGE/1 generated and checked OBJ • ready for review":"FORGE/1 base model verified • refining topology locally");
           getWritableDatabase().setTransactionSuccessful();
         }finally{getWritableDatabase().endTransaction();}
+      }
+      if(!cancel.get()){
+        Snapshot finalRevision=get(id);
+        if(finalRevision.rev==2&&"complete".equals(finalRevision.state))
+          rememberTechnique(blueprint,finalRevision.triangles,finalRevision.sha);
       }
     }catch(InterruptedException ex){
       Snapshot last=get(id);set(id,"cancelled",last.rev,last.sha,last.triangles,"Stopped locally • previous model retained");
