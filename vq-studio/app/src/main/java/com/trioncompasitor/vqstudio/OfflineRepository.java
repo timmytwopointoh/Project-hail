@@ -52,6 +52,13 @@ public final class OfflineRepository extends SQLiteOpenHelper {
     values.put("updated",System.currentTimeMillis());
     db.insertWithOnConflict("techniques",null,values,SQLiteDatabase.CONFLICT_REPLACE);
   }
+  private synchronized ForgeSpec.Blueprint latestVerifiedStrategy(){
+    try(Cursor c=getReadableDatabase().rawQuery(
+        "SELECT blueprint FROM techniques ORDER BY updated DESC LIMIT 1",null)){
+      if(c.moveToFirst())return ForgeSpec.parse(c.getString(0));
+    }
+    throw new IllegalArgumentException("No verified prior model technique to reuse yet");
+  }
   /** Lessons are explicit, local, bounded and re-inspectable. */
   public synchronized String lastTechnique(String family){
     try(Cursor c=getReadableDatabase().rawQuery(
@@ -77,7 +84,11 @@ public final class OfflineRepository extends SQLiteOpenHelper {
   public synchronized String submit(String prompt)throws Exception{
     if(prompt==null||prompt.trim().isEmpty()||prompt.length()>5000)
       throw new IllegalArgumentException("Prompt must be 1–5000 characters");
-    ForgeSpec.Blueprint blueprint=ForgeSpec.compile(prompt);
+    String lower=prompt.toLowerCase(Locale.ROOT);
+    boolean reuse=(lower.contains("previous")||lower.contains("last"))&&
+      (lower.contains("technique")||lower.contains("construction"));
+    ForgeSpec.Blueprint blueprint=reuse?
+      ForgeSpec.adapt(latestVerifiedStrategy(),prompt):ForgeSpec.compile(prompt);
     String shape=blueprint.title;
     String id=UUID.randomUUID().toString().replace("-","").substring(0,20);
     ContentValues v=new ContentValues();
