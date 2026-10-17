@@ -9,7 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from android_review import review
 from android_visual_qa import ROLES,VIEWS
 
-def evidence(root,replay=False):
+def evidence(root,replay=False,nonadjacent=False):
     previous=None
     for role,names in ROLES.items():
         d=root/("veilforge-android-"+role)
@@ -23,6 +23,8 @@ def evidence(root,replay=False):
                     previous=data
                 if replay and role=="props-equipment" and name=="ceremonial_sword" and index==0:
                     data=previous
+                if nonadjacent and role=="props-equipment" and name=="ceremonial_sword" and index==3:
+                    data=(f"synthetic-{role}-{name}-0|".encode()*100)
                 rel=f"{name}/{index:02d}.png"
                 target=d/rel
                 target.parent.mkdir(exist_ok=True)
@@ -49,6 +51,18 @@ class CrossAssetEvidenceTests(unittest.TestCase):
             result=review(root,root/"out","a"*40,"b"*64)
             self.assertTrue(result["all_emulator_gates_passed"],result["problems"])
             self.assertEqual(result["screenshots_checked"],154)
+    def test_delayed_same_asset_replay_fails_independent_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            evidence(root,nonadjacent=True)
+            result=review(root,root/"out","a"*40,"b"*64)
+            self.assertFalse(result["all_emulator_gates_passed"])
+            self.assertEqual(len(result["problems"]),1,result["problems"])
+            issue=result["problems"][0]
+            self.assertIn("repeated nonadjacent screenshot",issue)
+            self.assertIn("first yaw=0 pitch=15",issue)
+            self.assertIn("replayed yaw=75 pitch=15",issue)
+
     def test_stale_chest_as_sword_fails_independent_review(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

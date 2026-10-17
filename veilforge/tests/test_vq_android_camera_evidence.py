@@ -14,7 +14,8 @@ from android_visual_qa import ROLES, VIEWS, BACKGROUND
 from vq_android_camera_evidence import audit_archive, compare
 
 
-def fixture(path, *, commit, scale=0, replay=False, tamper=False):
+def fixture(path, *, commit, scale=0, replay=False, tamper=False,
+            replay_within=False):
     role = "props-equipment"
     names = ROLES[role]
     saved = {}
@@ -32,6 +33,14 @@ def fixture(path, *, commit, scale=0, replay=False, tamper=False):
             data = png.getvalue()
             if ai == 0 and i == 13:
                 saved["chest"] = img.copy()
+            if ai == 1 and i == 0:
+                saved["sword"] = img.copy()
+            if replay_within and ai == 1 and i == 3:
+                info = PngImagePlugin.PngInfo()
+                info.add_text("reencoded_stale_camera", "yaw0_pixels_at_yaw75")
+                png = io.BytesIO()
+                saved["sword"].save(png, format="PNG", pnginfo=info)
+                data = png.getvalue()
             if replay and ai == 1 and i == 0:
                 # Same decoded pixels as the chest, but a different PNG SHA.
                 info = PngImagePlugin.PngInfo()
@@ -84,6 +93,21 @@ class CameraEvidenceTests(unittest.TestCase):
             self.assertNotEqual(hashlib.sha256(chest).hexdigest(),
                                 hashlib.sha256(sword).hexdigest())
             with self.assertRaisesRegex(ValueError, "cross-asset pixel-identical"):
+                audit_archive(source)
+
+    def test_reencoded_nonadjacent_same_asset_replay_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)/"nonadjacent.zip"
+            fixture(source, commit="a"*40, replay_within=True)
+            with zipfile.ZipFile(source) as z:
+                report = json.loads(z.read("emulator_visual_qa.json"))
+                sword = report["assets"][1]["views"]
+                first = z.read(sword[0]["image"])
+                replay = z.read(sword[3]["image"])
+            self.assertNotEqual(hashlib.sha256(first).hexdigest(),
+                                hashlib.sha256(replay).hexdigest())
+            with self.assertRaisesRegex(ValueError,
+                                        "nonadjacent pixel-identical camera view"):
                 audit_archive(source)
 
     def test_manifest_tamper_rejected(self):

@@ -46,7 +46,7 @@ def audit_archive(path):
             if len(views) != len(VIEWS):
                 raise ValueError(asset_name + ": incomplete camera views")
             coverages, frames = [], []
-            previous_pixel = None
+            first_view_by_pixel = {}
             for i, (meta, (yaw, pitch)) in enumerate(zip(views, VIEWS)):
                 if (meta.get("yaw"), meta.get("pitch")) != (yaw, pitch):
                     raise ValueError(asset_name + ": wrong camera angle")
@@ -65,14 +65,21 @@ def audit_archive(path):
                     image.width.to_bytes(4, "big") +
                     image.height.to_bytes(4, "big") + image.tobytes()
                 ).hexdigest()
-                if pixel_sha == previous_pixel:
-                    raise ValueError(asset_name + ": adjacent pixel-identical camera view")
+                prior_view = first_view_by_pixel.setdefault(
+                    pixel_sha, (i, yaw, pitch))
+                if prior_view[0] != i:
+                    kind = ("adjacent" if i == prior_view[0]+1
+                            else "nonadjacent")
+                    raise ValueError(
+                        asset_name + ": " + kind +
+                        " pixel-identical camera view: yaw=" +
+                        str(prior_view[1]) + " pitch=" + str(prior_view[2]) +
+                        " replayed yaw=" + str(yaw) + " pitch=" + str(pitch))
                 if pixel_sha in seen_pixel and seen_pixel[pixel_sha][0] != asset_name:
                     prior = seen_pixel[pixel_sha]
                     raise ValueError("cross-asset pixel-identical screenshot: " +
                                      prior[1] + " and " + name)
                 seen_pixel.setdefault(pixel_sha, (asset_name, name))
-                previous_pixel = pixel_sha
                 w, h = image.size
                 sample = image.crop((int(w*.07), int(h*.08),
                                      int(w*.93), int(h*.92))).resize((192, 192))

@@ -49,15 +49,22 @@ def review(root,out,source_sha,apk_sha):
                     issues.append(f"{role}/{name}: not all 14 actual view frames present")
                 if a.get("max_orbit_change",0)<.0006:
                     issues.append(f"{role}/{name}: camera orbit not visually detectable")
-                previous_sha=None
-                for v in a["views"]:
+                # A delayed compositor replay can skip adjacent-frame checks.
+                first_view_by_sha={}
+                for index,v in enumerate(a["views"]):
                     count+=1
-                    if previous_sha is not None and v.get("sha256")==previous_sha:
-                        issues.append(f"{role}/{name}: repeated adjacent screenshot at "
-                                      f"yaw={v.get('yaw')} pitch={v.get('pitch')} "
-                                      "(stale camera presentation)")
-                    previous_sha=v.get("sha256")
                     digest=v.get("sha256")
+                    if isinstance(digest,str) and len(digest)==64:
+                        prior_view=first_view_by_sha.setdefault(
+                            digest,(index,v.get("yaw"),v.get("pitch")))
+                        if prior_view[0]!=index:
+                            kind=("adjacent" if index==prior_view[0]+1
+                                  else "nonadjacent")
+                            issues.append(
+                                f"{role}/{name}: repeated {kind} screenshot: "
+                                f"first yaw={prior_view[1]} pitch={prior_view[2]} "
+                                f"replayed yaw={v.get('yaw')} pitch={v.get('pitch')} "
+                                "(stale camera presentation)")
                     if isinstance(digest,str) and len(digest)==64:
                         prior=first_asset_by_sha.setdefault(
                             digest,(name,v.get("yaw"),v.get("pitch")))
