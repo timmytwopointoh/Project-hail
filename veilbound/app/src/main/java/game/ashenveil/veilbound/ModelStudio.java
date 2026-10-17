@@ -9,7 +9,7 @@ public final class ModelStudio {
     public static final String[] ITEMS={
         "BELLWARDEN - ORIGINAL EASTER EGG","HUSHED REVENANT","ASH KNIGHT",
         "WARDEN SWORD","ASH GREATSWORD","EMBER LANTERN","CHAPEL STONEWORK",
-        "FRACTURED FLAGSTONE","FUNERARY CENOTAPH","IRON RELIQUARY","ANCIENT ROOT CLUSTER","HUMAN BASE (SKIN TEST)","M23 HAND SCULPT","M24 DEFORMATION TEST","M25 FACE DETAIL","M26 SCULPT LEARNING LAB","M28 ORBITAL ANATOMY","M29 REFERENCE T-POSE","M29 REFERENCE 3/4 POSE","M31 REALISM NEUTRAL","M31 RIGGED T-POSE","M31 RIGGED RELAXED","M32 ANATOMY NEUTRAL","M32 SHOULDER T-POSE","M32 RELAXED BODY","M35 MOUTH NEUTRAL","M35 MOUTH OPEN","M35 MOUTH T-POSE","M36 FACE NEUTRAL","M36 FACE OPEN","M36 FACE T-POSE","IMPORTED OBJ"};
+        "FRACTURED FLAGSTONE","FUNERARY CENOTAPH","IRON RELIQUARY","ANCIENT ROOT CLUSTER","HUMAN BASE (SKIN TEST)","M23 HAND SCULPT","M24 DEFORMATION TEST","M25 FACE DETAIL","M26 SCULPT LEARNING LAB","M28 ORBITAL ANATOMY","M29 REFERENCE T-POSE","M29 REFERENCE 3/4 POSE","M31 REALISM NEUTRAL","M31 RIGGED T-POSE","M31 RIGGED RELAXED","M32 ANATOMY NEUTRAL","M32 SHOULDER T-POSE","M32 RELAXED BODY","M35 MOUTH NEUTRAL","M35 MOUTH OPEN","M35 MOUTH T-POSE","M36 FACE NEUTRAL","M36 FACE OPEN","M36 FACE T-POSE","M37 FEET AND SHOULDERS","M37 NARROW SHOULDER T-POSE","IMPORTED OBJ"};
     public static final String[] LIGHTS={"STUDIO","MOONLIT","EMBER","RIM LIGHT"};
     public static final String[] MATERIALS={"PBR-INSPIRED","FLAT ALBEDO","SILHOUETTE","NORMAL VIEW","EDGE WIRES"};
 
@@ -31,10 +31,10 @@ public final class ModelStudio {
     private static final String[] REVIEW_NAMES={"FRONT","SIDE","BACK","3/4"};
     /** Repeatable camera angles for actual geometry review and emulator QA. */
     public synchronized void nextReviewView(){
-        if(item<11||item>30)return;
+        if(item<11||item>32)return;
         reviewView=(reviewView+1)%4;
         yaw=REVIEW_YAWS[reviewView];pitch=.055f;
-        zoom=(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30)?5.10f:4.15f;panX=0;panY=0;autoTurn=false;
+        zoom=(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30||item==32)?5.10f:4.15f;panX=0;panY=0;autoTurn=false;
     }
     public synchronized String reviewViewName(){return REVIEW_NAMES[reviewView];}
     private static float clamp(float x,float lo,float hi){return Math.max(lo,Math.min(hi,x));}
@@ -42,10 +42,10 @@ public final class ModelStudio {
     public synchronized void nextItem(int step){
         item=(item+ITEMS.length+(step%ITEMS.length))%ITEMS.length;
         panX=panY=0;
-        if(item>=11&&item<=30){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
+        if(item>=11&&item<=32){reviewView=0;yaw=0f;pitch=.055f;autoTurn=false;}
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:
-            item==12?2.20f:(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30)?5.10f:4.50f;
+            item==12?2.20f:(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30||item==32)?5.10f:4.50f;
     }
     public synchronized void selectImported(){item=ITEMS.length-1;reset();zoom=5.3f;}
     public synchronized void nextLight(){light=(light+1)%LIGHTS.length;}
@@ -57,6 +57,12 @@ public final class ModelStudio {
         autoTurn=false;
         if(item==14||item==15||item==16||item==19||item==22||item==25||item==26||item==28||item==29){
             yaw=.12f;pitch=.025f;panX=0;panY=0;zoom=1.22f;return;
+        }
+        if(item==31){
+            // M37 real foot camera: center the visible forefeet and heels
+            // rather than aiming the face close-up at the character's eyes.
+            yaw=.16f;pitch=-.08f;panX=0f;panY=-1.15f;
+            zoom=1.48f;return;
         }
         if(item==11||item==12){
             // World-space hand center is y~1.55: the skin mesh is placed
@@ -80,7 +86,7 @@ public final class ModelStudio {
         yaw=.50f;pitch=.12f;panX=0;panY=0;
         zoom=item==2?6.80f:item==6?12f:item==5?3.2f:
             item==7?3.30f:item==8?4.25f:item==9?5.0f:item==10?5.0f:
-            item==12?2.20f:(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30)?5.10f:4.50f;
+            item==12?2.20f:(item==14||item==16||item==25||item==26||item==28||item==29)?1.45f:(item==17||item==20||item==23||item==27||item==30||item==32)?5.10f:4.50f;
         autoTurn=false;
     }
     public synchronized void orbit(float dx,float dy){
