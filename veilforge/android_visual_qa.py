@@ -116,7 +116,9 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None, previ
         if (last["foreground_fraction"] >= .0015 and
                 last["channel_stddev"] >= 3 and
                 last.get("renderer_background_confirmed") is True):
-            current_sha=hashlib.sha256(path.read_bytes()).hexdigest()
+            current_sha=None
+            if previous_frame_sha is not None:
+                current_sha=hashlib.sha256(path.read_bytes()).hexdigest()
             if previous_frame_sha is not None and current_sha == previous_frame_sha:
                 evidence=path.parent/(path.stem+f"_stale_presented_{attempt}.png")
                 evidence.write_bytes(path.read_bytes())
