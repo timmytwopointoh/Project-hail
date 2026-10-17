@@ -201,3 +201,27 @@ commit `debd682f4c568aec6757b4f4d6401e80216e8753`
 The verified audit lives on `feature/veilforge-geo02-regional-audit-20261016`.
 GEO-02 remains partial pending material/UV-safe conservative repair,
 real source-region audit integration and visual/hardware approval.
+
+
+## GEO-02 semantic-safe topology repair (verified 2026-10-16)
+
+Branch `feature/veilforge-geo02-semantic-repair-20261016`, source
+`8fbaf9e686808138c68533f724602f0834a6959a`.
+Full factory/Android run 38987380107 and six-team high-detail run
+38987380176 both succeeded. The factory ran 181 unit tests, eight asset
+producers, four Android 15 roles and independent LOD/semantic review.
+
+Previously `topology.py` discarded same-geometry triangles even when UV,
+normal, vertex-color, material or group attributes differed. Its candidate
+OBJ also lost material/group tags. Now only semantic-exact duplicate
+triangles are removed; distinct overlays and material/group face streams
+are preserved. Hole caps must have one unambiguous rim material and use
+a separate repair group. Existing candidate and evidence files cannot be
+overwritten. Source and candidate SHA256 are recorded. Five new adversarial
+tests include a real two-material glTF export.
+
+These tests prove technical preservation, not visual improvement. The
+repair path does not copy external MTL/texture files, preserve every OBJ
+object/smoothing directive, generate full cage baking, or guarantee
+watertight artistic geometry. GEO-02 remains partial; physical hardware
+and manual artistic signoff are still required. Do not merge into games.

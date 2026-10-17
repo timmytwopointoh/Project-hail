@@ -3,14 +3,14 @@
   "as_of": "2026-10-16",
   "repository": "timmytwopointoh/Project-hail",
   "source_of_truth": {
-    "branch": "feature/vq-library-snapshot-m34-10-20261016",
-    "derived_from_sha": "5aec7a0d681896996be9c58e88d6a493c6af4a5a",
+    "branch": "feature/vq-library-snapshot-geo02-semantic-20261016",
+    "derived_from_sha": "8fbaf9e686808138c68533f724602f0834a6959a",
     "source_ci": {
-      "run_id": 38971117494,
+      "run_id": 38987380107,
       "conclusion": "success",
-      "scope": "164 tests, eight asset producers, four Android 15 roles, 154 screenshots, LOD and semantic review"
+      "scope": "181 unit tests, eight assets, four Android 15 roles and independent image reviews"
     },
-    "important": "Single snapshot commit. Separate M30 Android normal/flat control and physical device review remain open."
+    "important": "Versioned snapshot of a single source commit, not a merge of all experimental branches."
   },
   "verified_workstreams": [
     {
@@ -101,6 +101,16 @@
       "status": "failed_unmerged",
       "run": 38979439195,
       "note": "Python syntax error caught by factory source QA; separate clean branch verified."
+    },
+    {
+      "name": "GEO-02 semantic-safe topology candidate",
+      "branch": "feature/veilforge-geo02-semantic-repair-20261016",
+      "sha": "8fbaf9e686808138c68533f724602f0834a6959a",
+      "status": "partial_geo02_full_factory_android_pass",
+      "run": 38987380107,
+      "high_detail_run": 38987380176,
+      "tests": 181,
+      "notes": "Five adversarial tests; distinct material/UV/normal/group overlays preserved; mixed-material caps rejected; source/candidate SHA256. No artistic or hardware approval."
     }
   ],
   "separate_projects": [
@@ -132,7 +142,8 @@
     "No private keys/signing secrets are archived.",
     "Manual artistic and real-device performance gates remain open.",
     "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release.",
-    "GEO-02 regional audit is read-only; no automatic hole filling, appearance or physical-device approval."
+    "GEO-02 regional audit is read-only; no automatic hole filling, appearance or physical-device approval.",
+    "GEO-02 semantic repair does not copy external MTL/texture files or prove production-quality hole filling."
   ],
   "in_progress_workstreams": [
     {
@@ -144,9 +155,10 @@
     }
   ],
   "latest_recovery_snapshot": {
-    "branch": "feature/vq-library-snapshot-geo02-20261016",
-    "source_commit": "1aa75e88d53eb8bcd024c3faa92abc2290526e06",
-    "factory_run": 38979589571,
+    "branch": "feature/vq-library-snapshot-geo02-semantic-20261016",
+    "source_commit": "8fbaf9e686808138c68533f724602f0834a6959a",
+    "factory_run": 38987380107,
+    "high_detail_run": 38987380176,
     "full_android_tested": true,
     "game_release_approved": false
   }

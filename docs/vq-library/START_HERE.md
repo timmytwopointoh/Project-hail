@@ -143,3 +143,14 @@ to obtain read-only, per-connected-region mesh defect evidence, including
 source SHA256 and material/UV overlay differentiation. The tool does not
 fill holes or authorize model/game release. Recovery snapshot branch:
 `feature/vq-library-snapshot-geo02-20261016`. Keep all older source ZIPs.
+
+
+## Verified GEO-02 semantic repair snapshot (2026-10-16)
+
+Source commit `8fbaf9e686808138c68533f724602f0834a6959a`
+on `feature/veilforge-geo02-semantic-repair-20261016`.
+Factory run 38987380107 passed 181 tests and four Android 15 roles;
+six-team high-detail run 38987380176 also passed. The snapshot branch
+`feature/vq-library-snapshot-geo02-semantic-20261016` adds the evidence
+ledger and technique notes. Keep earlier source ZIPs as last-known-good.
+GEO-02 is partial; neither appearance nor physical hardware is approved.
