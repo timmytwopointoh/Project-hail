@@ -41,6 +41,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private final Mesh[][] studioM32ReviewMeshes=new Mesh[3][2];
     private final Mesh[][] studioM35ReviewMeshes=new Mesh[3][2];
     private final Mesh[][] studioM36ReviewMeshes=new Mesh[3][2];
+    private final Mesh[][] studioM37ReviewMeshes=new Mesh[2][2];
     private Mesh[] studioHumanPoseFrames;
     private Rigged playerRig,playerLiteRig,revenantRig,knightRig,revenantFarRig,knightFarRig;
     private boolean ultraHeroLod=true;
@@ -515,6 +516,23 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
      * retains corrected T-pose; all source meshes loaded only on demand.
      */
     /** Candidate-only M36: lazy expression-aware model with controlled LOD. */
+    /** M37 actual adjusted anatomical model, lazy to avoid phone memory cost. */
+    private Mesh getM37ReferenceMesh(int item,boolean ultra){
+        int pose=item-31,detail=ultra?1:0;
+        if(pose<0||pose>=2)throw new IllegalArgumentException("M37 studio slot");
+        if(studioM37ReviewMeshes[pose][detail]==null){
+            ArtKit.Model neutral=HumanAnatomy.buildM37Candidate(!ultra);
+            ArtKit.Model candidate=pose==1?
+                M32ShoulderRig.pose(neutral,M32ShoulderRig.T_POSE,
+                                    HumanAnatomy.M37_SHOULDER_SPAN):neutral;
+            studioM37ReviewMeshes[pose][detail]=new Mesh(candidate.vertices);
+            Log.i("VEILBOUND_STUDIO","M37_FOOT_SHOULDER_REFERENCE_READY item="+item+
+                " triangles="+candidate.triangleCount+
+                " shoulder_span="+HumanAnatomy.M37_SHOULDER_SPAN+
+                " five_toes=true artist_approved=false");
+        }
+        return studioM37ReviewMeshes[pose][detail];
+    }
     private Mesh getM36FaceMesh(int item,boolean ultra){
         int pose=item-28,detail=ultra?1:0;
         if(pose<0||pose>=3)throw new IllegalArgumentException("M36 studio slot");
@@ -679,6 +697,10 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             case 11:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
             case 12:chosen=studioHandSculpt;break;
             case 14:chosen=m.ultraMesh?studioHuman:studioHumanLite;break;
+            case 31:
+            case 32:
+                chosen=getM37ReferenceMesh(m.item,m.ultraMesh);
+                break;
             case 28:
             case 29:
             case 30:
@@ -737,7 +759,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             chosen=studioWireMeshes[m.item];
             studioLinePrimitive=true;
         }
-        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=30)?1f:0f);
+        GLES20.glUniform1f(uSkinMode,(m.item>=11&&m.item<=32)?1f:0f);
         draw(chosen,model,1,1,1,.06f);
         GLES20.glUniform1f(uSkinMode,0f);
         studioLinePrimitive=false;
