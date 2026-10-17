@@ -219,9 +219,9 @@ public final class ContinuousHuman {
                 for(int toe=0;toe<5;toe++){
                     // Anatomical order: hallux on the medial/center side,
                     // then the four smaller toes progressively laterally.
-                    float tx=side*(.133f+toe*.042f);
+                    float tx=side*(toe==4?.313f:.133f+toe*.042f);
                     float tip=distal[toe];
-                    float radius=toe==0?.025f:toe==4?.018f:.020f;
+                    float radius=toe==0?.025f:toe==4?.021f:.020f;
                     // Connected shafts with distinct distal tips, not a
                     // painted seam on one solid foot slab.
                     f.bone(tx,.064f,.337f,
@@ -437,8 +437,9 @@ public final class ContinuousHuman {
                             anatomyReferenceFeet);
         // M37 toes are thinner than the old fused foot slab. At .055
         // spacing a toe center can fall between all lattice nodes and
-        // silently vanish in the mobile mesh. Use reviewable toe sampling.
-        float h=anatomyReferenceFeet?(lite?.042f:.035f):
+        // silently vanish in the mobile mesh. Use .048 with source-aligned
+        // rays to retain toe tips within bounded mobile triangle budgets.
+        float h=anatomyReferenceFeet?(lite?.048f:.035f):
                 smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
