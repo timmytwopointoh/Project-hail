@@ -97,6 +97,12 @@ public final class EnvironmentKitTest {
         check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M36 FACE T-POSE"),
             "M36 anatomical T-pose model not inspectable");
         s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M37 FEET AND SHOULDERS"),
+            "M37 anatomy candidate not inspectable");
+        s.nextItem(1);
+        check(ModelStudio.ITEMS[s.snapshot().item].startsWith("M37 NARROW SHOULDER"),
+            "M37 matched anatomical T-pose not inspectable");
+        s.nextItem(1);
         check(s.snapshot().item==ModelStudio.ITEMS.length-1 &&
               "IMPORTED OBJ".equals(ModelStudio.ITEMS[s.snapshot().item]),
             "Last slot must remain import OBJ");
