@@ -260,7 +260,7 @@ public final class HumanVariantCLI {
     public static void main(String[] args) throws Exception{
         if(args.length<2||args.length>4)
             throw new IllegalArgumentException(
-                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed | --m31-neutral | --m31-tpose | --m31-relaxed | --m32-neutral | --m32-tpose | --m32-relaxed | --m35-neutral | --m35-mouth-open | --m35-tpose] [--mesh-only]");
+                "args: <12 proportions> <output-folder> [8 sculpt dials | --m28 | --m29-tpose | --m29-relaxed | --m30-tpose | --m30-relaxed | --m31-neutral | --m31-tpose | --m31-relaxed | --m32-neutral | --m32-tpose | --m32-relaxed | --m35-neutral | --m35-mouth-open | --m35-tpose | --m37-neutral | --m37-tpose] [--mesh-only]");
         boolean meshOnly="--mesh-only".equals(args[args.length-1]);
         boolean m28=args.length>=3&&"--m28".equals(args[2]);
         boolean tPose=args.length>=3&&"--m29-tpose".equals(args[2]);
@@ -281,17 +281,21 @@ public final class HumanVariantCLI {
         boolean m35Open=args.length>=3&&"--m35-mouth-open".equals(args[2]);
         boolean m35T=args.length>=3&&"--m35-tpose".equals(args[2]);
         boolean m35=m35Neutral||m35Open||m35T;
-        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!m31&&!m32&&!m35&&!"--mesh-only".equals(args[2]);
-        if(args.length==4&&(!(hasDials||m28||referencePose||newPose||m31||m32||m35)||!meshOnly))
+        boolean m37Neutral=args.length>=3&&"--m37-neutral".equals(args[2]);
+        boolean m37T=args.length>=3&&"--m37-tpose".equals(args[2]);
+        boolean m37=m37Neutral||m37T;
+        boolean hasDials=args.length>=3&&!m28&&!referencePose&&!newPose&&!m31&&!m32&&!m35&&!m37&&!"--mesh-only".equals(args[2]);
+        if(args.length==4&&(!(hasDials||m28||referencePose||newPose||m31||m32||m35||m37)||!meshOnly))
             throw new IllegalArgumentException("Unexpected M26 CLI options");
         float[] dials=hasDials?M26SculptDials.parse(args[2]):null;
-        studyLabel=m35?"M35":m32?"M32":m31?"M31":newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
+        studyLabel=m37?"M37":m35?"M35":m32?"M32":m31?"M31":newPose?"M30":referencePose?"M29":m28?"M28":hasDials?"M26":"M25";
         String[] values=args[0].split(",");
         float[] p=new float[values.length];
         for(int i=0;i<values.length;i++)p[i]=Float.parseFloat(values[i]);
         ContinuousHuman.validate(p);
         Path dir=Path.of(args[1]);Files.createDirectories(dir);
-        ArtKit.Model source=m35?HumanAnatomy.buildM35Candidate(false,m35Open):
+        ArtKit.Model source=m37?HumanAnatomy.buildM37Candidate(false):
+            m35?HumanAnatomy.buildM35Candidate(false,m35Open):
             m32?HumanAnatomy.buildM32Candidate(false):
             m31?
             M31SkinSurfaceNormals.smooth(HumanAnatomy.buildM28Candidate(false,p,
@@ -301,7 +305,9 @@ public final class HumanVariantCLI {
               new float[]{.42f,.34f,.38f,.24f,.43f,.39f,.38f,.35f}):
             hasDials?HumanAnatomy.buildM26Candidate(false,p,dials):
             HumanAnatomy.buildM25Candidate(false,p);
-        ArtKit.Model mesh=m35T?M32ShoulderRig.pose(
+        ArtKit.Model mesh=m37T?M32ShoulderRig.pose(
+            source,M32ShoulderRig.T_POSE,HumanAnatomy.M37_SHOULDER_SPAN):
+            m35T?M32ShoulderRig.pose(
             source,M32ShoulderRig.T_POSE):
             (m32T||m32Relaxed)?M32ShoulderRig.pose(
             source,m32T?M32ShoulderRig.T_POSE:M32ShoulderRig.RELAXED):
@@ -313,7 +319,7 @@ public final class HumanVariantCLI {
              tPose?M29ReferencePose.T_POSE:
                    M29ReferencePose.THREE_QUARTER_RELAXED):source;
         obj(mesh,dir.resolve("human_candidate.obj"));
-        obj(HumanHandSculpt.buildStandalone(false,p[0]),dir.resolve("m23_sculpted_hands.obj"));
+        obj(HumanHandSculpt.buildStandalone(false,m37?HumanAnatomy.M37_SHOULDER_SPAN:p[0]),dir.resolve("m23_sculpted_hands.obj"));
         if(!meshOnly){
             for(int view=0;view<VIEWS.length;view++)
                 render(mesh,view,dir.resolve(VIEWS[view]+".png"));
@@ -330,7 +336,9 @@ public final class HumanVariantCLI {
             views.append('"').append(view).append('"');
         }
         String json="{\"model\":\""+
-            (m35?(m35Neutral?"m35_anatomical_mouth_neutral":
+            (m37?(m37Neutral?"m37_narrow_shoulder_anatomical_feet":
+                  "m37_anatomical_feet_tpose"):
+             m35?(m35Neutral?"m35_anatomical_mouth_neutral":
                   m35Open?"m35_anatomical_mouth_open":"m35_mouth_tpose"):
              m32?(m32Neutral?"m32_anatomy_neutral":
                  m32T?"m32_corrected_tpose":"m32_anatomy_relaxed"):
@@ -344,7 +352,7 @@ public final class HumanVariantCLI {
             "\",\"triangles\":"+mesh.triangleCount+
             ",\"reviewed\":false,\"photo_realistic\":false,"+
             "\"offline_preview\":"+(!meshOnly)+
-            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose||m31||m32||m35?8:0)+
+            ",\"sculpt_dials\":"+(hasDials||m28||referencePose||newPose||m31||m32||m35||m37?8:0)+
             ",\"hand_closeups_per_side\":"+(meshOnly?0:3)+
             ",\"camera_views\":["+(meshOnly?"":views.toString())+"]}";
         Files.writeString(dir.resolve("mesh_evidence.json"),json+"\n");
