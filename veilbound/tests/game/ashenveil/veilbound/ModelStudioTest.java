@@ -32,6 +32,18 @@ public final class ModelStudioTest {
         ok(!s.snapshot().autoTurn,"Close inspection disables turntable");
         s.reset();ok(!s.snapshot().autoTurn,"Reset must disable turntable");
         s.nextItem(-1);
+        ok(s.snapshot().item==32,"M37 narrow shoulder T-pose not registered");
+        ok(s.snapshot().zoom>4.8f,"M37 outstretched hands clipped");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M37 shoulder profile missing");
+        s.nextItem(-1);
+        ok(s.snapshot().item==31,"M37 foot anatomy candidate not registered");
+        s.focusDetail();
+        ok(s.snapshot().panY<-.95f&&s.snapshot().zoom<1.6f,
+           "M37 close foot inspection must point at the feet");
+        s.nextReviewView();
+        ok("SIDE".equals(s.reviewViewName()),"M37 arch side camera missing");
+        s.nextItem(-1);
         ok(s.snapshot().item==30,"M36 corrected T-pose not registered");
         ok(s.snapshot().zoom>4.8f,"M36 raised arms must fit the stage");
         s.nextReviewView();
