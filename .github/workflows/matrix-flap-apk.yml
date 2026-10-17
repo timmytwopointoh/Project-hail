@@ -1,13 +1,12 @@
 name: Matrix Flap - Real APK Emulator Test
 on:
-  push:
-    branches:
-      - main
-      - feature/matrix-flap-android-test
-    paths:
-      - 'matrix-flap/**'
-      - '.github/workflows/matrix-flap-apk.yml'
   workflow_dispatch:
+    inputs:
+      keep_test_apk:
+        description: 'Preserve the tested APK for two days'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -64,10 +63,12 @@ jobs:
           name: matrix-flap-gameplay-report
           path: inspection_output/matrix_flap/
           if-no-files-found: warn
+          retention-days: 1
       - name: Upload tested Matrix Flap APK
-        if: success()
+        if: ${{ success() && inputs.keep_test_apk == true }}
         uses: actions/upload-artifact@v4
         with:
           name: matrix-flap-android15-tested-apk
           path: matrix-flap/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 2
