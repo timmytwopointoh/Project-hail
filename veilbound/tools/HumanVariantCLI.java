@@ -257,6 +257,87 @@ public final class HumanVariantCLI {
         g.dispose();
         ImageIO.write(image,"png",file.toFile());
     }
+    /**
+     * M37 repeatable anatomical foot inspection directly from the real
+     * triangle stream. TOP is the dorsal view; SIDE isolates the model's
+     * right foot to make the longitudinal arch and heel slope visible.
+     * This is not a generated photo and not an Android GPU capture.
+     */
+    private static void renderFeet(ArtKit.Model mesh,boolean top,Path file)
+            throws Exception{
+        final int width=840,height=680;
+        float[] v=mesh.vertices;
+        ArrayList<Integer> selected=new ArrayList<>();
+        float lowX=Float.MAX_VALUE,highX=-Float.MAX_VALUE;
+        float lowY=Float.MAX_VALUE,highY=-Float.MAX_VALUE;
+        for(int i=0;i<v.length;i+=27){
+            boolean valid=true;
+            for(int k=0;k<3;k++){
+                int j=i+9*k;
+                float x=v[j],y=v[j+1],z=v[j+2];
+                if(Math.abs(x)>.43f||y<-.10f||y>.42f||
+                   z<-.17f||z>.55f||(!top&&x<.045f)){valid=false;break;}
+            }
+            if(!valid)continue;
+            float nx=(v[i+3]+v[i+12]+v[i+21])/3,
+                  ny=(v[i+4]+v[i+13]+v[i+22])/3;
+            if((top?ny:nx)<-.12f)continue;
+            selected.add(i);
+            for(int k=0;k<3;k++){
+                int j=i+9*k;
+                float horizontal=top?v[j]:v[j+2];
+                float vertical=top?v[j+2]:v[j+1];
+                lowX=Math.min(lowX,horizontal);
+                highX=Math.max(highX,horizontal);
+                lowY=Math.min(lowY,vertical);
+                highY=Math.max(highY,vertical);
+            }
+        }
+        if(selected.size()<70)throw new IllegalStateException(
+            "No reviewable connected foot triangles");
+        float centerX=(highX+lowX)*.5f,centerY=(highY+lowY)*.5f;
+        float scale=Math.min(width*.79f/Math.max(.05f,highX-lowX),
+                             height*.73f/Math.max(.05f,highY-lowY));
+        BufferedImage out=new BufferedImage(width,height,
+                                            BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=out.createGraphics();
+        g.setColor(new Color(218,220,224));g.fillRect(0,0,width,height);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                           RenderingHints.VALUE_ANTIALIAS_ON);
+        ArrayList<Face> triangles=new ArrayList<>(selected.size());
+        for(int i:selected){
+            int[] xx=new int[3],yy=new int[3];float r=0,green=0,blue=0;
+            double depth=0;
+            float normal=top?(v[i+4]+v[i+13]+v[i+22])/3:
+                               (v[i+3]+v[i+12]+v[i+21])/3;
+            for(int k=0;k<3;k++){
+                int j=i+9*k;
+                float horizontal=top?v[j]:v[j+2];
+                float vertical=top?v[j+2]:v[j+1];
+                xx[k]=Math.round(width*.5f+(horizontal-centerX)*scale);
+                yy[k]=Math.round(height*.52f-(vertical-centerY)*scale);
+                depth+=top?v[j+1]:v[j];
+                r+=v[j+6];green+=v[j+7];blue+=v[j+8];
+            }
+            float shade=Math.max(.48f,Math.min(1.13f,.82f+.22f*normal));
+            triangles.add(new Face(xx,yy,depth/3,new Color(
+                Math.max(0,Math.min(255,Math.round(r*shade*255f/3))),
+                Math.max(0,Math.min(255,Math.round(green*shade*255f/3))),
+                Math.max(0,Math.min(255,Math.round(blue*shade*255f/3))))));
+        }
+        triangles.sort(Comparator.comparingDouble(a->a.depth));
+        for(Face face:triangles){
+            g.setColor(face.color);g.fillPolygon(new Polygon(face.px,face.py,3));
+        }
+        g.setColor(new Color(44,49,54));
+        g.drawString("M37 "+(top?"FEET / DORSAL TOP":"RIGHT FOOT / SIDE ARCH")+
+            " | REAL 3D TRIANGLES",18,30);
+        g.drawString("REPRODUCIBLE MESH PROJECTION / NOT ANDROID SCREENSHOT",
+                     18,height-18);
+        g.dispose();
+        ImageIO.write(out,"png",file.toFile());
+    }
+
     public static void main(String[] args) throws Exception{
         if(args.length<2||args.length>4)
             throw new IllegalArgumentException(
@@ -329,6 +410,10 @@ public final class HumanVariantCLI {
                         (side<0?"left":"right")+"_hand_"+VIEWS[view]+".png"));
             for(int view:new int[]{0,1,3})
                 renderFace(mesh,view,dir.resolve("face_"+VIEWS[view]+".png"));
+            if(m37){
+                renderFeet(mesh,true,dir.resolve("feet_top.png"));
+                renderFeet(mesh,false,dir.resolve("feet_side.png"));
+            }
         }
         StringBuilder views=new StringBuilder();
         for(String view:VIEWS){
