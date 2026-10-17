@@ -35,33 +35,21 @@ public final class OfflineActivity extends Activity {
     TextView subtitle=label("100% local • private model repository • no account required",13,Color.LTGRAY);
     root.addView(subtitle);
     status=label("Ready to create an offline model.",14,mint);
-    root.addView(status);
+    status.setMaxLines(2);root.addView(status);
     viewport=new ModelViewport(this);
     root.addView(viewport,new LinearLayout.LayoutParams(-1,0,5f));
     asset=label("DEMONSTRATION MESH  •  prompts create real stored OBJs",12,Color.LTGRAY);
-    root.addView(asset);
+    asset.setMaxLines(2);root.addView(asset);
     prompt=new EditText(this);
     prompt.setSingleLine(false);prompt.setMaxLines(3);
-    prompt.setHint("Describe a tree, sword, chest or terrain…");
+    prompt.setHint("Controlled from Trion Assistant");
     prompt.setTextColor(Color.WHITE);prompt.setHintTextColor(Color.GRAY);
     prompt.setText("A detailed ancient tree with branches");
-    root.addView(prompt);
-    LinearLayout line=new LinearLayout(this);
-    line.addView(button("Create locally",this::create),new LinearLayout.LayoutParams(0,48*dp(),1));
-    line.addView(button("STOP",this::stop),new LinearLayout.LayoutParams(0,48*dp(),.5f));
-    root.addView(line);
-    LinearLayout line2=new LinearLayout(this);
-    line2.addView(button("Trion",this::openTrion),new LinearLayout.LayoutParams(0,47*dp(),1));
-    line2.addView(button("Import OBJ",this::chooseObj),new LinearLayout.LayoutParams(0,47*dp(),1));
-    line2.addView(button("Edges",()->viewport.toggleWire()),new LinearLayout.LayoutParams(0,47*dp(),.6f));
-    line2.addView(button("Spin",()->viewport.toggleOrbit()),new LinearLayout.LayoutParams(0,47*dp(),.6f));
-    root.addView(line2);
-    root.addView(button("Automatic revision loading ON/OFF",()->{
-      auto=!auto;details.setText(auto?
-        "Auto ON • new source revisions load while keeping your camera.":
-        "Auto OFF • current model remains selected.");
-    }));
-    details=label("VQ saves verified model versions on this device. No screenshots are retained.",12,Color.rgb(177,208,204));
+    // No creation or operation buttons in the viewer. Trion controls every job.
+    // The source editor is retained internally for compatibility with job intent
+    // handoff; only the model surface and noninteractive status are displayed.
+    prompt.setVisibility(View.GONE);
+    details=label("Read-only progress viewport • build, stop and correct models inside Trion Assistant. Touch the 3D model to orbit. No screenshot history retained.",12,Color.rgb(177,208,204));
     root.addView(details);
     setContentView(root);
     handle(getIntent());
