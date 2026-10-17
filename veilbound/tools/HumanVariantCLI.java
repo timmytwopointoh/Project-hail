@@ -281,7 +281,7 @@ public final class HumanVariantCLI {
             if(!valid)continue;
             float nx=(v[i+3]+v[i+12]+v[i+21])/3,
                   ny=(v[i+4]+v[i+13]+v[i+22])/3;
-            if((top?ny:nx)<-.12f)continue;
+            if((top?ny:-nx)<-.12f)continue;
             selected.add(i);
             for(int k=0;k<3;k++){
                 int j=i+9*k;
@@ -316,7 +316,7 @@ public final class HumanVariantCLI {
                 float vertical=top?v[j+2]:v[j+1];
                 xx[k]=Math.round(width*.5f+(horizontal-centerX)*scale);
                 yy[k]=Math.round(height*.52f-(vertical-centerY)*scale);
-                depth+=top?v[j+1]:v[j];
+                depth+=top?v[j+1]:-v[j];
                 r+=v[j+6];green+=v[j+7];blue+=v[j+8];
             }
             float shade=Math.max(.48f,Math.min(1.13f,.82f+.22f*normal));
@@ -330,7 +330,7 @@ public final class HumanVariantCLI {
             g.setColor(face.color);g.fillPolygon(new Polygon(face.px,face.py,3));
         }
         g.setColor(new Color(44,49,54));
-        g.drawString("M37 "+(top?"FEET / DORSAL TOP":"RIGHT FOOT / SIDE ARCH")+
+        g.drawString("M37 "+(top?"FEET / DORSAL TOP":"RIGHT FOOT / MEDIAL ARCH")+
             " | REAL 3D TRIANGLES",18,30);
         g.drawString("REPRODUCIBLE MESH PROJECTION / NOT ANDROID SCREENSHOT",
                      18,height-18);
