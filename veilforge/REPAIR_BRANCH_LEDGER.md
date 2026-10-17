@@ -100,3 +100,9 @@ Status: UNVALIDATED until the full Android factory run completes. Acceptance:
 views, independent semantic/LOD PASS, every task's 14 screenshot hashes
 match their archived emulator artifact and every lowest-view coverage matches
 its independent semantic frame analysis. Preserve failed candidate evidence.
+
+## 2026-10-17 h11: archived task-to-frame replay
+
+Pinned h10 source `de4b059aa8a9dbc665518f253be55d8ba345c7d6`, factory run `39054441812`, four Android 15 roles and 154 accepted frames. New offline replay script independently checked 154/154 original PNG SHA256 values, all 154 distinct accepted hashes, all 56 exact-angle REVIEW task screenshot hashes and recomputed silhouette fractions, and the shared APK SHA256 `82845abc9e2ab91ef17c7f1511ec3311713f2b80f31169fccca6b38207db9a4e`. Three local fail-closed tests passed. Task artifact ID `12109107468`; screenshot ZIP IDs `12108609571`, `12108951543`, `12109266791`, `12109142133`.
+
+Isolated branch `feature/veilforge-archived-review-replay-20261017-h11`: adds the offline archive replay verifier, regression tests and a playbook. No renderer, geometry, game, queue, threshold or auto-promotion changes. State: CANDIDATE; full factory revalidation pending. This proves evidence consistency, not artistic quality, photorealism, device performance or self-repair.
