@@ -39,6 +39,7 @@ jobs:
           python3 veilforge/vq_emulator_efficiency.py \
             --root . --out inspection_output/library-manager/emulator_efficiency_audit.json
           python3 veilforge/roadmap.py --out inspection_output/library-manager
+          python3 veilforge/vq_canonical_milestones.py --root veilforge --out inspection_output/library-manager
       - id: plan
         name: Assign independently isolated asset workers from validated catalog
         run: |
