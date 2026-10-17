@@ -5,7 +5,7 @@
         android:roundIcon="@drawable/veilbound_icon"
         android:label="VEILBOUND: Ash of the Bells"
         android:theme="@android:style/Theme.Material.NoActionBar"
-        android:hardwareAccelerated="true" android:allowBackup="false">
+        android:hardwareAccelerated="true" android:largeHeap="true" android:allowBackup="false">
         <activity android:name=".MainActivity" android:screenOrientation="landscape"
             android:exported="true" android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>

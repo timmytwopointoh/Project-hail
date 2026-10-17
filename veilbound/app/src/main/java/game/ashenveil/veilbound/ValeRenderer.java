@@ -50,6 +50,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
     private Mesh verdigrisPool;
     private final Mesh[] studioWireMeshes=new Mesh[ModelStudio.ITEMS.length];
     private boolean lastMeshUltra=true;
+    private int lastStudioItem=-1;
     private boolean studioLinePrimitive=false;
     private Mesh studioImported;
     private final java.util.concurrent.atomic.AtomicReference<ArtKit.Model> importQueue=
@@ -615,6 +616,33 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
         Log.i("VEILBOUND_STUDIO","M28_INTEGRATED_ORBITS_READY triangles="+
               (studioM28Face.count/3)+" approved=false lazy_loaded=true");
     }
+
+    /**
+     * Dense anatomy studies are independent editor previews, not game assets.
+     * Retaining every high/low mesh after a full review used up the 192MB
+     * Android app heap before the later mouth studies could be constructed.
+     * Keep only the active review slot; never evict playable knight meshes.
+     */
+    private void evictInactiveStudioPreviews(int activeItem){
+        if(lastStudioItem==activeItem)return;
+        lastStudioItem=activeItem;
+        for(int i=0;i<3;i++){
+            java.util.Arrays.fill(studioM31ReviewMeshes[i],null);
+            java.util.Arrays.fill(studioM32ReviewMeshes[i],null);
+            java.util.Arrays.fill(studioM35ReviewMeshes[i],null);
+            java.util.Arrays.fill(studioM36ReviewMeshes[i],null);
+        }
+        for(int i=0;i<2;i++)java.util.Arrays.fill(studioM37ReviewMeshes[i],null);
+        // Older model studies are also large; free them when no longer selected.
+        if(activeItem!=15){studioM26Sculpt=null;studioM26SculptLite=null;}
+        if(activeItem!=16){studioM28Face=null;studioM28FaceLite=null;}
+        if(activeItem!=17&&activeItem!=18){
+            studioM29Tpose=null;studioM29Relaxed=null;
+        }
+        for(int i=11;i<studioWireMeshes.length-1;i++)studioWireMeshes[i]=null;
+        Log.i(TAG,"STUDIO_PREVIEW_CACHE_TRIM item="+activeItem+
+              " gameplay_knight_preserved=true");
+    }
     private void renderStudio(){
         initStudioHighDetail();
         ArtKit.Model pending=importQueue.getAndSet(null);
@@ -624,6 +652,7 @@ public final class ValeRenderer implements GLSurfaceView.Renderer {
             Log.i("VEILBOUND_STUDIO","IMPORTED_OBJ_READY triangles="+pending.triangleCount);
         }
         ModelStudio.Snapshot m=state.studio.snapshot();
+        evictInactiveStudioPreviews(m.item);
         if(lastMeshUltra!=m.ultraMesh){
             for(int i=0;i<studioWireMeshes.length;i++)studioWireMeshes[i]=null;
             lastMeshUltra=m.ultraMesh;
