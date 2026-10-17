@@ -8,6 +8,7 @@ Every mutation is explicitly reported, requires QA and visual review.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 from collections import Counter, defaultdict
 import json
 import math
@@ -107,32 +108,72 @@ def _loops(boundary):
             incomplete+=1
     return closed,incomplete
 
+def _styles(path, expected):
+    active = ("default", "default")
+    result = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        parts = raw.partition("#")[0].strip().split(maxsplit=1)
+        if not parts:
+            continue
+        if parts[0] == "usemtl":
+            active = (parts[1] if len(parts)>1 else "default", active[1])
+        elif parts[0] == "g":
+            active = (active[0], parts[1] if len(parts)>1 else "default")
+        elif parts[0] == "f":
+            result.append(active)
+    if len(result) != expected:
+        raise MeshError("Material/group face count mismatch")
+    return result
+
+def _semantic(tri, verts, uvs, normals, style):
+    corners = []
+    for vi, ui, ni in tri:
+        corners.append((key(verts[vi]), tuple(verts[vi][3:]),
+            tuple(uvs[ui]) if ui is not None else None,
+            tuple(normals[ni]) if ni is not None else None))
+    return (tuple(sorted(corners, key=repr)), style)
+
 def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
                max_hole_diameter=.16, max_hole_nonplanarity=.012):
     """Never edit or replace src; produce auditable independent candidate OBJ."""
-    if src.resolve()==dest.resolve():
+    src, dest = Path(src), Path(dest)
+    report_path = dest.parent / (dest.stem+"_topology_report.json")
+    if src.resolve() in (dest.resolve(), report_path.resolve()):
         raise ValueError("Source must never be overwritten")
+    if dest.exists() or report_path.exists():
+        raise ValueError("Refuse to overwrite existing candidate or evidence")
     if mode not in ("human","assembly","diagnose"):
         raise ValueError("Unknown repair mode")
     verts,uvs,norms,original=read_obj(src)
+    styles = _styles(src, len(original))
     unique=set()
+    seen_geom=set()
     cleaned=[]
+    clean_styles=[]
     duplicate=0
-    for tri in original:
-        sig=tuple(sorted(key(verts[c[0]]) for c in tri))
-        if len(set(sig))!=3:
-            # Don't silently remove irregular triangles as a repair.
-            cleaned.append(tri)
-            continue
-        if sig in unique:
+    overlays=0
+    for tri,style in zip(original,styles):
+        geom=tuple(sorted(key(verts[c[0]]) for c in tri))
+        sig=_semantic(tri,verts,uvs,norms,style)
+        if len(set(geom))==3 and sig in unique:
             duplicate+=1
             continue
+        if geom in seen_geom and sig not in unique:
+            overlays+=1
+        seen_geom.add(geom)
         unique.add(sig)
         cleaned.append(tri)
+        clean_styles.append(style)
     boundary,nonmanifold,corners=_boundary(verts,cleaned)
     candidates,incomplete=_loops(boundary)
     capped=[]
+    cap_styles=[]
     skipped=[]
+    edge_materials=defaultdict(set)
+    for tri,style in zip(cleaned,clean_styles):
+        points=[key(verts[c[0]]) for c in tri]
+        for j in range(3):
+            edge_materials[edge(points[j],points[(j+1)%3])].add(style[0])
     # M24 correction: hole caps must be constrained by existing edge
     # incidences. Pure planarity is insufficient: the old repair introduced
     # seven new nonmanifold edges and four zero-area faces in a human mesh.
@@ -149,6 +190,11 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
         if nonmanifold==0:
             directed=set(boundary)
             for ring in candidates:
+                mats=set().union(*(edge_materials[edge(ring[j],ring[(j+1)%len(ring)])]
+                                   for j in range(len(ring))))
+                if len(mats)!=1:
+                    skipped.append({"edges":len(ring),"reason":"mixed-material-rim"})
+                    continue
                 if len(ring)<3 or len(ring)>max_hole_vertices:
                     skipped.append({"edges":len(ring),"center":[round(sum(p[k] for p in ring)/len(ring),4) for k in range(3)],"reason":"size"});continue
                 diameter,perimeter,nonplanarity=_loop_metrics(ring)
@@ -186,6 +232,7 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
                         if not valid:break
                     if valid:
                         capped.extend(faces)
+                        cap_styles.extend([(next(iter(mats)),"VQ_REPAIR_CAP")]*len(faces))
                         occupied.update(proposed)
                         face_signatures.update(signatures)
                     else:
@@ -195,7 +242,7 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
     else:
         skipped=[{"edges":len(c),"reason":"intentional open or mixed surface"} for c in candidates]
     dest.parent.mkdir(parents=True,exist_ok=True)
-    with dest.open("w",encoding="utf-8") as stream:
+    with dest.open("x",encoding="utf-8") as stream:
         stream.write("# VEILFORGE M2 CLEANED EXPORT; original source remains unchanged\n")
         stream.write("# Back-to-back coincident faces removed for export, not in Android runtime\n")
         for v in verts:
@@ -204,7 +251,13 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
             stream.write("vt "+" ".join(format(x,".9g") for x in v)+"\n")
         for v in norms:
             stream.write("vn "+" ".join(format(x,".9g") for x in v)+"\n")
-        for tri in cleaned+capped:
+        previous=(None,None)
+        for tri,style in zip(cleaned+capped,clean_styles+cap_styles):
+            if style[0]!=previous[0]:
+                stream.write("usemtl "+style[0]+"\n")
+            if style[1]!=previous[1]:
+                stream.write("g "+style[1]+"\n")
+            previous=style
             def ref(c):
                 return str(c[0]+1)+(
                     "/"+str(c[1]+1) if c[1] is not None and c[2] is None else
@@ -217,6 +270,10 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
     report={
         "schema_version":1,"mode":mode,"source":str(src),"candidate":str(dest),
         "input_triangles":len(original),"coincident_faces_removed":duplicate,
+        "semantic_overlays_preserved":overlays,
+        "source_sha256":hashlib.sha256(src.read_bytes()).hexdigest(),
+        "candidate_sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
+        "material_groups_preserved":True,
         "small_hole_triangles_inserted":len(capped),
         "boundary_loops_found":len(candidates),"boundary_components_unresolved":incomplete,
         "skipped_boundary_loops":skipped[:100],
@@ -237,8 +294,8 @@ def repair_obj(src:Path, dest:Path, *, mode="human", max_hole_vertices=12,
         "safe_export_candidate":after["nonmanifold_edges"]==0 and
             after["degenerate_triangles"]==0,
     }
-    (dest.parent/(dest.stem+"_topology_report.json")).write_text(
-        json.dumps(report,indent=2)+"\n",encoding="utf-8")
+    with report_path.open("x",encoding="utf-8") as evidence:
+        evidence.write(json.dumps(report,indent=2)+"\n")
     if not report["topology_improved"]:
         raise MeshError("Topology cleanup increased invalid edge counts")
     return report
