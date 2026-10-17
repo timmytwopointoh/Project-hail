@@ -53,7 +53,7 @@ public final class ForgeSpec {
   private static Part part(String id,String type,float x,float y,float z,float w,float h,float d){
     if(!id.matches("[a-zA-Z][a-zA-Z0-9_]{0,39}"))
       throw new IllegalArgumentException("Use named geometry parts, not arbitrary code");
-    if(!Arrays.asList("box","ellipsoid","taper","cylinder","capsule","ring").contains(type))
+    if(!Arrays.asList("box","ellipsoid","taper","cylinder","capsule","ring","ring_z").contains(type))
       throw new IllegalArgumentException("Unsupported geometric tool: "+type);
     if(w<=.005f||h<=.005f||d<=.005f||w>30||h>30||d>30)
       throw new IllegalArgumentException("Every part needs positive bounded dimensions");
@@ -170,7 +170,9 @@ public final class ForgeSpec {
     void make(Part p,int revision){
       out.append("g ").append(p.name).append('\n');
       if(p.type.equals("box")){box(p);return;}
-      if(p.type.equals("ring")){ring(p,revision);return;}
+      if(p.type.equals("ring")||p.type.equals("ring_z")){
+        ring(p,revision,p.type.equals("ring_z"));return;
+      }
       int segments=revision==1?10:20,rings=revision==1?6:12;
       int[][] grid=new int[rings+1][segments];
       for(int j=0;j<=rings;j++){
@@ -202,10 +204,11 @@ public final class ForgeSpec {
       }
     }
     /** True parametric torus, not a reused wheel or image asset. */
-    void ring(Part p,int revision){
+    void ring(Part p,int revision,boolean upright){
       int around=revision==1?16:32,across=revision==1?6:10;
-      float tube=Math.min(p.h*.5f,Math.min(p.w,p.d)*.24f);
-      float rx=p.w*.5f-tube,rz=p.d*.5f-tube;
+      float tube=Math.min((upright?p.d:p.h)*.5f,
+        Math.min(p.w,upright?p.h:p.d)*.24f);
+      float rx=p.w*.5f-tube,rz=(upright?p.h:p.d)*.5f-tube;
       if(rx<=.005f||rz<=.005f)throw new IllegalArgumentException("Ring requires space around its center hole");
       int[][] v=new int[around][across];
       for(int i=0;i<around;i++){
@@ -213,8 +216,8 @@ public final class ForgeSpec {
         for(int j=0;j<across;j++){
           double t=2*Math.PI*j/across;
           float x=p.x+(rx+tube*(float)Math.cos(t))*(float)Math.cos(a);
-          float y=p.y+tube*(float)Math.sin(t);
-          float z=p.z+(rz+tube*(float)Math.cos(t))*(float)Math.sin(a);
+          float y=p.y+(upright?(rz+tube*(float)Math.cos(t))*(float)Math.sin(a):tube*(float)Math.sin(t));
+          float z=p.z+(upright?tube*(float)Math.sin(t):(rz+tube*(float)Math.cos(t))*(float)Math.sin(a));
           v[i][j]=vertex(x,y,z);
         }
       }
