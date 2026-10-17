@@ -423,6 +423,24 @@ jobs:
           echo "LOD reviewer exit: $LOD_RESULT; semantic reviewer exit: $SEMANTIC_RESULT"
           test "$LOD_RESULT" -eq 0
           test "$SEMANTIC_RESULT" -eq 0
+      - name: Convert every verified semantic warning into scoped next-iteration tasks
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_android_repair_handoff.py \
+            --semantic inspection_output/semantic-review/semantic_visual_review.json \
+            --out inspection_output/next-iteration-review \
+            --source-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}"
+          cat inspection_output/next-iteration-review/next_iteration_tasks.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive machine-readable repair tasks for the next VQ worker iteration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilforge-android-next-iteration-tasks
+          path: inspection_output/next-iteration-review/
+          if-no-files-found: warn
+          retention-days: 21
       - name: Preserve the full original independent LOD evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
