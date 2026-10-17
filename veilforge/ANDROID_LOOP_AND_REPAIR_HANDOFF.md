@@ -81,3 +81,13 @@ feedback handoff, not autonomous artistic self-perfection.
 
 The source modules remain under `veilforge/`, with a versioned recovery ZIP
 and instructions in ChatGPT Library `/App creation/VEILFORGE - VQ Engine`.
+
+## October 17, 2026 — sword broadside inspection candidate
+
+Review of immutable handoff artifact `12085917087` and actual Android
+screenshots distinguishes intentional edge-on sword geometry from a
+separate broadside framing/readability concern. The scoped Android-probe
+camera candidate, conservative near-plane regression and rejected zoom
+are documented in `docs/VEILFORGE_SWORD_CAMERA_REVIEW_LEDGER_20261017.md`.
+This is a non-promoting, non-executing candidate; full emulator validation
+and human artistic review remain required.

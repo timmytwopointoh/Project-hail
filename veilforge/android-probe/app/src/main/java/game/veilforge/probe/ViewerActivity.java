@@ -478,13 +478,18 @@ public final class ViewerActivity extends Activity {
             float eyeRadius=Math.max(3.0f,radius*2.35f+1.2f);
             // Scoped screenshot-review correction: ancient_tree has two spaced
             // instances in the assembled scene. The generic orbit leaves both
-            // unnecessarily small; do not zoom swords (intentional edge-on)
-            // or alter the camera for any other asset.
+            // unnecessarily small; other assets keep the generic camera
+            // unless separately measured and scoped to one QA asset.
             // Baseline 325ca6d, run 38995400473: conservative projected
             // max |NDC y| 0.669. This branch predicts 0.839 (16% margin);
             // only real 14-view Android evidence can confirm improvement.
             if("ancient_tree".equals(filter)){
                 eyeRadius=Math.max(3.0f,radius*1.95f+0.9f);
+            }
+            // Narrow QA-only framing adjustment for the ceremonial_sword.
+            // Thin edge-on views remain intentional, not missing geometry.
+            if("ceremonial_sword".equals(filter)){
+                eyeRadius=Math.max(3.0f,radius*1.75f+0.9f);
             }
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
