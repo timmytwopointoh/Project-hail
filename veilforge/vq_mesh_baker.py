@@ -17,6 +17,7 @@ import json
 import math
 from pathlib import Path
 from engine import read_obj, write_png
+from vq_uv_overlap_audit import validate_unique_uv_atlas
 
 MAX_FACES=150000
 MAX_PIXELS=512*512
@@ -128,6 +129,8 @@ def bake(low,high,out,*,size=128,height_limit=.08):
     if size*size>MAX_PIXELS:raise ValueError("Pixel budget exceeded")
     low_rows,low_normals=uv_rows(low)
     high_rows,high_normals=uv_rows(high)
+    validate_unique_uv_atlas(low_rows)
+    validate_unique_uv_atlas(high_rows)
     low_pixels=raster(low_rows,low_normals,size,frame=True)
     high_pixels=raster(high_rows,high_normals,size)
     common=0;norm_rgbs=bytearray(size*size*3)

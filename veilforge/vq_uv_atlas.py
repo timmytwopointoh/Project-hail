@@ -17,6 +17,7 @@ import json
 import math
 from pathlib import Path
 from engine import inspect_obj, read_obj
+from vq_uv_overlap_audit import validate_unique_uv_atlas
 
 def plan(face_count,texture_size,padding):
     if type(face_count) is not int or not 1<=face_count<=150000:
@@ -106,7 +107,8 @@ def unwrap(source,dest,*,texture_size=1024,padding=2):
         from vq_mesh_baker import uv_rows
         # This checks every triangle's UV orientation and nonzero area using
         # the same strict parser as the high-to-low mesh baker.
-        uv_rows(dest)
+        rows,_=uv_rows(dest)
+        validate_unique_uv_atlas(rows)
     except Exception:
         dest.unlink(missing_ok=True)
         raise
