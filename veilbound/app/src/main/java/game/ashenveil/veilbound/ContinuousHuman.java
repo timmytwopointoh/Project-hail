@@ -214,8 +214,8 @@ public final class ContinuousHuman {
                 // Unlike the old long ellipsoid, it cannot engulf all five
                 // toe silhouettes into a flat mitten front.
                 f.add(side*.217f,.086f,.151f,
-                      .120f*g[11],.077f,.208f*g[11]);
-                final float[] distal={.448f,.435f,.426f,.413f,.395f};
+                      .118f*g[11],.077f,.185f*g[11]);
+                final float[] distal={.473f,.455f,.440f,.427f,.409f};
                 for(int toe=0;toe<5;toe++){
                     // Anatomical order: hallux on the medial/center side,
                     // then the four smaller toes progressively laterally.
@@ -224,10 +224,10 @@ public final class ContinuousHuman {
                     float radius=toe==0?.025f:toe==4?.021f:.020f;
                     // Connected shafts with distinct distal tips, not a
                     // painted seam on one solid foot slab.
-                    f.bone(tx,.064f,.337f,
-                           tx+side*.003f,.051f,tip-.016f,
+                    f.bone(tx,.064f,.307f,
+                           tx+side*.003f,.051f,tip-.018f,
                            radius,.026f,2);
-                    f.add(tx+side*.003f,.051f,tip-.016f,
+                    f.add(tx+side*.003f,.051f,tip-.018f,
                           radius,.027f,.025f);
                 }
             }else{
@@ -270,7 +270,7 @@ public final class ContinuousHuman {
             // Achilles and heel-to-midfoot volumes for proper side profile.
             f.add(side*.218f,.148f,-.062f,.074f,.086f,.090f);
             if(anatomyReferenceFeet)
-                f.add(side*.213f,.080f,.269f,.114f*g[11],.061f,.105f*g[11]);
+                f.add(side*.213f,.080f,.259f,.114f*g[11],.061f,.085f*g[11]);
             else
                 f.add(side*.213f,.079f,.300f,.119f*g[11],.059f,.156f*g[11]);
             // Deltoid transition, biceps, triceps and brachioradialis.
