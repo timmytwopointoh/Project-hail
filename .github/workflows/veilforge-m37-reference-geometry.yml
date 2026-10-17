@@ -34,7 +34,7 @@ jobs:
           SRC=veilbound/app/src/main/java/game/ashenveil/veilbound
           TEST=veilbound/tests/game/ashenveil/veilbound
           javac -d /tmp/m37-geometry \
-            "$SRC"/{ArtKit,ShapeEngine,ContinuousHuman,HumanHandSculpt,HumanSkeleton,M25FaceSculpt,M25SkinPolish,M24BodyRetarget,M26SculptDials,M28FaceSculpt,M28SkinContinuity,M29ReferencePose,M29SkinAtlas,M30ReferenceRig,M31SkinSurfaceNormals,M32ShoulderRig,M32AnatomySurface,M35MouthSculpt,M36PerioralSkin,M37FootSurface,HumanAnatomy,ModelStudio,MaterialMapping,SurfaceAtlas,EnvironmentKit,DetailArtKit,CinematicArtKit,ObjMeshLoader}.java \
+            "$SRC"/{ArtKit,ShapeEngine,ContinuousHuman,HumanHandSculpt,HumanSkeleton,M25FaceSculpt,M25SkinPolish,M24BodyRetarget,M26SculptDials,M28FaceSculpt,M28SkinContinuity,M29ReferencePose,M29SkinAtlas,M30ReferenceRig,M31SkinSurfaceNormals,M32ShoulderRig,M32AnatomySurface,M35MouthSculpt,M36PerioralSkin,M37FootSurface,HumanAnatomy,ModelStudio,MaterialMapping,SurfaceAtlas,EnvironmentKit,DetailArtKit,CinematicArtKit,BellwardenAnatomy,ObjMeshLoader}.java \
             "$TEST"/{M32AnatomyPerfectionTest,M35MouthSculptTest,M36PerioralSkinTest,M37AnatomicalFeetTest,ModelStudioTest,EnvironmentKitTest}.java \
             veilbound/tools/HumanVariantCLI.java
           java -Xmx2400m -cp /tmp/m37-geometry game.ashenveil.veilbound.M32AnatomyPerfectionTest
