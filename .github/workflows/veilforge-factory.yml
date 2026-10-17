@@ -433,6 +433,15 @@ jobs:
             --source-sha "${{ github.sha }}" \
             --run-id "${{ github.run_id }}"
           cat inspection_output/next-iteration-review/next_iteration_tasks.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Bind REVIEW proposals to all original SHA-verified Android camera frames
+        run: |
+          set -euo pipefail
+          python3 veilforge/vq_handoff_angle_provenance.py \
+            --tasks inspection_output/next-iteration-review/next_iteration_tasks.json \
+            --semantic inspection_output/semantic-review/semantic_visual_review.json \
+            --screenshots-root inspection_output/android-collected \
+            --source-sha "${{ github.sha }}" \
+            --run-id "${{ github.run_id }}"
       - name: Archive machine-readable repair tasks for the next VQ worker iteration
         if: always()
         uses: actions/upload-artifact@v4
