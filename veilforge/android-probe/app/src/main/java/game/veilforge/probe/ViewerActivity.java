@@ -501,6 +501,11 @@ public final class ViewerActivity extends Activity {
             if("human_repaired".equals(filter)){
                 eyeRadius=Math.max(3.0f,radius*1.85f+0.9f);
             }
+            // Bellwarden Android QA framing only; AABB checked over all 14 angles.
+            // Depth >= 2.48465 (near plane 2), max vertical NDC <= 0.92671.
+            if("bellwarden_full_anatomy_repaired".equals(filter)){
+                eyeRadius=Math.max(3.0f,radius*2.22f+1.13f);
+            }
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
