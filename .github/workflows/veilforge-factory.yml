@@ -52,7 +52,7 @@ jobs:
           name: veilforge-library-manager
           path: inspection_output/library-manager/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   asset-producers:
     name: Factory asset / ${{ matrix.id }}
@@ -102,7 +102,7 @@ jobs:
           name: veilforge-library-${{ matrix.id }}
           path: inspection_output/library/${{ matrix.id }}/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
   library-review:
     name: Independently audit entire game-asset catalog
@@ -136,7 +136,7 @@ jobs:
           name: veilforge-library-final-review
           path: inspection_output/library-review/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
   scene-package:
     name: Assemble reusable world from reviewed asset outputs
@@ -186,7 +186,7 @@ jobs:
           name: veilforge-assembled-world-scene
           path: inspection_output/scene-package/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
 
   build-android-visual-probe:
     name: Build independent Android glTF renderer APK
@@ -276,7 +276,7 @@ jobs:
           name: veilforge-android-shared-probe-apk
           path: veilforge/android-probe/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   android-visual-workers:
     name: Android 15 / ${{ matrix.role }} / ${{ matrix.profile }}
@@ -344,7 +344,7 @@ jobs:
           name: veilforge-android-${{ matrix.role }}
           path: inspection_output/visual/${{ matrix.role }}/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
 
   android-visual-review:
     name: Fail closed on incomplete emulator visual QA evidence
@@ -379,7 +379,7 @@ jobs:
           name: veilforge-android-final-review
           path: inspection_output/android-review/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
 
   extended-visual-review:
     name: Independently verify mobile LOD and per-asset Android silhouettes
@@ -448,7 +448,7 @@ jobs:
           name: veilforge-android-visual-lod-review
           path: inspection_output/android-lod/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
       - name: Preserve the full original semantic repair evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -456,7 +456,7 @@ jobs:
           name: veilforge-android-semantic-review
           path: inspection_output/semantic-review/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
 
   bounded-auto-model-candidates:
     name: Produce isolated candidate geometry from verified emulator findings
