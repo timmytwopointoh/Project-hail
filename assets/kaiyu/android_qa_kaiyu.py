@@ -13,6 +13,9 @@ def wait_kaiyu_frame(yaw, pitch, timeout=210):
  Require the exact static Kaiyu source triangle count and a per-pose draw marker.
  This checks OpenGL draw callbacks only; screenshot validity is checked separately.
  """
+ expected=json.loads((Path('inspection_output/kaiyu/scene')/'kaiyu_m12_probe_report.json').read_text())
+ expected_nodes=int(expected['batched_material_nodes']);expected_triangles=int(expected['source_triangles'])
+ assert 0<expected_nodes<90 and expected_triangles==133584
  deadline=time.monotonic()+timeout
  loaded=False
  while time.monotonic()<deadline:
@@ -22,7 +25,7 @@ def wait_kaiyu_frame(yaw, pitch, timeout=210):
   for entry in log.splitlines():
    if 'GLTF_LOADED actual_scene=true' in entry:
     count=re.search(r'models=(\d+) nodes=(\d+) source_triangles=(\d+)',entry)
-    if not count or tuple(map(int,count.groups()))!=(90,90,133584):
+    if not count or tuple(map(int,count.groups()))!=(expected_nodes,expected_nodes,expected_triangles):
      raise RuntimeError('Kaiyu scene counts differ from reviewed source: '+entry)
     loaded=True
    if loaded and 'FRAME_OK asset=kaiyu ' in entry and (' yaw='+str(yaw)+' pitch='+str(pitch)+' ') in entry:
@@ -34,7 +37,7 @@ def main():
  ap=argparse.ArgumentParser();ap.add_argument('--apk',required=True);ap.add_argument('--out',required=True)
  a=ap.parse_args();out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
  apk=Path(a.apk);digest=hashlib.sha256(apk.read_bytes()).hexdigest()
- sdk=int(qa.adb('shell','getprop','ro.build.version.sdk').strip());assert sdk==35, sdk
+ sdk=int(qa.adb('shell','getprop','ro.build.version.sdk').strip());assert sdk==30, sdk
  qa.adb('install','-r',str(apk),timeout=180)
  qa.adb('logcat','-G','16M',timeout=35)
  qa.adb('logcat','-c')
@@ -70,7 +73,7 @@ def main():
  assert 'GLTF_LOADED actual_scene=true' in log and 'GLES_READY renderer=' in log
  markers=re.findall(r'MATERIAL_MAPS_LOADED basecolor=(\d+) metallic_roughness=(\d+) unique_gpu_textures=(\d+)',log)
  assert markers and max(int(x[0]) for x in markers)>=1,markers
- report={'milestone':'Kaiyu M4 actual Android 15 static 3D rendering','apk_sha256':digest,'android_api':sdk,'model':'Kaiyu', 'screenshots':len(frames),'views':frames,'max_orbit_change':round(max(changes),5),'material_albedo_uploaded':True,'real_gles2_scene_draw':True,'screenshots_real_adb':True,'skinned_motion_android_verified':False,'reference_likeness_approved':False,'physical_phone_fps_verified':False,'production_ready':False}
+ report={'milestone':'Kaiyu M12 Android 30 static 3D diagnostic','apk_sha256':digest,'android_api':sdk,'model':'Kaiyu', 'screenshots':len(frames),'views':frames,'max_orbit_change':round(max(changes),5),'material_albedo_uploaded':True,'real_gles2_scene_draw':True,'screenshots_real_adb':True,'skinned_motion_android_verified':False,'reference_likeness_approved':False,'physical_phone_fps_verified':False,'production_ready':False}
  (out/'kaiyu_android_report.json').write_text(json.dumps(report,indent=2)+'\n')
  (out/'device_logcat.txt').write_text(log)
  print('KAIYU_ANDROID_STATIC_14_VIEW_PASS',len(frames), 'MAX_ORBIT_CHANGE',max(changes))
