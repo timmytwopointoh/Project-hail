@@ -192,6 +192,11 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
     adb("logcat","-c")
     with LogcatStream(output/"device_logcat.txt", reject_wrong_pack=True) as monitor:
         collected=[]
+        # Keep the last ACTUALLY PRESENTED frame across asset boundaries.
+        # The first sword screenshot must never be a stale chest framebuffer.
+        # The same strict per-frame change threshold applies; rejected images
+        # are archived and retried rather than silently counted as accepted.
+        previous_presented_frame=None
         for asset in ROLES[role]:
             base=output/asset;base.mkdir(parents=True,exist_ok=True)
             shots=[];measurements=[]
@@ -203,12 +208,13 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                 wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
                 dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
                 pic,result,attempts=capture_visible_frame(
-                    dest,monitor=monitor,previous_frame=shots[-1] if shots else None)
+                    dest,monitor=monitor,previous_frame=previous_presented_frame)
                 result.update({"index":index,"yaw":yaw,"pitch":pitch,
                                 "capture_attempts":attempts,
                                 "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
                                 "image":str(dest.relative_to(output))})
                 shots.append(pic);measurements.append(result)
+                previous_presented_frame=pic
             changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
             del shots
             if max(changes)<.0006:

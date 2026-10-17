@@ -68,3 +68,17 @@ accepted prior Android frames, and keep all three sky probes, modal,
 stale-frame, origin SHA, GLES, structural, semantic and LOD gates.
 First 4 partial sword views showed coverage improvement but are NOT
 complete proof. Retest all four Android roles; candidate still unmerged.
+
+2026-10-17 H13 independent manual audit rejected an apparently green run:
+Run 39071499467 SHA 2d66086713f55acd55db9f25835054bbcaed3fec
+had 18/18 jobs PASS and 154 recorded frames, but its FIRST accepted sword
+screenshot was byte-identical to treasure_chest final yaw325 frame:
+SHA-256 5af86de2a82e1a08d85cc9f88a9767db4e8c00bdd0d21d47125b9a7ae940b7d7.
+Artifact 12115067670. The screenshot shows the CHEST. Therefore measured
+14-view sword coverage for that run is INVALID, regardless of green CI.
+Preserve all evidence, reject visual acceptance, no auto-promote/merge.
+Repair strictly the cross-asset stale-frame handoff: keep last accepted
+presented frame outside asset loop, enforce existing .0006 change threshold
+on every first frame, archive/retry duplicates. New regression tests added.
+All other technical gates and 14 yaw/pitch angles unchanged. Full rerun
+and independent SHA audit REQUIRED before marking sword camera verified.

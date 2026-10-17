@@ -75,3 +75,26 @@ yaw25 0.001465 -> 0.004747,
 yaw50 0.002252 -> 0.005778,
 yaw75 0.003011 -> 0.006538 (attempt 1).
 The H13 candidate remains isolated pending a complete fresh 154-frame run.
+
+## H13 18/18 run 39071499467 — source-provenance rejection
+The full run at SHA 2d66086713f55acd55db9f25835054bbcaed3fec
+passed 18/18 technical jobs, 4 Android 15 roles, 154 files and independent
+LOD/semantic gates. Nevertheless, manual screenshot inspection discovered
+an invalid accepted FIRST sword angle. Exact PNG SHA-256
+5af86de2a82e1a08d85cc9f88a9767db4e8c00bdd0d21d47125b9a7ae940b7d7
+is IDENTICAL between treasure_chest/13_yaw325_pitch25.png and
+ceremonial_sword/00_yaw0_pitch15.png in props artifact 12115067670.
+The displayed object is a CHEST, not the sword. This invalidates any claim
+of 14 valid sword views, despite green automated gates; reject that run
+for sword visual acceptance. Previous-frame comparisons were reset by the
+per-asset shots list, so a cross-asset stale compositor buffer escaped.
+
+Fix: retain previous_presented_frame outside the asset loop and pass it
+to every capture_visible_frame, including the first frame of each new
+asset. On each accepted screenshot, update that reference. Existing
+change_fraction threshold .0006, retries, immutable rejected PNG archive,
+source SHA, modal checks, three sky probes and all other QA gates remain
+unchanged. Add a source-wiring test and a real-image synthetic cross-asset
+rejection regression. Re-run the FULL matrix and inspect cross-asset SHA
+collisions before any visibility gain is accepted. Do not erase the
+rejected green-run evidence.

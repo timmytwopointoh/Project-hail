@@ -124,6 +124,47 @@ class PresentedFrameTest(unittest.TestCase):
             self.assertTrue((Path(tmp)/"01_rejected_duplicate_1.png").is_file())
             self.assertTrue((Path(tmp)/"01_rejected_duplicate_2.png").is_file())
 
+    def test_cross_asset_stale_frame_handoff_is_required(self):
+        # A fresh GLES FRAME_OK can precede the compositor presenting the
+        # new asset. Source wiring must carry the last accepted frame even
+        # when the asset loop changes from chest to sword.
+        import inspect
+        from android_visual_qa import capture
+        source=inspect.getsource(capture)
+        self.assertLess(source.index("previous_presented_frame=None"),
+                        source.index("for asset in ROLES[role]:"))
+        self.assertIn("previous_frame=previous_presented_frame",source)
+        self.assertIn("previous_presented_frame=pic",source)
+        self.assertNotIn("previous_frame=shots[-1] if shots else None",source)
+
+    def test_cross_asset_duplicate_is_rejected_and_archived(self):
+        from PIL import Image,ImageDraw
+        from tempfile import TemporaryDirectory
+        chest=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(chest).rectangle((250,120,390,270),fill=(105,70,39))
+        sword=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(sword).rectangle((315,50,325,290),fill=(115,117,120))
+        visible={"foreground_fraction":.03,"channel_stddev":18,
+                 "renderer_background_confirmed":True}
+        with TemporaryDirectory() as tmp:
+            path=Path(tmp)/"ceremonial_sword"/"00_yaw0_pitch15.png"
+            path.parent.mkdir()
+            frames=iter((chest,sword))
+            def take(dest):
+                pic=next(frames)
+                pic.save(dest)
+                return pic
+            with patch("android_visual_qa.screenshot",side_effect=take), \
+                 patch("android_visual_qa.metrics",return_value=visible.copy()), \
+                 patch("android_visual_qa.time.sleep"):
+                pic,measured,attempt=capture_visible_frame(
+                    path,attempts=2,interval=0,previous_frame=chest)
+            self.assertEqual(attempt,2)
+            self.assertEqual(measured["rejected_duplicate_count"],1)
+            self.assertTrue((path.parent/"00_yaw0_pitch15_rejected_duplicate_1.png").is_file())
+            self.assertNotEqual(path.read_bytes(),
+                                (path.parent/"00_yaw0_pitch15_rejected_duplicate_1.png").read_bytes())
+
     def test_zero_attempts_rejected(self):
         with self.assertRaises(ValueError):
             capture_visible_frame("actual.png",attempts=0)
