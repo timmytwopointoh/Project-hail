@@ -139,15 +139,19 @@ public final class ForgeLang2 {
       plan.append(String.format(Locale.ROOT,"part support_left box %.3f %.3f 0 %.3f %.3f %.3f\n",
        -1.15f*m,.38f*m,.36f*m,.76f*m,.36f*m));
       plan.append("mirror support_left support_right x\n");
-      plan.append(String.format(Locale.ROOT,"part railing_left box %.3f %.3f 0 %.3f %.3f %.3f\n",
-       -.69f*m,1.25f*m,(longish?5.6f:3.5f)*m,.56f*m,.10f*m));
-      plan.append("mirror railing_left railing_right x\n");
+      plan.append(String.format(Locale.ROOT,"part railing_left box 0 %.3f %.3f %.3f %.3f %.3f\n",
+       1.25f*m,-(wide?1.05f:.65f)*m,(longish?5.6f:3.5f)*m,.56f*m,.10f*m));
+      plan.append("mirror railing_left railing_right z\n");
     }else if(word(s,"wheel|tire")){
       plan.append("model procedural_wheel\n");
-      plan.append(String.format(Locale.ROOT,"part rim ring 0 %.3f 0 %.3f %.3f %.3f\n",
-       .6f*m,(wide?1.5f:1.1f)*m,.16f*m,(wide?1.5f:1.1f)*m));
-      plan.append(String.format(Locale.ROOT,"part hub cylinder 0 %.3f 0 %.3f %.3f %.3f\n",
-       .6f*m,.25f*m,.12f*m,.25f*m));
+      plan.append(String.format(Locale.ROOT,"part rim ring_z 0 %.3f 0 %.3f %.3f %.3f\n",
+       .6f*m,(wide?1.5f:1.1f)*m,(wide?1.5f:1.1f)*m,.16f*m));
+      plan.append(String.format(Locale.ROOT,"part hub ellipsoid 0 %.3f 0 %.3f %.3f %.3f\n",
+       .6f*m,.25f*m,.25f*m,.12f*m));
+      plan.append(String.format(Locale.ROOT,"part spoke_horizontal box 0 %.3f 0 %.3f %.3f %.3f\n",
+       .6f*m,(wide?.95f:.65f)*m,.09f*m,.075f*m));
+      plan.append(String.format(Locale.ROOT,"part spoke_vertical box 0 %.3f 0 %.3f %.3f %.3f\n",
+       .6f*m,.09f*m,(wide?.95f:.65f)*m,.075f*m));
     }else{
       throw new IllegalArgumentException("FORGE/2 automatic planning supports robots, bridges and wheels. Other objects need named part instructions, not copied assets.");
     }
