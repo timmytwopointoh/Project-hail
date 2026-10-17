@@ -1,0 +1,17 @@
+{
+  "milestone": "ANDROID-FRAME-FRESHNESS-01",
+  "branch": "feature/veilforge-frame-freshness-20261016",
+  "source_commit": "325ca6df457ee77a971ae2a4b1fde8a5c7223a6f",
+  "baseline_run": 38993296206,
+  "verification_run": 38995400473,
+  "baseline_adjacent_duplicates": 28,
+  "verified_adjacent_duplicates": 0,
+  "transitions": 143,
+  "frames": 154,
+  "emulators": 4,
+  "unit_tests": 145,
+  "full_factory_jobs": 19,
+  "independent_reviews": "passed",
+  "artistic_review": "still_required",
+  "auto_promote": false
+}
