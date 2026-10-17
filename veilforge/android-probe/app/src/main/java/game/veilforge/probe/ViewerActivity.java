@@ -496,6 +496,11 @@ public final class ViewerActivity extends Activity {
             if("forest_tree_mobile".equals(filter)){
                 eyeRadius=Math.max(3.0f,radius*1.95f+0.9f);
             }
+            // Human: smaller but intact across all 14 Android screenshots.
+            // QA-only camera fit; source mesh and other cameras unchanged.
+            if("human_repaired".equals(filter)){
+                eyeRadius=Math.max(3.0f,radius*1.85f+0.9f);
+            }
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
