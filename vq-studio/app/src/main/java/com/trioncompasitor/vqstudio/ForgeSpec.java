@@ -131,6 +131,28 @@ public final class ForgeSpec {
     }
     return new Blueprint(title,p,"Constructed with "+p.size()+" named parts; scale="+scale+"; no prefabricated meshes");
   }
+  /** Reapply previously VERIFIED geometric strategy to a new dimensional
+   * request. It re-generates all vertices; no old OBJ is ever loaded or copied.
+   * Only transformations that this compiler can actually satisfy are accepted.
+   */
+  public static Blueprint adapt(Blueprint previous,String direction){
+    if(previous==null||direction==null)throw new IllegalArgumentException("No verified past plan");
+    String s=direction.toLowerCase(Locale.ROOT);
+    float size=s.contains("smaller")||s.contains("miniature")?.75f:
+      s.contains("larger")||s.contains("bigger")||s.contains("giant")?1.3f:1f;
+    float tall=s.contains("taller")||s.contains("higher")?1.25f:
+      s.contains("shorter")?.80f:1f;
+    float wide=s.contains("wider")||s.contains("broader")?1.25f:
+      s.contains("narrower")?.80f:1f;
+    if(size==1f&&tall==1f&&wide==1f)
+      throw new IllegalArgumentException("Say larger, smaller, taller, shorter, wider or narrower when reusing the last verified geometry technique");
+    ArrayList<Part> rebuilt=new ArrayList<>();
+    for(Part p:previous.parts)rebuilt.add(part(p.name,p.type,
+      p.x*size*wide,p.y*size*tall,p.z*size*wide,
+      p.w*size*wide,p.h*size*tall,p.d*size*wide));
+    return new Blueprint(previous.title,rebuilt,
+      "Reused verified proportional construction strategy; regenerated every triangle");
+  }
   private static final class Mesh {
     final StringBuilder out=new StringBuilder("# FORGE/1 original procedural OBJ\n");
     int vertices=0,triangles=0;
