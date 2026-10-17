@@ -41,7 +41,10 @@ def audit(root,out=None):
         issues.append("Expected exactly one combined reviewer job")
         reviews=""
     else:
-        reviews=blocks[1]
+        # Only inspect the independent visual-review job. Later review-
+        # gated workers may legitimately install Pillow and download their
+        # OWN input artifacts without duplicating this reviewer setup.
+        reviews=blocks[1].split("\n  bounded-auto-model-candidates:\n",1)[0]
         if reviews.count("actions/download-artifact@v4")!=1:
             issues.append("Duplicate reviewer screenshot downloads")
         if reviews.count("pip install --quiet pillow==11.3.0")!=1:
