@@ -46,3 +46,31 @@ rewriting source history.
 Canonical 34-capability and 13-efficiency milestone JSON maps remain
 unchanged. This ledger is a review trail, not an unrestricted automatic
 self-repair system.
+
+## 2026-10-17 isolated QA correction: duplicate camera screenshots
+
+Parent source SHA: `9cf8ebdec2c6b40148bff2e105d9addc9495f6ab`; Android factory run `39040161933`
+(18/18 jobs passed). The ancient_tree-only visibility fill improved the
+independent 192x192 foreground mask at yaw225/pitch15 from 0.00079 to
+0.03133, but the run still accepted byte-identical PNGs for different
+adjacent labelled views: ancient_tree yaw0/yaw25 and yaw75/yaw100,
+yaw125/yaw150, yaw250/yaw275, yaw300/yaw325 (five repeated pairs).
+The screenshot capture gate on this isolated parent lacked the already
+verified cross-asset compositor-freshness guard on the separate sword branch.
+This is a camera evidence integrity defect, not evidence of a bad tree mesh.
+
+New candidate branch: `feature/veilforge-tree-frame-freshness-20261017-h09`.
+Bounded correction: propagate the prior accepted PNG SHA through all
+camera/asset transitions, retry exact duplicate presented screenshots,
+retain each rejected `_stale_presented_*.png` and fail closed on persistent
+staleness. Reuses the technique independently proven in source
+`291223bfcc5b39e5a11c7f2e0558febbb235c41a`, run `39020966378`.
+No geometry, shaders, games, thresholds, workflow concurrency, or camera
+parameters change. Tests cover retry, preserved rejected evidence,
+persistent failure and digest propagation.
+
+Status: UNVALIDATED until full 4-emulator, 154-labelled-view factory and
+independent semantic/LOD checks complete. Require zero adjacent exact
+duplicate accepted frames and preserve original screenshot evidence.
+This improves *camera provenance*, not artistic appearance, photorealism,
+or physical-device performance. Do not merge or promote automatically.

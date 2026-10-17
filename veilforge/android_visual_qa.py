@@ -83,7 +83,7 @@ def metrics(image):
             "renderer_background_confirmed":renderer_background_confirmed(image),
             "dimensions":list(image.size)}
 
-def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
+def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None, previous_frame_sha=None):
     """Wait for the *presented* Android frame, not just the GL draw callback.
 
     A FRAME_OK log is emitted before the emulator compositor necessarily
@@ -116,6 +116,18 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
         if (last["foreground_fraction"] >= .0015 and
                 last["channel_stddev"] >= 3 and
                 last.get("renderer_background_confirmed") is True):
+            # A new GLES draw log can precede Android compositor presentation.
+            # Different requested camera views must not reuse identical PNG bytes.
+            # Keep rejected real frames for provenance, including asset switches.
+            if previous_frame_sha is not None:
+                current_sha=hashlib.sha256(path.read_bytes()).hexdigest()
+                if current_sha == previous_frame_sha:
+                    evidence=path.parent/(path.stem+f"_stale_presented_{attempt}.png")
+                    evidence.write_bytes(path.read_bytes())
+                    print(f"VEILFORGE_STALE_PRESENTED_FRAME attempt={attempt}/{attempts} "
+                          f"sha256={current_sha}",flush=True)
+                    if attempt<attempts:time.sleep(interval)
+                    continue
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
@@ -130,7 +142,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
             monitor.assert_healthy()
         if attempt < attempts:
             time.sleep(interval)
-    raise RuntimeError(f"Blank, launcher/splash, system UI, or near-empty GLES frame after {attempts} "
+    raise RuntimeError(f"Blank, stale, launcher/splash, system UI, or near-empty GLES frame after {attempts} "
                        f"real screenshot attempts: {last}")
 
 
@@ -168,6 +180,8 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
     adb("logcat","-c")
     with LogcatStream(output/"device_logcat.txt", reject_wrong_pack=True) as monitor:
         collected=[]
+        # Carry the accepted presented-frame SHA across camera AND asset changes.
+        previous_frame_sha=None
         for asset in ROLES[role]:
             base=output/asset;base.mkdir(parents=True,exist_ok=True)
             shots=[];measurements=[]
@@ -178,11 +192,13 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                     "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
                 wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
                 dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
-                pic,result,attempts=capture_visible_frame(dest,monitor=monitor)
+                pic,result,attempts=capture_visible_frame(dest,monitor=monitor,
+                    previous_frame_sha=previous_frame_sha)
                 result.update({"index":index,"yaw":yaw,"pitch":pitch,
                                 "capture_attempts":attempts,
                                 "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
                                 "image":str(dest.relative_to(output))})
+                previous_frame_sha=result["sha256"]
                 shots.append(pic);measurements.append(result)
             changes=[round(change_fraction(shots[0],other),5) for other in shots[1:]]
             del shots
