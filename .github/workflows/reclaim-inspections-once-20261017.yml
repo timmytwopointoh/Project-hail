@@ -1,0 +1,56 @@
+name: One-shot safely reclaim replaced Android inspection reports
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/reclaim-inspections-once-20261017.yml']
+permissions: {contents: read, actions: write}
+jobs:
+  reclaim-only-replaced-inspections:
+    if: contains(github.event.head_commit.message, '[reclaim-replaced-emulator-inspections]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner,repo}=context.repo;
+            const artifacts=await github.paginate(github.rest.actions.listArtifactsForRepo,{owner,repo,per_page:100});
+            const runs=await github.paginate(github.rest.actions.listWorkflowRunsForRepo,{owner,repo,per_page:100});
+            const runMap=new Map(runs.map(r=>[r.id,r]));
+            const ephemeral=name=>name==='veilbound-native3d-inspection-report'||
+              /^veilbound-emulator-android(?:34|35)_pixel\d+(?:_a)?-inspection$/.test(name);
+            const groups=new Map();
+            for(const a of artifacts){
+              if(a.expired||!ephemeral(a.name)||!a.workflow_run?.id)continue;
+              const run=runMap.get(a.workflow_run.id);
+              if(!run||run.status!=='completed')continue;
+              if(!groups.has(a.name))groups.set(a.name,[]);
+              groups.get(a.name).push({a,run});
+            }
+            const candidates=[],protectedIds=new Set();
+            for(const items of groups.values()){
+              items.sort((a,b)=>Date.parse(b.a.created_at)-Date.parse(a.a.created_at));
+              items.slice(0,2).forEach(item=>protectedIds.add(item.a.id));
+              const success=items.find(x=>x.run.conclusion==='success');
+              if(success)protectedIds.add(success.a.id);
+              for(const x of items){
+                if(protectedIds.has(x.a.id))continue;
+                if(Date.now()-Date.parse(x.a.created_at)<3*60*60*1000)continue;
+                candidates.push(x);
+              }
+            }
+            candidates.sort((a,b)=>b.a.size_in_bytes-a.a.size_in_bytes);
+            const MiB=n=>(n/1048576).toFixed(2);
+            core.info('VQ_INSPECTION_CLEAN_PLAN eligible='+candidates.length+' protected='+protectedIds.size
+              +' potential_MiB='+MiB(candidates.reduce((n,x)=>n+x.a.size_in_bytes,0)));
+            let n=0,freed=0,errors=0;
+            for(const x of candidates.slice(0,275)){
+              try{await github.rest.actions.deleteArtifact({owner,repo,artifact_id:x.a.id});
+                n++;freed+=x.a.size_in_bytes;
+              }catch(e){errors++;core.warning('Inspection artifact delete failed '+x.a.id+': '+String(e.message).slice(0,130));
+                if(e.status===401||e.status===403)break;}
+            }
+            core.info('VQ_INSPECTION_CLEAN_DONE deleted='+n+' freed_MiB='+MiB(freed)+' errors='+errors);
+            await core.summary.addHeading('Safe Android inspection archive reclaim',2)
+              .addRaw('Deleted '+n+' superseded emulator/native inspection archives. Reclaimed '+MiB(freed)+' MiB. Preserved newest two and newest successful per inspection family and all model/approved-asset files.\n\nErrors: '+errors).write();
+            if(errors)core.setFailed('Some archives failed deletion');
