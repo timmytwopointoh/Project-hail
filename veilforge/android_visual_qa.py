@@ -176,10 +176,13 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
     adb("logcat","-c")
     with LogcatStream(output/"device_logcat.txt", reject_wrong_pack=True) as monitor:
         collected=[]
+        # The last presented frame can belong to the PREVIOUS asset. Keep its
+        # digest across asset transitions so an old model cannot masquerade as
+        # the new asset's first screenshot despite a fresh GLES draw marker.
+        previous_frame_sha=None
         for asset in ROLES[role]:
             base=output/asset;base.mkdir(parents=True,exist_ok=True)
             shots=[];measurements=[]
-            previous_frame_sha=None
             for index,(yaw,pitch) in enumerate(VIEWS):
                 cursor=monitor.mark()
                 adb("shell","am","start","--activity-single-top",

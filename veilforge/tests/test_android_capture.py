@@ -64,6 +64,40 @@ class PresentedFrameTest(unittest.TestCase):
         self.assertEqual(shot.call_count,1)
         delay.assert_not_called()
 
+    def test_previous_frame_digest_is_carried_across_assets(self):
+        # A new FRAME_OK event does not prove the Android compositor
+        # has presented the new asset. Guard the first frame as well.
+        import inspect
+        from android_visual_qa import capture
+        source=inspect.getsource(capture)
+        self.assertEqual(source.count("previous_frame_sha=None"),1)
+        self.assertLess(source.index("previous_frame_sha=None"),
+                        source.index("for asset in ROLES[role]:"))
+
+    def test_cross_asset_stale_frame_is_archived_then_recaptured(self):
+        import hashlib
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Path(tmp)/"00_yaw0_pitch15.png"
+            values=[b"previous-asset-frame",b"correct-new-asset-frame"]
+            def take(path):
+                Path(path).write_bytes(values.pop(0))
+                return "presented-image"
+            visible={"foreground_fraction":.14,"channel_stddev":20.,
+                     "renderer_background_confirmed":True}
+            with patch("android_visual_qa.screenshot",side_effect=take), \
+                 patch("android_visual_qa.metrics",return_value=visible), \
+                 patch("android_visual_qa.time.sleep"):
+                _,measured,attempt=capture_visible_frame(
+                    target,attempts=2,interval=0,
+                    previous_frame_sha=hashlib.sha256(b"previous-asset-frame").hexdigest())
+            self.assertEqual(attempt,2)
+            self.assertEqual(measured,visible)
+            self.assertEqual(target.read_bytes(),b"correct-new-asset-frame")
+            self.assertEqual(
+                (target.parent/"00_yaw0_pitch15_stale_presented_1.png").read_bytes(),
+                b"previous-asset-frame")
+
     def test_zero_attempts_rejected(self):
         with self.assertRaises(ValueError):
             capture_visible_frame("actual.png",attempts=0)
