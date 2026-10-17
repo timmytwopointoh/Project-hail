@@ -491,6 +491,11 @@ public final class ViewerActivity extends Activity {
             if("ceremonial_sword".equals(filter)){
                 eyeRadius=Math.max(3.0f,radius*1.75f+0.9f);
             }
+            // Forest mobile asset: narrower QA-only framing, all 14 orbit views.
+            // Projection bounds predict <0.82 vertical NDC and >3.0 near depth.
+            if("forest_tree_mobile".equals(filter)){
+                eyeRadius=Math.max(3.0f,radius*1.95f+0.9f);
+            }
             float ex=mid[0]+eyeRadius*(float)(Math.sin(yawRad)*Math.cos(pitchRad));
             float ey=mid[1]+eyeRadius*(float)Math.sin(pitchRad);
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
