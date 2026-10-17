@@ -64,6 +64,54 @@ class PresentedFrameTest(unittest.TestCase):
         self.assertEqual(shot.call_count,1)
         delay.assert_not_called()
 
+    def test_rejects_stale_presented_frame_and_preserves_evidence(self):
+        from PIL import Image, ImageDraw
+        from tempfile import TemporaryDirectory
+        old=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(old).rectangle((180,110,350,300),fill=(100,90,70))
+        fresh=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(fresh).rectangle((250,110,450,300),fill=(100,90,70))
+        visible={"foreground_fraction":.12,"channel_stddev":19.5,
+                 "renderer_background_confirmed":True}
+        with TemporaryDirectory() as tmp:
+            path=Path(tmp)/"01_yaw25_pitch25.png"
+            shots=iter([old,fresh])
+            def take(dest):
+                pic=next(shots)
+                pic.save(dest)
+                return pic
+            with patch("android_visual_qa.screenshot",side_effect=take) as shot, \
+                 patch("android_visual_qa.metrics",return_value=visible.copy()), \
+                 patch("android_visual_qa.time.sleep") as delay:
+                pic,measured,attempt=capture_visible_frame(
+                    path,attempts=3,interval=.1,previous_frame=old)
+            self.assertEqual(attempt,2)
+            self.assertEqual(shot.call_count,2)
+            self.assertEqual(measured["rejected_duplicate_count"],1)
+            self.assertGreater(measured["previous_view_change_fraction"],.0006)
+            self.assertTrue((Path(tmp)/"01_yaw25_pitch25_rejected_duplicate_1.png").is_file())
+            delay.assert_called_once_with(.1)
+
+    def test_persistent_stale_frame_fails_closed(self):
+        from PIL import Image
+        from tempfile import TemporaryDirectory
+        old=Image.new("RGB",(640,360),(17,21,29))
+        visible={"foreground_fraction":.12,"channel_stddev":19.5,
+                 "renderer_background_confirmed":True}
+        with TemporaryDirectory() as tmp:
+            path=Path(tmp)/"01.png"
+            def take(dest):
+                old.save(dest)
+                return old
+            with patch("android_visual_qa.screenshot",side_effect=take) as shot, \
+                 patch("android_visual_qa.metrics",return_value=visible), \
+                 patch("android_visual_qa.time.sleep"):
+                with self.assertRaisesRegex(RuntimeError,"repeated stale GLES frame"):
+                    capture_visible_frame(path,attempts=2,interval=0,previous_frame=old)
+            self.assertEqual(shot.call_count,2)
+            self.assertTrue((Path(tmp)/"01_rejected_duplicate_1.png").is_file())
+            self.assertTrue((Path(tmp)/"01_rejected_duplicate_2.png").is_file())
+
     def test_zero_attempts_rejected(self):
         with self.assertRaises(ValueError):
             capture_visible_frame("actual.png",attempts=0)

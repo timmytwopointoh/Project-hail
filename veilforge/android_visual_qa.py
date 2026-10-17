@@ -83,16 +83,21 @@ def metrics(image):
             "renderer_background_confirmed":renderer_background_confirmed(image),
             "dimensions":list(image.size)}
 
-def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
+def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None,
+                          previous_frame=None, min_view_change=.0006):
     """Wait for the *presented* Android frame, not just the GL draw callback.
 
     A FRAME_OK log is emitted before the emulator compositor necessarily
     presents the buffer. SwiftShader can briefly return a uniform black
-    screenshot while the surface is attaching. Retry that transient only;
-    never accept a blank screenshot or fabricate an image.
+    screenshot or the previous camera view while the surface is attaching.
+    Retry both transients; preserve rejected screenshots and fail closed if
+    the new camera view cannot be distinguished from the previous one.
     """
     if attempts < 1:
         raise ValueError("At least one real screenshot attempt is required")
+    if previous_frame is not None and not (0 < min_view_change <= 1):
+        raise ValueError("Invalid distinct-view threshold")
+    duplicate_rejections = 0
     last = None
     for attempt in range(1, attempts + 1):
         if monitor is not None:
@@ -116,6 +121,19 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
         if (last["foreground_fraction"] >= .0015 and
                 last["channel_stddev"] >= 3 and
                 last.get("renderer_background_confirmed") is True):
+            if previous_frame is not None:
+                changed = change_fraction(previous_frame, pic)
+                if changed < min_view_change:
+                    duplicate_rejections += 1
+                    evidence = path.parent / (path.stem + f"_rejected_duplicate_{attempt}.png")
+                    evidence.write_bytes(path.read_bytes())
+                    print(f"VEILFORGE_STALE_PRESENTED_FRAME attempt={attempt}/{attempts} "
+                          f"change={changed:.6f} saved={evidence}", flush=True)
+                    if attempt < attempts:
+                        time.sleep(interval)
+                    continue
+                last["previous_view_change_fraction"] = round(changed, 5)
+                last["rejected_duplicate_count"] = duplicate_rejections
             return pic, last, attempt
         print(f"VEILFORGE_FRAME_NOT_READY attempt={attempt}/{attempts} "
               f"metrics={last}", flush=True)
@@ -130,7 +148,7 @@ def capture_visible_frame(path, *, attempts=8, interval=.75, monitor=None):
             monitor.assert_healthy()
         if attempt < attempts:
             time.sleep(interval)
-    raise RuntimeError(f"Blank, launcher/splash, system UI, or near-empty GLES frame after {attempts} "
+    raise RuntimeError(f"Blank, launcher/splash, system UI, near-empty or repeated stale GLES frame after {attempts} "
                        f"real screenshot attempts: {last}")
 
 
@@ -178,7 +196,8 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                     "--ei","yaw",str(yaw),"--ei","pitch",str(pitch),timeout=40)
                 wait_frame(asset,yaw,pitch,monitor=monitor,since=cursor)
                 dest=base/f"{index:02d}_yaw{yaw}_pitch{pitch}.png"
-                pic,result,attempts=capture_visible_frame(dest,monitor=monitor)
+                pic,result,attempts=capture_visible_frame(
+                    dest,monitor=monitor,previous_frame=shots[-1] if shots else None)
                 result.update({"index":index,"yaw":yaw,"pitch":pitch,
                                 "capture_attempts":attempts,
                                 "sha256":hashlib.sha256(dest.read_bytes()).hexdigest(),
@@ -210,6 +229,9 @@ def capture(role,apk,output,expected_apk_sha,source_sha):
                           "metallic_roughness":max(int(b) for a,b,t in texture_markers),
                           "unique_gpu_textures":max(int(t) for a,b,t in texture_markers)},
         "screenshot_count":sum(len(x["views"]) for x in collected),
+        "rejected_duplicate_screenshots":sum(
+            v.get("rejected_duplicate_count",0)
+            for asset in collected for v in asset["views"]),
         "assets":collected,"memory_snapshot_saved":True,
         "technical_visual_smoke_pass":True,"artistic_quality_approved":False,
         "physical_device_qa_pass":False,"photorealism_verified":False,

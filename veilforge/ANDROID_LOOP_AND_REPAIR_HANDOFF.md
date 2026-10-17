@@ -81,3 +81,32 @@ feedback handoff, not autonomous artistic self-perfection.
 
 The source modules remain under `veilforge/`, with a versioned recovery ZIP
 and instructions in ChatGPT Library `/App creation/VEILFORGE - VQ Engine`.
+
+## October 17, 2026 — measured stale camera screenshots
+
+At verified baseline commit `85f634f58d0a5863186b22a90c1fd74292cc8c2b`,
+run `38993296206` had 154 actual captures on four Android 15 emulators.
+Reading all four screenshot artifacts revealed **28 byte-identical adjacent
+captures out of 143 camera transitions**, across 11 assets. For example,
+`ceremonial_sword` yaw 0/pitch 15 and yaw 25/pitch 25 were identical,
+as were `ancient_tree` yaw 0/pitch 15 and yaw 25/pitch 25.
+This is a genuine **presented-camera-frame evidence defect**: the existing
+logcat `FRAME_OK` only certifies a draw callback, not that the new buffer
+has been presented by the Android compositor. It is not evidence that
+an edge-on sword or small tree silhouette is geometrically defective.
+
+Isolated candidate branch `feature/veilforge-stale-frame-evidence-20261017`
+retries a visually unchanged adjacent camera capture (threshold 0.0006
+at 240x135 pixels, RGB difference >=12), preserves each rejected real
+image as `*_rejected_duplicate_<attempt>.png`, and fails closed after
+the existing eight attempts. The independent Android reviewer also
+rejects adjacent identical screenshot SHA-256 values. Regression tests
+cover rejection, evidence retention and fail-closed behavior.
+
+The 28 original duplicates remain preserved in immutable baseline
+artifacts: nature-mobile `12085179609`, props `12086056909`,
+characters `12086640383`, scene-world `12085664797`.
+Acceptance requires a fresh 4-emulator 154-frame run with **0/143**
+adjacent duplicates and unchanged semantic/LOD and source-hash gates.
+This fix does not edit models, weaken semantic heuristics, certify
+photorealism or imply real-phone FPS or human artistic acceptance.

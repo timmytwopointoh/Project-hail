@@ -47,8 +47,14 @@ def review(root,out,source_sha,apk_sha):
                     issues.append(f"{role}/{name}: not all 14 actual view frames present")
                 if a.get("max_orbit_change",0)<.0006:
                     issues.append(f"{role}/{name}: camera orbit not visually detectable")
+                previous_sha=None
                 for v in a["views"]:
                     count+=1
+                    if previous_sha is not None and v.get("sha256")==previous_sha:
+                        issues.append(f"{role}/{name}: repeated adjacent screenshot at "
+                                      f"yaw={v.get('yaw')} pitch={v.get('pitch')} "
+                                      "(stale camera presentation)")
+                    previous_sha=v.get("sha256")
                     img=path.parent/v["image"]
                     if not img.is_file() or img.stat().st_size<1000 or (
                         hashlib.sha256(img.read_bytes()).hexdigest()!=v["sha256"]):
