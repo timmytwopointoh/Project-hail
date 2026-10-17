@@ -1,0 +1,32 @@
+name: VQ GLB Shape-Only Regression (lightweight)
+on:
+  push:
+    branches: ['feature/vq-glb-shape-only-refinement-*']
+    paths:
+      - 'veilforge/vq_glb_shape_refine.py'
+      - 'veilforge/tests/test_vq_glb_shape_refine.py'
+      - '.github/workflows/vq-glb-shape-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: vq-glb-shape-${{ github.ref }}
+  cancel-in-progress: true
+
+# One short runner, no emulator, no uploaded artifacts: preserve Actions storage.
+jobs:
+  structural-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile GLB shape refinement
+        run: python3 -m py_compile veilforge/vq_glb_shape_refine.py
+      - name: Prove original rig, UV and triangle preservation
+        run: python3 -m unittest discover -s veilforge/tests -p 'test_vq_glb_shape_refine.py' -v
