@@ -17,7 +17,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from engine import read_obj,inspect_obj
+from engine import MAX_ELEMENTS,read_obj,inspect_obj
 from vq_brushes import _face_materials,_normal,_unit,_dot
 
 MAX_VERTICES=250000
@@ -134,6 +134,34 @@ def _select_edges(verts,faces,face_materials,incidence,face_edges,normals,recipe
 def _interpolate(v0,v1):
     return tuple((v0[i]+v1[i])*.5 for i in range(len(v0)))
 
+def _preflight_output_capacity(vertices,uvs,normals,faces,face_edges,chosen):
+    """Count face-local midpoint attributes before allocating or writing output.
+
+    Both sides of a welded edge receive distinct OBJ indices to preserve
+    independent UV/normal corners. Counting unique edges underestimates cost.
+    """
+    added_vertices=added_uvs=added_normals=0
+    for tri,edges in zip(faces,face_edges):
+        for i,edge in enumerate(edges):
+            if edge not in chosen:
+                continue
+            p,q=tri[i],tri[(i+1)%3]
+            added_vertices+=1
+            if (p[1] is None)!=(q[1] is None):
+                raise ValueError("Mixed UV presence on same triangle edge")
+            if (p[2] is None)!=(q[2] is None):
+                raise ValueError("Mixed normals on same triangle edge")
+            added_uvs+=p[1] is not None
+            added_normals+=p[2] is not None
+    predicted={"vertices":len(vertices)+added_vertices,
+               "uvs":len(uvs)+added_uvs,
+               "normals":len(normals)+added_normals}
+    if predicted["vertices"]>MAX_VERTICES:
+        raise ValueError("Candidate vertex budget exceeded before output")
+    if predicted["uvs"]>MAX_ELEMENTS or predicted["normals"]>MAX_ELEMENTS:
+        raise ValueError("Candidate OBJ attribute capacity exceeded before output")
+    return predicted
+
 def refine(src:Path,recipe:dict,dest:Path):
     """Write a new candidate OBJ + QA JSON. Never mutate the source OBJ."""
     src=Path(src);dest=Path(dest)
@@ -153,6 +181,7 @@ def refine(src:Path,recipe:dict,dest:Path):
     chosen,splits,possible,expected=_select_edges(
         vertices,faces,materials,incidence,face_edges,unit_normals,recipe)
     if not chosen:raise ValueError("No safe interior edges qualify for adaptive refinement")
+    capacity=_preflight_output_capacity(vertices,uvs,normals,faces,face_edges,chosen)
     new_vertices=list(vertices)
     new_uvs=list(uvs)
     new_normals=list(normals)
@@ -215,6 +244,9 @@ def refine(src:Path,recipe:dict,dest:Path):
             raise ValueError("Subdivision changed total planar face area")
     if len(out_faces)!=expected or len(out_faces)>recipe["triangle_budget"]:
         raise ValueError("Adaptive subdivision exceeded planned budget")
+    if (len(new_vertices)!=capacity["vertices"] or
+        len(new_uvs)!=capacity["uvs"] or len(new_normals)!=capacity["normals"]):
+        raise ValueError("Candidate output does not match capacity preflight")
     # Explicit single material/group/shading state per triangle preserves
     # the original per-face OBJ topology semantics and UV seam references.
     lines=["# VEYLQUORIN M29 / review-only conforming adaptive subdivided mesh"]
@@ -262,6 +294,9 @@ def refine(src:Path,recipe:dict,dest:Path):
             "edges_selected":len(chosen),"edge_budget":recipe["max_edges"],
             "triangle_budget":recipe["triangle_budget"],
             "source_faces_by_split_count":{str(k):v for k,v in new_edge_counts.items()},
+            "candidate_capacity_preflight":capacity,
+            "capacity_preflight_passed":True,
+            "capacity_limit_vertices":MAX_VERTICES,
             "geometry_welded_topology_preserved":True,
             "source_face_materials_preserved":True,
             "existing_uv_corner_attributes_preserved":True,

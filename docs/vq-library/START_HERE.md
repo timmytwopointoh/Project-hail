@@ -154,3 +154,20 @@ six-team high-detail run 38987380176 also passed. The snapshot branch
 `feature/vq-library-snapshot-geo02-semantic-20261016` adds the evidence
 ledger and technique notes. Keep earlier source ZIPs as last-known-good.
 GEO-02 is partial; neither appearance nor physical hardware is approved.
+
+## PERF-01 capacity-safe adaptive refinement (2026-10-16)
+
+The isolated source branch `feature/veilforge-perf01-output-preflight-20261016` at commit
+`2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c` passed full factory/Android run
+38989416581: 133 tests, eight asset producers, four Android 15 roles
+and 154 accepted frames, plus both independent visual reviewers. Six semantic
+warnings remain. Its adaptive refinement now preflights exact per-face
+vertex/UV/normal output counts and refuses to create or overwrite a candidate
+when the output exceeds safe capacity.
+
+The refreshed archive branch `feature/vq-library-snapshot-perf01-20261016` combines this tested
+two-file patch with the earlier GEO-02 semantic recovery snapshot.
+**This combined source tree has not independently passed the full factory.**
+Use the source branch for the exact tested PERF-01 code, the archive branch for
+offline recovery, and the ledger for the separate evidence. No real-phone
+performance, artistic realism or game release is approved.

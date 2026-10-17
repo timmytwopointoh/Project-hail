@@ -280,7 +280,8 @@
       "objective": "Hard per-tier triangle/vertex, texture memory and job runtime budgets.",
       "acceptance": "Refinement rejects over-budget recipes before writing partial output.",
       "status": "partial",
-      "automatic_game_approval": false
+      "automatic_game_approval": false,
+      "implementation_note": "Isolated PERF-01 candidate at 2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c passed factory run 38989416581 (133 tests, four Android 15 roles, 154 accepted frames). Face-local adaptive split vertex/UV/normal output counts are preflighted before write; overflow fails closed. Texture/GPU memory, runtime deadlines and physical hardware performance remain unverified; status stays partial."
     },
     {
       "id": "PERF-02",

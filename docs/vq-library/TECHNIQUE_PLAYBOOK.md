@@ -225,3 +225,32 @@ repair path does not copy external MTL/texture files, preserve every OBJ
 object/smoothing directive, generate full cage baking, or guarantee
 watertight artistic geometry. GEO-02 remains partial; physical hardware
 and manual artistic signoff are still required. Do not merge into games.
+
+## PERF-01 — Candidate output capacity preflight (verified 2026-10-16)
+
+Source branch `feature/veilforge-perf01-output-preflight-20261016`,
+commit `2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c`, full factory/Android Actions run
+38989416581. The source QA ran **133 tests**; eight independent
+asset producers, one Android test APK, four Android 15 emulator roles,
+**154 accepted real frames**, the LOD reviewer and semantic reviewer passed.
+The semantic reviewer still recorded **six warnings**; a green technical
+result is not artistic approval.
+
+**Important invariant:** one selected welded interior edge creates *two*
+face-local midpoint OBJ vertices, one for each triangle, so independent
+UV/normal corner streams survive seam boundaries. Counting only selected
+unique edges would understate output capacity. Before constructing or writing
+a candidate, `vq_adaptive_remesh.py` now computes the exact projected raw
+vertex, UV and normal counts, rejects over-capacity output, and rejects mixed
+corner attributes. After construction, the output counts must match the
+preflight prediction. Adversarial tests prove that a rejected recipe leaves
+the source unchanged, creates no partial candidate/report, and does not
+overwrite an existing review candidate.
+
+This closes **one bounded geometry allocation hazard**, not all PERF-01
+acceptance criteria: there is no verified per-tier GPU memory limit, texture
+memory accounting, timed job deadline or physical-device P95 frame-time
+budget. PERF-01 remains **partial**. The patch is isolated and unmerged;
+the refreshed Library snapshot combines this tested patch with the earlier
+separately verified GEO-02 recovery tree, and must not be described as a
+fully integrated factory CI pass on the combined commit.

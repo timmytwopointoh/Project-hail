@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "milestone": "PERF-01",
+  "status": "partial",
+  "verified_subgate": "adaptive_candidate_vertex_uv_normal_capacity_preflight",
+  "source_branch": "feature/veilforge-perf01-output-preflight-20261016",
+  "source_sha": "2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c",
+  "source_parent": "6481720458f99258e19f1ed1fe16071adc508e73",
+  "factory_run": 38989416581,
+  "factory_conclusion": "success",
+  "unit_tests": 133,
+  "asset_producers": 8,
+  "android_emulator_roles": 4,
+  "accepted_screenshots": 154,
+  "visual_lod_review": "success",
+  "semantic_review": "success",
+  "semantic_warnings": 6,
+  "source_files_changed": [
+    "veilforge/vq_adaptive_remesh.py",
+    "veilforge/tests/test_vq_adaptive_remesh.py"
+  ],
+  "game_source_edited": false,
+  "merged_to_main": false,
+  "physical_device_tested": false,
+  "artistic_signoff": false,
+  "combined_snapshot_factory_verified": false
+}

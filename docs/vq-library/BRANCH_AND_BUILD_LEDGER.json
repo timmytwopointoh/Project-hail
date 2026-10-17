@@ -3,14 +3,24 @@
   "as_of": "2026-10-16",
   "repository": "timmytwopointoh/Project-hail",
   "source_of_truth": {
-    "branch": "feature/vq-library-snapshot-geo02-semantic-20261016",
-    "derived_from_sha": "8fbaf9e686808138c68533f724602f0834a6959a",
+    "branch": "feature/vq-library-snapshot-perf01-20261016",
+    "derived_from_sha": "b7628a17fd2e9d75b7e743a71dc25c02cbc54a0b",
     "source_ci": {
       "run_id": 38987380107,
       "conclusion": "success",
       "scope": "181 unit tests, eight assets, four Android 15 roles and independent image reviews"
     },
-    "important": "Versioned snapshot of a single source commit, not a merge of all experimental branches."
+    "important": "Recovery snapshot derived from previous GEO-02 semantic backup plus exact PERF-01 source/test patch. GEO-02 and PERF-01 passed factory CI on separate source branches; the combined snapshot has archive integrity verification only, not a full combined factory/emulator pass.",
+    "additional_verified_patch": {
+      "branch": "feature/veilforge-perf01-output-preflight-20261016",
+      "sha": "2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c",
+      "run_id": 38989416581,
+      "tests": 133,
+      "android_roles": 4,
+      "accepted_frames": 154,
+      "semantic_warnings": 6,
+      "scope": "adaptive candidate vertex/UV/normal output preflight; PERF-01 remains partial"
+    }
   },
   "verified_workstreams": [
     {
@@ -111,6 +121,17 @@
       "high_detail_run": 38987380176,
       "tests": 181,
       "notes": "Five adversarial tests; distinct material/UV/normal/group overlays preserved; mixed-material caps rejected; source/candidate SHA256. No artistic or hardware approval."
+    },
+    {
+      "name": "PERF-01 fail-closed adaptive candidate capacity preflight",
+      "branch": "feature/veilforge-perf01-output-preflight-20261016",
+      "sha": "2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c",
+      "status": "partial_perf01_full_factory_android_pass_unmerged",
+      "run": 38989416581,
+      "tests": 133,
+      "accepted_screenshots": 154,
+      "semantic_warnings": 6,
+      "note": "Counts face-local split vertices, UVs and normals before output; rejects capacity overflow without partial or overwritten files. No measured memory/frame-time budget or artistic/hardware approval."
     }
   ],
   "separate_projects": [
@@ -143,7 +164,8 @@
     "Manual artistic and real-device performance gates remain open.",
     "M34-09 timing evidence covers two different successful source commits; no measured speedup, no real-device GPU benchmark, and no automatic release.",
     "GEO-02 regional audit is read-only; no automatic hole filling, appearance or physical-device approval.",
-    "GEO-02 semantic repair does not copy external MTL/texture files or prove production-quality hole filling."
+    "GEO-02 semantic repair does not copy external MTL/texture files or prove production-quality hole filling.",
+    "PERF-01 preflight is technically tested only on its isolated source branch; the new recovery snapshot combines independent verified changes and has no combined full factory run."
   ],
   "in_progress_workstreams": [
     {
@@ -155,11 +177,12 @@
     }
   ],
   "latest_recovery_snapshot": {
-    "branch": "feature/vq-library-snapshot-geo02-semantic-20261016",
-    "source_commit": "8fbaf9e686808138c68533f724602f0834a6959a",
-    "factory_run": 38987380107,
-    "high_detail_run": 38987380176,
-    "full_android_tested": true,
+    "branch": "feature/vq-library-snapshot-perf01-20261016",
+    "source_commit": "2b37d42dc5ec1d1e64ae8fb8a936169bb6c07d8c",
+    "previous_snapshot_commit": "b7628a17fd2e9d75b7e743a71dc25c02cbc54a0b",
+    "factory_run": 38989416581,
+    "full_android_tested_on_source_branch": true,
+    "combined_snapshot_full_factory_tested": false,
     "game_release_approved": false
   }
 }
