@@ -51,6 +51,7 @@ public final class ContinuousHuman {
     private static final class Field{
         final ArrayList<Blob> shapes=new ArrayList<>();
         boolean smoothSurface;
+        boolean referenceFeet;
         void add(float x,float y,float z,float rx,float ry,float rz){
             shapes.add(new Blob(x,y,z,rx,ry,rz));
         }
@@ -68,7 +69,9 @@ public final class ContinuousHuman {
                 // Protect the air gaps between fingertips: global
                 // .025 smoothing blended adjacent .04-wide digits into a
                 // mitten. Keep soft transitions at elbow/shoulder/palm.
-                float k=(y<.765f&&y>.46f&&Math.abs(x)>.40f)
+                float k=(referenceFeet&&y<.19f&&z>.355f&&
+                         Math.abs(x)>.097f&&Math.abs(x)<.40f)
+                    ?.003f:(y<.765f&&y>.46f&&Math.abs(x)>.40f)
                     ?.0035f:(smoothSurface
                        // Whole-body only. Facial detail has a tighter union
                        // radius; toes stay clearly distinct.
@@ -109,6 +112,7 @@ public final class ContinuousHuman {
                                  boolean anatomyReferenceFeet){
         Field f=new Field();
         f.smoothSurface=m25;
+        f.referenceFeet=anatomyReferenceFeet;
         // Pelvis, abdomen and sternum each transition by overlapping
         // anatomical soft tissue instead of visible intersecting rings.
         f.add(0,1.095f,-.01f,.294f*g[4],.229f,.206f);
@@ -431,7 +435,11 @@ public final class ContinuousHuman {
         validate(controls);
         Field field=anatomy(controls,includeDigits,refined,smoothSkin,
                             anatomyReferenceFeet);
-        float h=smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
+        // M37 toes are thinner than the old fused foot slab. At .055
+        // spacing a toe center can fall between all lattice nodes and
+        // silently vanish in the mobile mesh. Use reviewable toe sampling.
+        float h=anatomyReferenceFeet?(lite?.042f:.035f):
+                smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
             nz=2+(int)Math.ceil(1.14f/h);
