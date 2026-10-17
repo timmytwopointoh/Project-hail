@@ -1,0 +1,45 @@
+name: FORGE/1 - Geometry Language and Android Viewer
+on:
+  push:
+    branches: ['app/vq-studio-forgespec-v1-20261016']
+    paths:
+      - 'vq-studio/**'
+      - '.github/workflows/vq-forgespec.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vq-forgespec-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  geometry-and-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile and exercise the real original mesh language
+        run: |
+          set -euo pipefail
+          mkdir -p build/forgespec
+          javac -d build/forgespec \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/OfflineGeometry.java \
+            vq-studio/app/src/main/java/com/trioncompasitor/vqstudio/ForgeSpec.java \
+            vq-studio/tests/ForgeSpecSelfTest.java
+          java -cp build/forgespec com.trioncompasitor.vqstudio.ForgeSpecSelfTest
+      - name: Assemble complete button-free VQ Android viewer
+        run: gradle -p vq-studio :app:assembleDebug --no-daemon --max-workers=2
+      - name: Include actual installable VQ APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VQ-FORGE-SPEC-PASSIVE-VIEWER-APK
+          path: vq-studio/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
