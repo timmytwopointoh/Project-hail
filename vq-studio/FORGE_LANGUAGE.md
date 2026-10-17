@@ -47,3 +47,35 @@ bounds and regenerated geometry. It does not implement inverse graphics,
 free-form language comprehension for every possible object, skinning,
 animation, realistic material baking or human-likeness QA. Work toward those
 features through additional verified geometry tools and reference checks.
+
+## FORGE/2 — Relative geometry and symmetry
+
+```text
+FORGE/2
+model simple_robot
+part torso box 0 1 0 1 1 .5
+part head capsule 0 0 0 .5 .6 .5
+attach head torso top 0.03
+part ear_l taper -.3 0 .0 .12 .32 .12
+attach ear_l head top 0
+mirror ear_l ear_r x
+```
+
+New construction tools are `capsule`, `ring` (horizontal torus in X/Z),
+and `ring_z` (upright torus in X/Y for wheel rims). All surfaces are newly
+generated parametric vertices. The `attach CHILD PARENT FACE GAP` rule
+supports top, bottom, left, right, front, and back, with a bounded
+nonnegative gap in meters. `mirror SOURCE NEW_NAME x|z` duplicates
+dimensions and reflects the source center across the selected axis.
+
+The two operations execute sequentially; names must already exist, and
+mirror destinations must be unique. Parts, bounds, offsets, triangle counts
+and output size are validated. Resolved absolute dimensions are persisted
+as replayable instructions, **not** copied mesh files. Tests validate
+actual mesh topology changes, head-on-body attachment, symmetric geometry,
+bridge rails on opposite deck edges and upright wheel orientation.
+
+Offline natural-language coverage now includes elementary robot assemblies,
+bridges and wheels in addition to FORGE/1 families. This is **not yet**
+inverse graphics, skeletal joint animation, surface continuity at seams,
+or visually faithful reconstruction of arbitrary characters and objects.
