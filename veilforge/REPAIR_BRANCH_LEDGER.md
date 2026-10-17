@@ -74,3 +74,20 @@ independent semantic/LOD checks complete. Require zero adjacent exact
 duplicate accepted frames and preserve original screenshot evidence.
 This improves *camera provenance*, not artistic appearance, photorealism,
 or physical-device performance. Do not merge or promote automatically.
+
+## Verified camera freshness, October 17
+
+Source commit: 1a9986d3f63da9ebd30879e3642c38d7897de531. Full factory run 39044408914: 18/18 jobs,
+four Android 15 emulators, 154 accepted screenshots and independent
+Android, semantic and LOD gates PASS. Against parent
+9cf8ebdec2c6b40148bff2e105d9addc9495f6ab (run 39040161933),
+accepted adjacent byte-identical screenshots dropped 31 -> 0; 34
+rejected stale PNGs were preserved. Every accepted PNG hash matches
+the source emulator report. APK SHA256:
+c9db8a2bb46e8a6175ee8f2cf9d8c8e704adb1cd2aa25f9d36800eff76a9169a.
+Semantic warnings remain four non-executing REVIEW proposals, zero
+blockers; ancient_tree min mask coverage 0.0254 unchanged. LOD mean
+IoU 0.4070 -> 0.5944, min 0.1222 -> 0.4269 (heuristics only).
+No artistic acceptance, real-phone validation, merge or promotion.
+The full source/evidence playbook is CAMERA_FRESHNESS_VERIFIED.md;
+source backups and rejected frames are in the user's VEILFORGE Library.
