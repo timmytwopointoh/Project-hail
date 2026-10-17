@@ -91,3 +91,19 @@ Independent Android reviewer now rejects identical hashes across assets
 within one emulator role. Synthetic tests include a positive 154-frame
 fixture and a negative cross-asset replay. No model or camera edits.
 Full four-emulator, semantic and LOD verification pending; no merge.
+
+
+H14 VERIFIED at unchanged executable-source commit 44bff23aa7f7bc9874a97d147868b1b0c4752ed9:
+run 39072830533 SUCCESS, 18/18 jobs, 148 tests, 8 catalog workers,
+4 Android 15 emulators, one matching APK SHA across roles, 154 actual
+frames, 0 SHA integrity failures, 0 cross-asset accepted duplicates,
+0 adjacent accepted duplicates, 49 rejected duplicate frames archived.
+Independent structural and semantic gates PASS (5 REVIEW warnings remain);
+independent LOD check PASS (mean silhouette IoU 0.5944, min 0.4269).
+SWORD QA camera unchanged vs H13: min 0.00152, mean 0.010929,
+max 0.02542 real 14-view silhouette fraction. This validates reviewer
+defect detection, NOT artistic quality or real-phone performance.
+Role artifacts: props 12116056704, nature 12115539487,
+characters 12116275434, scene 12115519355. No asset promotion/merge.
+The documentation-only ledger update after the verified run does not
+modify the tested executable source; do not relabel its SHA as tested.

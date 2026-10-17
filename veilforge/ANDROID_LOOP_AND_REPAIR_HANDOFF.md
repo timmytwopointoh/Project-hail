@@ -129,3 +129,22 @@ Android 15 emulators and 154 frames. Its four screenshot manifests had
 zero cross-asset accepted collisions. Full H14 emulator and independent
 semantic/LOD verification is pending. Preserve rejected evidence.
 These are integrity gates, not artistic approval or real-phone benchmarks.
+
+### H14 independent full Android verification (2026-10-17)
+
+Executable source commit 44bff23aa7f7bc9874a97d147868b1b0c4752ed9
+completed run 39072830533: 18/18 jobs, 148 passing tests,
+8 catalog workers, four Android 15 emulators, 154 actual SHA-verified
+frames and one identical hash-verified GLES APK. The new independent
+cross-asset SHA check passed with zero collisions; zero adjacent accepted
+duplicates. All 49 rejected duplicate attempts remain archived in the
+emulator artifacts. Structural and semantic gates passed; five semantic
+warnings remain REVIEW proposals. Independent LOD passed, silhouette
+IoU mean 0.5944, min 0.4269. No camera or model edits were made in H14.
+The sword 14-view silhouette coverage remains min 0.00152, mean
+0.010929, max 0.02542, as in H13. This is a validated evidence
+integrity correction, not a realism, PBR, phone-FPS or artistic approval.
+Preserve the rejected earlier green-run evidence. Full source and
+verification playbook are pinned in the VEILFORGE VQ Engine Library.
+This post-validation documentation-only commit does not change tested
+executable code and must not be mistaken for a new emulator-tested SHA.
