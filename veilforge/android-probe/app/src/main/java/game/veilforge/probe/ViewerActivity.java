@@ -489,7 +489,20 @@ public final class ViewerActivity extends Activity {
             // Exact source-geometry 14-view projection predicts max |NDC y|
             // 0.805 (baseline 0.604), max |NDC x| 0.403, near depth >11.6.
             // These are geometric estimates, not proof of Android/art quality.
-            final float frustumScale="ancient_tree".equals(filter)?0.75f:1.0f;
+            // The thin edge-on sword is intentional. Its broadside inspection
+            // views are also small, so enlarge only this QA filter's framing.
+            // Pinned 350151ad sword glTF bounding corners, all 14 camera angles:
+            // at 0.65, max |NDC y| <=0.881, max |NDC x| <=0.144,
+            // min forward depth >=2.643 (near=2). Predicted, NOT Android proof.
+            // Preserve the already-verified ancient_tree 0.75 correction.
+            final float frustumScale;
+            if ("ancient_tree".equals(filter)) {
+                frustumScale=0.75f;
+            } else if ("ceremonial_sword".equals(filter)) {
+                frustumScale=0.65f;
+            } else {
+                frustumScale=1.0f;
+            }
             Matrix.frustumM(projection,0,-ratio*frustumScale,ratio*frustumScale,
                 -frustumScale,frustumScale,2,Math.max(150,eyeRadius*6));
             Matrix.multiplyMM(pv,0,projection,0,view,0);
