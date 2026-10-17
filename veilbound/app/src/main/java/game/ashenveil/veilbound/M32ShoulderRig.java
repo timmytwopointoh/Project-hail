@@ -16,7 +16,8 @@ public final class M32ShoulderRig {
         x=Math.max(0f,Math.min(1f,x));
         return x*x*(3f-2f*x);
     }
-    private static float scapulaWeight(float ax,float y){
+    private static float scapulaWeight(float ax,float y,float span){
+        ax/=span;
         // Low clavicle/scapula motion in upper chest, not a broad ribcage bend.
         float shoulderY=M24BodyRetarget.y(.445f,1.82f);
         float clavicleY=M24BodyRetarget.y(.310f,1.90f);
@@ -33,9 +34,9 @@ public final class M32ShoulderRig {
      * upper chest y≈2 and lift the inner shoulder skin OUTWARD rather
      * than dragging the ribs, pelvis or shorts with the arm bone.
      */
-    private static void underarmContour(float[] v){
-        final float centerX=.355f;
-        final float centerY=M24BodyRetarget.y(.355f,1.90f);
+    private static void underarmContour(float[] v,float span){
+        final float centerX=.355f*span;
+        final float centerY=M24BodyRetarget.y(centerX,1.90f);
         final float radiusX=.115f,radiusY=.115f;
         for(int i=0;i<v.length;i+=9){
             if(!M25SkinPolish.isBodySkin(v[i+6],v[i+7],v[i+8]))continue;
@@ -61,6 +62,12 @@ public final class M32ShoulderRig {
     }
 
     public static ArtKit.Model pose(ArtKit.Model bind,int type){
+        return pose(bind,type,1f);
+    }
+    /** M37 review-only aligned joint pivot for narrower source shoulders. */
+    public static ArtKit.Model pose(ArtKit.Model bind,int type,float span){
+        if(!Float.isFinite(span)||span<.83f||span>1.17f)
+            throw new IllegalArgumentException("Shoulder span out of range");
         if(type!=T_POSE&&type!=RELAXED)
             throw new IllegalArgumentException("Unknown M32 pose");
         if(bind==null||bind.vertices==null||bind.vertices.length%27!=0)
@@ -70,8 +77,8 @@ public final class M32ShoulderRig {
             float x=v[i],y=v[i+1],z=v[i+2];
             float nx=v[i+3],ny=v[i+4],nz=v[i+5];
             float side=x<0f?-1f:1f;
-            float w=M30ReferenceRig.armWeight(x,y,v[i+6],v[i+7],v[i+8]);
-            float clav=scapulaWeight(Math.abs(x),y);
+            float w=M30ReferenceRig.armWeight(x/span,y,v[i+6],v[i+7],v[i+8]);
+            float clav=scapulaWeight(Math.abs(x),y,span);
             boolean garment=v[i+6]<.29f&&v[i+7]<.28f&&
                             v[i+8]<.28f&&y<1.68f;
             if(garment){w=0;clav=0;}
@@ -81,7 +88,7 @@ public final class M32ShoulderRig {
                            side<0f?.25f:.39f;
             float clavicleLift=(type==T_POSE?.016f:.004f)*clav;
             float clavicleSlide=side*(type==T_POSE?.010f:.002f)*clav;
-            float ax=side*.445f,ay=M24BodyRetarget.y(ax,1.82f);
+            float ax=side*.445f*span,ay=M24BodyRetarget.y(ax,1.82f);
             float radians=side*armAngle*w;
             float cs=(float)Math.cos(radians),sn=(float)Math.sin(radians);
             float dx=x-ax,dy=y-ay;
@@ -95,7 +102,7 @@ public final class M32ShoulderRig {
                 throw new IllegalArgumentException("Invalid shoulder-normal transformation");
             v[i+3]=rx/norm;v[i+4]=ry/norm;v[i+5]=nz/norm;
         }
-        if(type==T_POSE)underarmContour(v);
+        if(type==T_POSE)underarmContour(v,span);
         return new ArtKit.Model(v);
     }
 }
