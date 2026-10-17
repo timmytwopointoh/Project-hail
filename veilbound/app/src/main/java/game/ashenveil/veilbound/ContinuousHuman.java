@@ -99,6 +99,14 @@ public final class ContinuousHuman {
     }
     private static Field anatomy(float[] g,boolean includeDigits,
                                  boolean m24,boolean m25){
+        return anatomy(g,includeDigits,m24,m25,false);
+    }
+    // Opt-in M37: independent medial/lateral instep and individually tapered
+    // toe rays. Legacy M20-M36 signed-distance fields remain byte-for-byte
+    // unchanged when anatomyReferenceFeet is false.
+    private static Field anatomy(float[] g,boolean includeDigits,
+                                 boolean m24,boolean m25,
+                                 boolean anatomyReferenceFeet){
         Field f=new Field();
         f.smoothSurface=m25;
         // Pelvis, abdomen and sternum each transition by overlapping
@@ -197,15 +205,38 @@ public final class ContinuousHuman {
             f.bone(side*.215f,.614f,-.01f,
                    side*.218f,.248f,.018f,.112f*g[8],.116f*g[8],4);
             f.add(side*.218f,.153f,.039f,.083f,.144f,.09f);
-            f.add(side*.217f,.086f,.193f,.129f*g[11],.078f,.250f*g[11]);
-            // Individual toes are fused to the front of each foot.
-            for(int toe=0;toe<5;toe++){
-                float tx=side*.217f+side*(toe-2)*.042f;
-                f.add(tx,.048f,.377f-.012f*toe,
-                      .025f,.032f,.067f);
+            if(anatomyReferenceFeet){
+                // The tarsal/forefoot body ends BEHIND the digital tips.
+                // Unlike the old long ellipsoid, it cannot engulf all five
+                // toe silhouettes into a flat mitten front.
+                f.add(side*.217f,.086f,.151f,
+                      .120f*g[11],.077f,.208f*g[11]);
+                final float[] distal={.448f,.435f,.426f,.413f,.395f};
+                for(int toe=0;toe<5;toe++){
+                    // Anatomical order: hallux on the medial/center side,
+                    // then the four smaller toes progressively laterally.
+                    float tx=side*(.133f+toe*.042f);
+                    float tip=distal[toe];
+                    float radius=toe==0?.025f:toe==4?.018f:.020f;
+                    // Connected shafts with distinct distal tips, not a
+                    // painted seam on one solid foot slab.
+                    f.bone(tx,.064f,.337f,
+                           tx+side*.003f,.051f,tip-.016f,
+                           radius,.026f,2);
+                    f.add(tx+side*.003f,.051f,tip-.016f,
+                          radius,.027f,.025f);
+                }
+            }else{
+                f.add(side*.217f,.086f,.193f,
+                      .129f*g[11],.078f,.250f*g[11]);
+                for(int toe=0;toe<5;toe++){
+                    float tx=side*.217f+side*(toe-2)*.042f;
+                    f.add(tx,.048f,.377f-.012f*toe,
+                          .025f,.032f,.067f);
+                }
             }
         }
-        if(m24)refineWholeBody(f,g,m25);
+        if(m24)refineWholeBody(f,g,m25,anatomyReferenceFeet);
         return f;
     }
     /**
@@ -215,7 +246,8 @@ public final class ContinuousHuman {
      * Hair and all historical baseline geometry remain unchanged.
      * Future retopology, texture painting and joint-weight review still needed.
      */
-    private static void refineWholeBody(Field f,float[] g,boolean facePolish){
+    private static void refineWholeBody(Field f,float[] g,
+                                        boolean facePolish,boolean anatomyReferenceFeet){
         // Thoracic / abdominal form: serratus, upper oblique and erector
         // spinae soften the formerly featureless barrel-shaped torso.
         for(int side:new int[]{-1,1}){
@@ -233,7 +265,10 @@ public final class ContinuousHuman {
             f.add(side*.180f,.422f,-.077f,.066f*g[8],.131f,.086f);
             // Achilles and heel-to-midfoot volumes for proper side profile.
             f.add(side*.218f,.148f,-.062f,.074f,.086f,.090f);
-            f.add(side*.213f,.079f,.300f,.119f*g[11],.059f,.156f*g[11]);
+            if(anatomyReferenceFeet)
+                f.add(side*.213f,.080f,.269f,.114f*g[11],.061f,.105f*g[11]);
+            else
+                f.add(side*.213f,.079f,.300f,.119f*g[11],.059f,.156f*g[11]);
             // Deltoid transition, biceps, triceps and brachioradialis.
             float x=side*.445f*g[0];
             f.add(x,1.735f,.107f,.120f*g[1],.146f,.103f);
@@ -381,11 +416,21 @@ public final class ContinuousHuman {
     static ArtKit.Model buildM25WithoutDigits(boolean lite,float[] controls){
         return build(lite,controls,false,true,true);
     }
+    /** Anatomical-foot option is ONLY used by separate M37 model candidate. */
+    static ArtKit.Model buildM37WithoutDigits(boolean lite,float[] controls){
+        return build(lite,controls,false,true,true,true);
+    }
     private static ArtKit.Model build(boolean lite,float[] controls,
                                       boolean includeDigits,boolean refined,
                                       boolean smoothSkin){
+        return build(lite,controls,includeDigits,refined,smoothSkin,false);
+    }
+    private static ArtKit.Model build(boolean lite,float[] controls,
+                                      boolean includeDigits,boolean refined,
+                                      boolean smoothSkin,boolean anatomyReferenceFeet){
         validate(controls);
-        Field field=anatomy(controls,includeDigits,refined,smoothSkin);
+        Field field=anatomy(controls,includeDigits,refined,smoothSkin,
+                            anatomyReferenceFeet);
         float h=smoothSkin?(lite?.055f:.035f):(lite?.062f:.039f);
         float x0=-.88f,y0=-.08f,z0=-.48f;
         int nx=2+(int)Math.ceil(1.76f/h),ny=2+(int)Math.ceil(2.88f/h),
