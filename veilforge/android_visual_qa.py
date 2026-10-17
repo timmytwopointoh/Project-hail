@@ -62,7 +62,13 @@ def renderer_background_confirmed(image):
     once, rather than repeatedly fetching emulator screenshot/logcat data.
     """
     frame=image.convert("RGB")
-    probes=((.50,.08),(.30,.10),(.65,.12))
+    # The enlarged legitimate sword tip can cross the old center-top
+    # (.50,.08) sky probe. Keep THREE independent strict background checks,
+    # but move only that probe to off-axis sky (.20,.08). This point was
+    # verified as clear on all 154 prior accepted real Android screenshots,
+    # and on the H13 sword screenshots that failed solely at the old probe.
+    # Threshold <=9 is unchanged; launcher/splash and stale-frame gates stay.
+    probes=((.20,.08),(.30,.10),(.65,.12))
     return all(max(abs(int(frame.getpixel((int(frame.width*x),
                                            int(frame.height*y)))[k])-BACKGROUND[k])
                    for k in range(3))<=9 for x,y in probes)

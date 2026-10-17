@@ -42,6 +42,18 @@ class PresentedFrameTest(unittest.TestCase):
         self.assertTrue(metrics(valid)["renderer_background_confirmed"])
         self.assertFalse(metrics(splash)["renderer_background_confirmed"])
 
+    def test_zoomed_real_sword_tip_does_not_invalidate_three_clear_sky_probes(self):
+        # Regression from real H13 Pixel 5 yaw75 screenshot: old center-top
+        # sample was (28,31,33), 11 off GLES background; off-axis sample
+        # was (17,21,29). Keep all three new samples mandatory.
+        from PIL import Image, ImageDraw
+        from android_visual_qa import renderer_background_confirmed
+        frame=Image.new("RGB",(640,360),(17,21,29))
+        ImageDraw.Draw(frame).rectangle((318,5,324,180),fill=(28,31,33))
+        self.assertTrue(renderer_background_confirmed(frame))
+        frame.putpixel((int(640*.20),int(360*.08)),(48,48,48))
+        self.assertFalse(renderer_background_confirmed(frame))
+
     def test_persistent_blank_fails_closed(self):
         blank={"foreground_fraction":.999,"channel_stddev":1.0}
         with patch("android_visual_qa.screenshot", return_value="blank") as shot, \

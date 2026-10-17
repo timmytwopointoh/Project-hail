@@ -47,3 +47,31 @@ If any gate fails, retain evidence and leave this isolated branch unmerged.
 Technical success never proves photorealism, actual phone FPS, PBR quality,
 or human artistic approval. Dynamic review tasks are separate from
 veilforge/queue_backlog.json and cannot auto-edit assets.
+
+## H13 first real Android attempts — correctly rejected, camera still promising
+The first full run 39070812414 at source 81e94b957927c867540ea3625fbda4c0a8c473eb
+passed 12 pre-emulator jobs and 3 of 4 Android emulator roles. Pixel 5
+props-equipment aborted; structural Android gate failed closed and semantic
+and LOD review did NOT run. Re-running failed jobs once still failed.
+Do not claim full validation. Preserve failed props artifacts 12115192686
+(attempt 1) and 12114428965 (attempt 2).
+
+At attempt 2 yaw75/pitch15, the screenshot visibly contains the enlarged
+sword with genuine GLES background. Pixel at old QA sky probe (.50,.08)
+was (28,31,33), 11 levels away from required (17,21,29) (limit 9);
+pixels at (.20,.08), (.30,.10), (.65,.12) were ALL exactly (17,21,29).
+The old center-top probe landed on the actual blade tip. This was a
+false-negative sky-location assumption, not a reason to lower thresholds.
+Across the prior successful run's 154 accepted actual screenshots, the new
+(.20,.08) point is clear in 154/154. Three independent sky probes and
+their exact <=9 threshold remain enforced; no blank, launcher, modal or
+stale-frame gates are weakened. Add synthetic regression checking a genuine
+sword tip is accepted but an off-axis non-background pixel is rejected.
+
+Partial real sword evidence (not full validation): first four angles
+old vs candidate foreground fractions:
+yaw0 0.000624 -> 0.001519,
+yaw25 0.001465 -> 0.004747,
+yaw50 0.002252 -> 0.005778,
+yaw75 0.003011 -> 0.006538 (attempt 1).
+The H13 candidate remains isolated pending a complete fresh 154-frame run.

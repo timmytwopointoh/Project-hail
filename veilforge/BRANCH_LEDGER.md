@@ -54,3 +54,17 @@ After: PENDING full four-emulator and independent semantic/LOD validation.
 Require measured mean coverage gain, all 14 frames, no clipping, no source
 SHA mismatch or stale-frame acceptance. Retain any rejected evidence.
 No automatic model rewrite, promotion, merge, or human-artistic signoff.
+
+2026-10-17 H13 fail-closed follow-up (same sword-camera candidate):
+Run 39070812414 attempt 1 failed props-equipment after 4 sword angles;
+attempt 2 failed props-equipment after 3 sword angles. Three other Android
+roles passed; final Android gate rejected 3/4 roles and 112/154 frames;
+independent semantic/LOD job correctly skipped. Preserve failed screenshot
+artifacts 12115192686 and 12114428965. Real yaw75 sword screenshot was
+visible; old sky probe (.50,.08) struck legitimate enlarged blade tip,
+RGB (28,31,33) vs (17,21,29), diff 11 > unchanged limit 9.
+Move only that strict sky probe to (.20,.08), which passed 154/154
+accepted prior Android frames, and keep all three sky probes, modal,
+stale-frame, origin SHA, GLES, structural, semantic and LOD gates.
+First 4 partial sword views showed coverage improvement but are NOT
+complete proof. Retest all four Android roles; candidate still unmerged.
