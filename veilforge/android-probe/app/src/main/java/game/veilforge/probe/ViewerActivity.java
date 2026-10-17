@@ -481,7 +481,17 @@ public final class ViewerActivity extends Activity {
             float ez=mid[2]+eyeRadius*(float)(Math.cos(yawRad)*Math.cos(pitchRad));
             Matrix.setLookAtM(view,0,ex,ey,ez,mid[0],mid[1],mid[2],0,1,0);
             float ratio=(float)width/height;
-            Matrix.frustumM(projection,0,-ratio,ratio,-1,1,2,Math.max(150,eyeRadius*6));
+            // QA-only correction for the TWO separated ancient_tree instances:
+            // baseline 43ea85d, run 39061003603, 14 actual Pixel 7 frames
+            // show mean semantic foreground coverage 0.00875 (min 0.00079).
+            // Retain both trees and all orbit angles. Narrow only their test
+            // camera's FOV; never change glTF geometry or other asset views.
+            // Exact source-geometry 14-view projection predicts max |NDC y|
+            // 0.805 (baseline 0.604), max |NDC x| 0.403, near depth >11.6.
+            // These are geometric estimates, not proof of Android/art quality.
+            final float frustumScale="ancient_tree".equals(filter)?0.75f:1.0f;
+            Matrix.frustumM(projection,0,-ratio*frustumScale,ratio*frustumScale,
+                -frustumScale,frustumScale,2,Math.max(150,eyeRadius*6));
             Matrix.multiplyMM(pv,0,projection,0,view,0);
             GLES20.glUseProgram(program);
             int visible=0,drawn=0;
