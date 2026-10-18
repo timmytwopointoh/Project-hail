@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from android_visual_qa import dialog_overlay_fraction
+from vq_lod_evidence import verified_lod_frames
 
 BACKGROUND=(17,21,29)
 PAIR=("ancient_gate_standard","ancient_gate_mobile")
@@ -34,15 +35,7 @@ def iou(a,b):
 
 def report(root,out):
     root=Path(root);out=Path(out);out.mkdir(parents=True,exist_ok=True)
-    reports=list(root.rglob("emulator_visual_qa.json"))
-    images={}
-    for file in reports:
-        record=json.loads(file.read_text())
-        for asset in record["assets"]:
-            if asset["asset"] in PAIR:
-                images[asset["asset"]]=[(file.parent/v["image"],v["yaw"],v["pitch"]) for v in asset["views"]]
-    if set(images)!=set(PAIR):
-        raise ValueError("LOD comparisons require actual mobile and standard emulator captures")
+    images, source_sha, apk_sha = verified_lod_frames(root)
     standard,mobile=(images[k] for k in PAIR)
     if len(standard)!=14 or len(mobile)!=14:
         raise ValueError("Need exactly 14 real frames at each LOD")
@@ -62,6 +55,8 @@ def report(root,out):
                 "mobile_coverage":round(sum(v)/len(v),4)})
     summary={
         "schema_version":1,"pair":list(PAIR),"samples":len(comparisons),
+        "source_commit":source_sha,"apk_sha256":apk_sha,
+        "lod_evidence_sha_and_camera_verified":True,
         "mean_silhouette_iou":round(sum(c["silhouette_iou"] for c in comparisons)/len(comparisons),4),
         "min_silhouette_iou":round(min(c["silhouette_iou"] for c in comparisons),4),
         "views":comparisons,"captures_from_android_emulator":True,
