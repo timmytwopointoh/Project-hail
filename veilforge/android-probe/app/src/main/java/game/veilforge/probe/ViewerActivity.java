@@ -100,7 +100,7 @@ public final class ViewerActivity extends Activity {
         volatile boolean loaded=false;
         int program,aPos,aNormal,aColor,aUv,aTangent,aBitangent,uMvp,uModel;
         int uBaseTexture,uMrTexture,uNormalTexture,uAOTexture;
-        int uUseAlbedo,uUseMr,uUseNormal,uUseAO,uMetallic,uRoughness;
+        int uUseAlbedo,uUseMr,uUseNormal,uUseAO,uMetallic,uRoughness,uAmbientFloor;
         final HashMap<Integer,Integer> imageTextures=new HashMap<>();
         int texAlbedoCount=0,texMrCount=0,texNormalCount=0,texAOCount=0;
         int width=1,height=1;
@@ -146,7 +146,7 @@ public final class ViewerActivity extends Activity {
             "uniform sampler2D uBaseTexture; uniform sampler2D uMrTexture;\n"+
             "uniform sampler2D uNormalTexture; uniform sampler2D uAOTexture;\n"+
             "uniform float uUseAlbedo; uniform float uUseMr; uniform float uUseNormal; uniform float uUseAO;\n"+
-            "uniform float uMetallic; uniform float uRoughness;\n"+
+            "uniform float uMetallic; uniform float uRoughness; uniform float uAmbientFloor;\n"+
             "void main(){vec3 original=normalize(vNormal);"+
             "vec3 sampled=texture2D(uNormalTexture,vUv).rgb*2.0-1.0;"+
             "vec3 mapped=normalize(sampled.x*normalize(vTangent)+sampled.y*normalize(vBitangent)+sampled.z*original);"+
@@ -160,7 +160,7 @@ public final class ViewerActivity extends Activity {
             "float metal=clamp(mix(uMetallic,rm.b*uMetallic,uUseMr),0.0,1.0);"+
             "vec3 halfdir=normalize(light+vec3(0.0,0.0,1.0));"+
             "float spec=pow(max(dot(n,halfdir),0.0),mix(70.0,7.0,rough));"+
-            "vec3 lit=albedo*(0.22+0.78*diffuse)*(1.0-0.15*metal)*ao;"+
+            "vec3 lit=albedo*(uAmbientFloor+(1.0-uAmbientFloor)*diffuse)*(1.0-0.15*metal)*ao;"+
             "vec3 reflectance=mix(vec3(0.045),albedo,metal);"+
             "gl_FragColor=vec4(lit+reflectance*spec*0.8,1.0);}\n";
         void setup(){
@@ -189,6 +189,7 @@ public final class ViewerActivity extends Activity {
             uUseMr=GLES20.glGetUniformLocation(program,"uUseMr");
             uMetallic=GLES20.glGetUniformLocation(program,"uMetallic");
             uRoughness=GLES20.glGetUniformLocation(program,"uRoughness");
+            uAmbientFloor=GLES20.glGetUniformLocation(program,"uAmbientFloor");
         }
         // Reads glTF 2.0 accessor buffers, including indexed primitives, from ACTUAL packed scene.
         static int comps(String type)throws Exception{
@@ -510,6 +511,9 @@ public final class ViewerActivity extends Activity {
             int visible=0,drawn=0;
             for(Instance item:instances){
                 if(!"scene".equals(filter)&&!filter.equals(item.asset))continue;
+                // QA-only: preserve front-lit response, raise shadow-side tree visibility.
+                // Scene/world and every other asset retain the original 0.22 floor.
+                GLES20.glUniform1f(uAmbientFloor,"ancient_tree".equals(filter)?0.38f:0.22f);
                 Matrix.setIdentityM(model,0);
                 Matrix.translateM(model,0,item.position[0],item.position[1],item.position[2]);
                 // glTF quaternion for yaw-only transform.
