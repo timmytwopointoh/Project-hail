@@ -11,3 +11,11 @@ Scoped fix: exact canonical camera metadata and PNG path, with three synthetic r
 After SHA and run: PENDING. Require 18/18, 154 accepted distinct real frames, all four emulators and independent semantic/LOD passes.
 Measured target: canonical synthetic 154-frame manifest passes; two malformed manifest cases fail closed. Foreground coverage intentionally unchanged; no artistic/phone-performance claims.
 Preserve all rejected candidates and prior branches; no auto-merge or asset promotion.
+
+H18 candidate 1 REJECTED: SHA 37040225aaedeaeed3dde2069cccff982b16bbaf,
+run 39087340024. Library-manager failed 3/159 unit tests, and all
+downstream emulator jobs correctly skipped. Root cause: historical synthetic
+cross-asset fixture used abbreviated image filenames (index-only), incompatible
+with newly enforced production naming. Fix only that fixture to canonical
+index/yaw/pitch naming; preserve original duplicate/replay assertions.
+No weakening of the new production camera binding. Rerun complete factory.

@@ -25,7 +25,7 @@ def evidence(root,replay=False,nonadjacent=False):
                     data=previous
                 if nonadjacent and role=="props-equipment" and name=="ceremonial_sword" and index==3:
                     data=(f"synthetic-{role}-{name}-0|".encode()*100)
-                rel=f"{name}/{index:02d}.png"
+                rel=f"{name}/{index:02d}_yaw{yaw}_pitch{pitch}.png"
                 target=d/rel
                 target.parent.mkdir(exist_ok=True)
                 target.write_bytes(data)
