@@ -74,7 +74,22 @@ def review(root,out,source_sha,apk_sha):
                                 f"{prior[0]} yaw={prior[1]} pitch={prior[2]} "
                                 f"and {name} yaw={v.get('yaw')} pitch={v.get('pitch')} "
                                 "(stale asset presentation)")
-                    img=path.parent/v["image"]
+                    # Require exact camera metadata and canonical screenshot path.
+                    if index >= len(VIEWS):
+                        issues.append(f"{role}/{name}: unexpected camera view index {index}")
+                        continue
+                    expected_yaw,expected_pitch=VIEWS[index]
+                    if (v.get("yaw"),v.get("pitch"))!=(expected_yaw,expected_pitch):
+                        issues.append(
+                            f"{role}/{name}: camera angle mismatch at view {index}: "
+                            f"expected yaw={expected_yaw} pitch={expected_pitch}, "
+                            f"got yaw={v.get('yaw')} pitch={v.get('pitch')}")
+                    expected_image=(f"{name}/{index:02d}_yaw{expected_yaw}_"
+                                    f"pitch{expected_pitch}.png")
+                    if v.get("image")!=expected_image:
+                        issues.append(f"{role}/{name}: camera screenshot path mismatch at view {index}")
+                        continue
+                    img=path.parent/expected_image
                     if not img.is_file() or img.stat().st_size<1000 or (
                         hashlib.sha256(img.read_bytes()).hexdigest()!=v["sha256"]):
                         issues.append(f"{role}/{name}: screenshot missing/changed")
