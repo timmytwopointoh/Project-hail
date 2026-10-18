@@ -84,12 +84,52 @@ class LogcatEvents:
 class LogcatStream:
     """Single append-only ADB process with full durable file and bounded RAM."""
 
-    def __init__(self, path, *, reject_wrong_pack=False, capacity=8192):
+    def __init__(self, path, *, reject_wrong_pack=False, capacity=8192,
+                 startup_timeout=20, startup_probe_interval=.75):
+        if startup_timeout <= 0 or startup_probe_interval <= 0:
+            raise ValueError("Logcat startup timeouts must be positive")
         self.path = Path(path)
         self.events = LogcatEvents(capacity, reject_wrong_pack=reject_wrong_pack)
+        self._startup_timeout = startup_timeout
+        self._startup_probe_interval = startup_probe_interval
         self._proc = None
         self._thread = None
         self._file = None
+
+    def _await_subscriber(self):
+        """Echo a real device nonce until the async logcat reader observes it.
+
+        ADB may finish `shell log` before `adb logcat` subscribes; a single
+        marker is therefore lossy. No simulated events or log-dump fallback:
+        only a nonce actually consumed by the live subscriber unlocks capture.
+        """
+        nonce = "VQ_LOGCAT_ATTACHED_" + uuid.uuid4().hex
+        deadline = time.monotonic() + self._startup_timeout
+        probes = 0
+        while True:
+            self.events.assert_healthy()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Android logcat subscriber did not echo nonce after "
+                    f"{probes} real ADB probes")
+            subprocess.run(
+                ["adb", "shell", "log", "-p", "i", "-t", "VEILFORGE_PROBE", nonce],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=min(15, remaining), check=True)
+            probes += 1
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                continue
+            try:
+                self.events.wait_for(
+                    lambda line: nonce in line, since=0,
+                    timeout=min(self._startup_probe_interval, remaining))
+                return
+            except TimeoutError:
+                # Only absence of this specific nonce is transient. A closed
+                # subscriber, cursor overrun or sticky GLES error still fails.
+                continue
 
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,14 +140,9 @@ class LogcatStream:
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             self._thread = threading.Thread(target=self._consume, daemon=True)
             self._thread.start()
-            # The subscriber must observe this real Android event before
-            # any view launch; otherwise early FRAME_OK lines could be lost.
-            nonce = "VQ_LOGCAT_ATTACHED_" + uuid.uuid4().hex
-            subprocess.run(
-                ["adb", "shell", "log", "-p", "i", "-t", "VEILFORGE_PROBE", nonce],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                timeout=15, check=True)
-            self.events.wait_for(lambda line: nonce in line, since=0, timeout=15)
+            # Real device echo must reach this live reader before any
+            # camera launch. Retry a lost startup probe, not a failed gate.
+            self._await_subscriber()
             return self
         except BaseException:
             self.close()
