@@ -62,9 +62,31 @@ def handoff(report_path,out,*,source_sha,run_id):
         if task_id in seen:
             raise ValueError("Duplicate repair task for asset/diagnostic")
         seen.add(task_id)
+        evidence=row.get("visibility_evidence")
+        if evidence is not None:
+            allowed=("possible_edge_on_view","low_color_contrast_or_thin_geometry",
+                     "framing_or_visibility_review")
+            if not isinstance(evidence,dict) or evidence.get("interpretation") not in allowed:
+                raise ValueError("Unrecognized screenshot visibility interpretation")
+            for prefix in ("lowest","strongest"):
+                index=evidence.get(prefix+"_view_index")
+                if type(index) is not int or not 0<=index<len(VIEWS):
+                    raise ValueError("Invalid screenshot visibility angle index")
+                yaw,pitch=VIEWS[index]
+                if (evidence.get(prefix+"_view_yaw"),evidence.get(prefix+"_view_pitch"))!=(yaw,pitch):
+                    raise ValueError("Visibility evidence does not match canonical camera")
+            for field in ("lowest_view_bbox_width","lowest_view_bbox_height",
+                          "strongest_view_bbox_height","strongest_view_coverage"):
+                value=evidence.get(field)
+                if type(value) not in (float,int) or not 0<=value<=1:
+                    raise ValueError("Invalid screenshot extent metric")
+            if evidence.get("interpretation_is_artistic_approval") is not False:
+                raise ValueError("Screenshot heuristic cannot approve art")
+            if warning.get("visibility_interpretation")!=evidence["interpretation"]:
+                raise ValueError("Semantic warning and source extent evidence differ")
         severity=("high" if subject=="view_visibility" and row.get("min_coverage",1)<.001
                   else "review")
-        tasks.append({
+        task={
             "id":task_id,"kind":"visual_review","status":"needs_specialist_review",
             "priority":severity,"asset":asset,"emulator_role":expected[asset],
             "diagnostic":subject,
@@ -77,7 +99,10 @@ def handoff(report_path,out,*,source_sha,run_id):
             "screenshot_artifact":"veilforge-android-"+expected[asset],
             "input_report_sha256":hashlib.sha256(report_path.read_bytes()).hexdigest(),
             "automatic_model_edit":False,"auto_promote":False
-        })
+        }
+        if evidence is not None:
+            task["visibility_evidence"]=evidence
+        tasks.append(task)
     tasks.sort(key=lambda x:(0 if x["priority"]=="high" else 1,x["asset"],x["diagnostic"]))
     pack={
         "schema_version":1,"engine":"VEILFORGE","stage":"android-qa-to-next-model-iteration",
@@ -102,6 +127,9 @@ def handoff(report_path,out,*,source_sha,run_id):
         "All tasks require examining real screenshots. No geometry edits/merges are authorized.",""]
     for task in tasks:
         lines.append(f"- {task['id']} ({task['priority']}, {task['emulator_role']}): {task['source_reason']}")
+        if "visibility_evidence" in task:
+            lines.append("  - Pixel-based hypothesis: "+task["visibility_evidence"]["interpretation"]+
+                         " (requires screenshot and human review; not a model defect verdict)")
     if not tasks:lines.append("- No unreviewed semantic warnings for this run.")
     (out/"next_iteration_tasks.md").write_text("\n".join(lines)+"\n",encoding="utf-8")
     return pack

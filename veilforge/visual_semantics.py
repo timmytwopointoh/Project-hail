@@ -25,7 +25,7 @@ def outline_analysis(mask,width,height):
     pixels=sum(mask)
     if not pixels:
         return {"coverage":0,"touch_edge_ratio":0,"edge_crossings":0,
-                "horizontal_asymmetry":0}
+                "horizontal_asymmetry":0,"bbox_width":0,"bbox_height":0}
     # Count actual image silhouette contact along an inset margin, not phone UI.
     margin=3
     boundary=[i for i,v in enumerate(mask) if v and
@@ -39,10 +39,41 @@ def outline_analysis(mask,width,height):
     y=height//2
     for x in range(1,width):
         if mask[y*width+x]!=mask[y*width+x-1]:crossings+=1
-    return {"coverage":round(pixels/(width*height),5),
+    xs=[i%width for i,v in enumerate(mask) if v]
+    ys=[i//width for i,v in enumerate(mask) if v]
+    return {"bbox_width":round((max(xs)-min(xs)+1)/width,5),
+            "bbox_height":round((max(ys)-min(ys)+1)/height,5),
+            "coverage":round(pixels/(width*height),5),
             "touch_edge_ratio":round(len(boundary)/max(pixels,1),5),
             "edge_crossings":crossings,
             "horizontal_asymmetry":round(abs(left-right)/pixels,5)}
+
+def visibility_evidence(measurements):
+    """Angle-linked diagnosis only; never clears a QA warning or approves art."""
+    if not measurements:
+        raise ValueError("Actual angle measurements required")
+    weakest=min(range(len(measurements)),key=lambda i:measurements[i]["coverage"])
+    strongest=max(range(len(measurements)),key=lambda i:measurements[i]["coverage"])
+    low=measurements[weakest];high=measurements[strongest]
+    if low["bbox_height"]>=.45:
+        interpretation="low_color_contrast_or_thin_geometry"
+    elif (low["bbox_width"]<=.05 and high["bbox_height"]>=.70 and
+          high["coverage"]>=.015):
+        interpretation="possible_edge_on_view"
+    else:
+        interpretation="framing_or_visibility_review"
+    return {"interpretation":interpretation,
+            "lowest_view_index":weakest,
+            "lowest_view_yaw":VIEWS[weakest][0],
+            "lowest_view_pitch":VIEWS[weakest][1],
+            "lowest_view_bbox_width":low["bbox_width"],
+            "lowest_view_bbox_height":low["bbox_height"],
+            "strongest_view_index":strongest,
+            "strongest_view_yaw":VIEWS[strongest][0],
+            "strongest_view_pitch":VIEWS[strongest][1],
+            "strongest_view_bbox_height":high["bbox_height"],
+            "strongest_view_coverage":high["coverage"],
+            "interpretation_is_artistic_approval":False}
 
 def iou(a,b):
     if len(a)!=len(b):raise ValueError("Mismatched screenshot sizes")
@@ -101,9 +132,11 @@ def diagnose(root,out,*,strict_provenance=True):
             if max(m["touch_edge_ratio"] for m in measurements)>.10:
                 warnings.append({"asset":name,"subject":"framing",
                                  "reason":"Foreground contacts crop boundary; verify if terrain or true clipping"})
-            if min(coverage)<.006:
+            evidence=visibility_evidence(measurements) if min(coverage)<.006 else None
+            if evidence is not None:
                 warnings.append({"asset":name,"subject":"view_visibility",
-                                 "reason":"At least one view has very little foreground; check culling/camera"})
+                                 "reason":"At least one view has very little foreground; check culling/camera",
+                                 "visibility_interpretation":evidence["interpretation"]})
             assets[name]={"role":role,"views":len(measurements),
                           "min_coverage":round(min(coverage),4),
                           "max_coverage":round(max(coverage),4),
@@ -111,7 +144,8 @@ def diagnose(root,out,*,strict_provenance=True):
                           "max_silhouette_change":round(maxdelta,4),
                           "mean_horizontal_asymmetry":round(
                               sum(m["horizontal_asymmetry"] for m in measurements)/len(measurements),4),
-                          "framing_warnings":sum(m["touch_edge_ratio"]>.10 for m in measurements)}
+                          "framing_warnings":sum(m["touch_edge_ratio"]>.10 for m in measurements),
+                          "visibility_evidence":evidence}
     for role,expected in ROLES.items():
         if role not in roles:problems.append("Missing emulator role "+role)
         for name in expected:
