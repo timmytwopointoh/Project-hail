@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 -m unittest discover -s worker/tests -v
           bash -n worker/android_smoke.sh
+          python3 worker/submit_job.py worker/requests/health-20261020-001.json
   validate:
     if: github.event_name != 'pull_request'
     needs: contract_tests
