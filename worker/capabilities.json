@@ -1,0 +1,27 @@
+{
+  "protocol": "vq.worker.v1",
+  "worker": "github-android-35",
+  "commands": [
+    "protocol.validate",
+    "android.build_test",
+    "android.install_test"
+  ],
+  "projects": [
+    "echoform"
+  ],
+  "results": [
+    "worker_result.json",
+    "worker-results/install.txt",
+    "worker-results/launch.txt",
+    "worker-results/logcat.txt",
+    "worker-results/game.png",
+    "worker-results/summary.txt"
+  ],
+  "rules": {
+    "review_gated": true,
+    "arbitrary_shell_commands": false,
+    "source_must_be_pinned_sha": true,
+    "android_emulator_api": 35,
+    "one_shot": true
+  }
+}
