@@ -29,3 +29,9 @@ Successful CI produces the install result, Android 35 screenshot, package path, 
 The AI is only a planner; a controller with limited GitHub rights authenticates and submits requests. The same JSON contract works for future local models. To extend capabilities, release `vq.worker.v2` without silently changing v1.
 
 Run offline unit tests using `python3 -m unittest discover -s worker/tests -v`.
+
+## Submitting commands from a future offline AI
+
+Run `python3 worker/submit_job.py your-request.json` to validate locally without any network request. Once the human/controller approves the command and securely sets `VQ_GITHUB_TOKEN`, run `python3 worker/submit_job.py your-request.json --submit`. This opens a reviewable GitHub pull request; it **does not merge automatically**. The controller owns authentication and PR submission. The AI only emits the JSON.
+
+CI publishes `worker-results/result.json` with `protocol: vq.worker.result.v1`, `job_id`, `status`, `failure_stage`, `android_install`, `android_launch`, `package` and evidence filenames. This is the stable feedback format for the future AI. Additional raw logs/screenshots remain available for investigation.
