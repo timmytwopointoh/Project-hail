@@ -1,0 +1,5 @@
+{
+  "protocol": "vq.worker.v1",
+  "job_id": "health-20261020-001",
+  "command": "protocol.validate"
+}
