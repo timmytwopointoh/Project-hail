@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from worker.command_protocol import validate
+from command_protocol import validate
 
 REPOSITORY="timmytwopointoh/Project-hail"
 API="https://api.github.com/repos/"+REPOSITORY
