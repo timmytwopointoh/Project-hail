@@ -1,0 +1,161 @@
+name: AI APK Build and Emulator Worker
+on:
+  pull_request:
+    paths:
+      - 'worker/**'
+      - '.github/workflows/ai-apk-worker.yml'
+  push:
+    branches: [main]
+    paths: ['worker/requests/*.json']
+  workflow_dispatch:
+    inputs:
+      request_file:
+        description: 'Existing worker/requests/NAME.json in repository'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ai-apk-worker-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  contract_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check command protocol and shell script
+        run: |
+          python3 -m unittest discover -s worker/tests -v
+          bash -n worker/android_smoke.sh
+  validate:
+    if: github.event_name != 'pull_request'
+    needs: contract_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      command: ${{ steps.plan.outputs.command }}
+      repository: ${{ steps.plan.outputs.repository }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      apk_path: ${{ steps.plan.outputs.apk_path }}
+      expected_package: ${{ steps.plan.outputs.expected_package }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Locate exactly one approved request
+        id: locate
+        shell: bash
+        env:
+          MANUAL: ${{ inputs.request_file }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "$MANUAL" ]; then
+            FILE="$MANUAL"
+          else
+            FILES=$(git diff --name-only "$BEFORE" "$AFTER" -- 'worker/requests/*.json')
+            test "$(printf '%s\n' "$FILES" | grep -c '.')" -eq 1 || { echo 'Submit exactly one job per merge'; exit 1; }
+            FILE="$FILES"
+          fi
+          [[ "$FILE" =~ ^worker/requests/[a-z0-9][a-z0-9_-]{2,63}\.json$ ]]
+          test -f "$FILE"
+          echo "request_file=$FILE" >> "$GITHUB_OUTPUT"
+      - name: Validate typed command and emit plan
+        id: plan
+        env:
+          REQUEST_FILE: ${{ steps.locate.outputs.request_file }}
+        run: |
+          python3 worker/command_protocol.py "$REQUEST_FILE" --github-output "$GITHUB_OUTPUT" --report worker_result.json
+      - name: Store validation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-worker-validation
+          path: worker_result.json
+          if-no-files-found: warn
+          retention-days: 3
+  build_and_emulate:
+    needs: validate
+    if: needs.validate.outputs.command == 'android.build_test' || needs.validate.outputs.command == 'android.install_test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch approved pinned game source
+        if: needs.validate.outputs.command == 'android.build_test'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.validate.outputs.repository }}
+          ref: ${{ needs.validate.outputs.source_sha }}
+          path: app-source
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        if: needs.validate.outputs.command == 'android.build_test'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        if: needs.validate.outputs.command == 'android.build_test'
+        with:
+          gradle-version: '8.9'
+      - name: Use preinstalled Android SDK and build tools
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+          echo "$SDK/build-tools/35.0.0" >> "$GITHUB_PATH"
+      - name: Build APK with Gradle
+        if: needs.validate.outputs.command == 'android.build_test'
+        run: |
+          cd app-source
+          gradle :app:assembleDebug --no-daemon
+          test -s app/build/outputs/apk/debug/app-debug.apk
+      - name: Select APK
+        id: apk
+        env:
+          KIND: ${{ needs.validate.outputs.command }}
+          STAGED: ${{ needs.validate.outputs.apk_path }}
+        run: |
+          set -euo pipefail
+          if [ "$KIND" = android.build_test ]; then
+            FILE=app-source/app/build/outputs/apk/debug/app-debug.apk
+          else
+            FILE="$STAGED"
+          fi
+          test -s "$FILE"
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+      - name: Verify Android APK signature and ZIP
+        env:
+          APK_FILE: ${{ steps.apk.outputs.file }}
+        run: |
+          apksigner verify --verbose "$APK_FILE"
+          unzip -t "$APK_FILE" | tail -1
+      - name: Emulator Android 35 install and launch
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APK_FILE: ${{ steps.apk.outputs.file }}
+          EXPECTED_PACKAGE: ${{ needs.validate.outputs.expected_package }}
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash worker/android_smoke.sh "$APK_FILE" "$EXPECTED_PACKAGE" worker-results
+      - name: Save installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-worker-android35-report
+          path: worker-results/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Save the single built APK
+        if: needs.validate.outputs.command == 'android.build_test'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-worker-built-apk
+          path: app-source/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 3
