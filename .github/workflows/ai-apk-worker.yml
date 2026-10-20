@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      job_id: ${{ steps.plan.outputs.job_id }}
       command: ${{ steps.plan.outputs.command }}
       repository: ${{ steps.plan.outputs.repository }}
       source_sha: ${{ steps.plan.outputs.source_sha }}
@@ -107,6 +108,7 @@ jobs:
           "$SDK/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
           echo "$SDK/build-tools/35.0.0" >> "$GITHUB_PATH"
       - name: Build APK with Gradle
+        id: build
         if: needs.validate.outputs.command == 'android.build_test'
         run: |
           cd app-source
@@ -127,12 +129,14 @@ jobs:
           test -s "$FILE"
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
       - name: Verify Android APK signature and ZIP
+        id: verify
         env:
           APK_FILE: ${{ steps.apk.outputs.file }}
         run: |
           apksigner verify --verbose "$APK_FILE"
           unzip -t "$APK_FILE" | tail -1
       - name: Emulator Android 35 install and launch
+        id: emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
           APK_FILE: ${{ steps.apk.outputs.file }}
@@ -143,6 +147,17 @@ jobs:
           arch: x86_64
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: bash worker/android_smoke.sh "$APK_FILE" "$EXPECTED_PACKAGE" worker-results
+      - name: Create machine-readable result receipt
+        if: always()
+        env:
+          JOB_ID: ${{ needs.validate.outputs.job_id }}
+          COMMAND: ${{ needs.validate.outputs.command }}
+          VERIFY_STEP: ${{ steps.verify.outcome }}
+          BUILD_STEP: ${{ steps.build.outcome }}
+          EMULATOR_STEP: ${{ steps.emulator.outcome }}
+        run: |
+          python3 worker/summarize.py --job-id "$JOB_ID" --command "$COMMAND" \
+            --verify "$VERIFY_STEP" --build "$BUILD_STEP" --emulator "$EMULATOR_STEP"
       - name: Save installation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
