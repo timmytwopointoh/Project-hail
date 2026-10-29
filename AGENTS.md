@@ -1,3 +1,5 @@
+**Owner superseding scope, 2026-10-29:** Project-hail is legacy **technique history** only. VQ is the model/QA component of **VEILFORGE Studio**. Codex communicates through private `Trion-Assistant-Lab/veilforge-link` without GitHub Actions. Only latest Peks source is an active game. Extract genuinely reusable animation/anatomy/physics/inspection code after verifying versions and provenance; do not import or restart historical game builds and do not delete unverified unique model techniques. Older workflow/retention advice below is historical, overridden by current manual-only/no-hosted-compute directive.
+
 # Worker Coordination — VEILFORGE / VQ / VEILBOUND
 
 This repository participates in a shared multi-chat model, game, emulator, and Android development pipeline. **First read** the current coordination issue at https://github.com/timmytwopointoh/Project-hail/issues/29 for current tested changes and GitHub Actions storage status. ECHOFORM lives separately: https://github.com/timmytwopointoh/New-game-/issues/4.
