@@ -1,0 +1,40 @@
+name: Publish signing-prep Nexus consumer test binary without Actions artifacts
+on:
+  push:
+    branches: [nexus-consumer-binary-downloads]
+    paths: ['downloads/VEILFORGE-Nexus-Consumer-v1.3.0-TRUST-PREP-SELF-SIGNED-TEST-Setup.exe']
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.repository == 'timmytwopointoh/Project-hail'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact SHA256 and publish public self-signed TEST release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          file='downloads/VEILFORGE-Nexus-Consumer-v1.3.0-TRUST-PREP-SELF-SIGNED-TEST-Setup.exe'
+          test -f "$file"
+          test "$(wc -c < "$file" | tr -d ' ')" = '760160'
+          echo 'c907c3d820102a397eb8a95a968bdc01005bba3a2232160ade8c1e8e141878c5  '"$file" | sha256sum -c -
+          test "$(head -c 2 "$file")" = 'MZ'
+          tag='nexus-consumer-v1.3.0-trust-prep-selfsigned-test-20261116'
+          test -f TRUST-PREP-TEST-NOTES.md
+          grep -q 'SELF-SIGNED TEST BUILD' TRUST-PREP-TEST-NOTES.md
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+             echo 'NEXUS_RELEASE_ALREADY_EXISTS_NOT_OVERWRITING'
+             exit 0
+          fi
+          gh release create "$tag" "$file" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title 'VEILFORGE Nexus 1.3.0 Trust Prep - Self-Signed Test' \
+            --notes-file TRUST-PREP-TEST-NOTES.md --prerelease
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets,url \
+            --jq '{url:.url,assets:[.assets[]|{name:.name,size:.size,digest:.digest}]}'
