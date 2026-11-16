@@ -1,0 +1,77 @@
+name: SIFT remove superseded Actions ZIP artifacts - Project-hail
+on:
+  push:
+    branches: [sift-actions-gc-20261116]
+    paths: ['.github/workflows/sift-actions-gc-20261116.yml']
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: sift-gc-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  reclaim:
+    if: github.repository == 'timmytwopointoh/Project-hail' && github.ref == 'refs/heads/sift-actions-gc-20261116'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Delete only superseded run archive copies - no source, release or keys
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const {owner,repo}=context.repo;
+            if(owner!=='timmytwopointoh'||repo!=='Project-hail')
+              throw Error('Wrong repository');
+            const arts=await github.paginate(github.rest.actions.listArtifactsForRepo,{owner,repo,per_page:100});
+            const MB=n=>Number((n/1048576).toFixed(2));
+            const originalBytes=arts.reduce((s,a)=>s+a.size_in_bytes,0);
+            core.info('SIFT_SCAN repo='+repo+' artifacts='+arts.length+' mib='+MB(originalBytes));
+            const protectedNames=/(approved|validated|keeper|golden|pinned|source|recipe|technique|knowledge|learning|backup|milestone|release|signing|certificate|keystore|private.?key)/i;
+            const normalized=name=>(name||'').toLowerCase()
+              .replace(/[-_ .]v?\d+(?:\.\d+){1,3}/gi,'')
+              .replace(/[-_][0-9a-f]{7,40}$/i,'')
+              .replace(/[-_](?:run|job|build)[-_]?\d+$/i,'')
+              .replace(/[-_]\d{6,}$/i,'')
+              .replace(/[-_. ]+/g,'-').replace(/^-|-$/g,'');
+            const groups=new Map();
+            for(const a of arts){
+              const family=normalized(a.name)+'|'+(a.workflow_run?.head_branch||'');
+              if(!groups.has(family))groups.set(family,[]);
+              groups.get(family).push(a);
+            }
+            const keep=new Set();
+            for(const items of groups.values()){
+              items.sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+              // Keep the latest three distinct archive generations per build family.
+              for(const a of items.slice(0,3))keep.add(a.id);
+            }
+            const cutoff=Date.now()-72*3600000;
+            const candidate=arts.filter(a=>!keep.has(a.id) &&
+              !protectedNames.test(a.name) &&
+              Date.parse(a.created_at)<cutoff);
+            candidate.sort((a,b)=>b.size_in_bytes-a.size_in_bytes);
+            const chosen=candidate.slice(0,175);
+            core.info('SIFT_SAFE_ELIGIBLE='+candidate.length+
+              ' selected='+chosen.length+' protected='+keep.size);
+            let removed=0,bytes=0,alreadyGone=0,failed=0;
+            for(const a of chosen){
+              try{
+                await github.rest.actions.deleteArtifact({owner,repo,artifact_id:a.id});
+                removed++;bytes+=a.size_in_bytes;
+              }catch(e){
+                if(e.status===404){alreadyGone++;continue;}
+                failed++;core.warning('SIFT_DELETE_BLOCKED artifact='+a.id+' '+String(e.message).slice(0,170));
+                if(e.status===401||e.status===403)break;
+              }
+            }
+            core.info('SIFT_DELETED='+removed);
+            core.info('SIFT_RECLAIMED_MIB='+MB(bytes));
+            core.info('SIFT_PROTECTED='+keep.size+' groups='+groups.size);
+            core.info('SIFT_ERRORS='+failed+' already_gone='+alreadyGone);
+            core.info('SIFT_PRESERVED=ALL_GIT_REPO_FILES_SOURCE_RELEASES_KEYS_WORKFLOWS');
+            await core.summary.addHeading('SIFT: safeguarded Actions artifact cleanup')
+              .addRaw('Repository: '+repo+'\n\nScanned **'+arts.length+
+                '** run ZIP archives. Removed **'+removed+'** superseded copies; nominal reclaimed **'+MB(bytes)+
+                ' MiB**. Preserved the most recent 3 per normalized build family and branch, all evidence/approved/source/learning/backup/release-tagged names, and all artifacts under 72 hours. No Git source, releases, assets, secrets or PC files deleted. Quota reporting may lag.').write();
+            if(failed)core.setFailed('Some old artifacts could not be deleted');
