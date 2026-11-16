@@ -1,0 +1,48 @@
+name: Publish Nexus Consumer v1.3.0 public signed test release
+on:
+  push:
+    branches: [nexus-consumer-binary-downloads]
+    paths:
+      - '.github/workflows/nexus-consumer-public-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish-verified-test-binary:
+    if: github.repository == 'timmytwopointoh/Project-hail' && github.ref == 'refs/heads/nexus-consumer-binary-downloads'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify exact isolated binary and publish public GitHub release (NO Actions artifact)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          p='downloads/VEILFORGE-Nexus-Consumer-v1.3.0-LOCAL-SIGNED-TEST-Setup.exe'
+          test -f "$p"
+          test "$(wc -c < "$p" | tr -d ' ')" = '718176'
+          echo '000a16b1201df761d6504eae6abfc4e925e0aec9fcc0d814ee8d19ba4afa779d  '${p} | sha256sum -c -
+          test "$(head -c 2 "$p")" = 'MZ'
+          # Never convert a self-signed local test signature into a retail or
+          # trusted-publisher claim. README documents exact limitations.
+          test -f README.md
+          grep -q 'self-signed' README.md
+          tag='nexus-consumer-v1.3.0-local-signed-test-20261116'
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "RELEASE_ALREADY_EXISTS_VERIFY_INSTEAD"
+            exit 0
+          fi
+          gh release create "$tag" "$p" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title 'VEILFORGE Nexus Consumer v1.3.0 - Signed Local Test' \
+            --notes-file README.md \
+            --prerelease
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets,url \
+            --jq '{url: .url, assets: [.assets[] | {name: .name, size: .size}]}'
+          echo 'NEXUS_PUBLIC_RELEASE_PUBLISHED_WITHOUT_ACTIONS_ARTIFACT_STORAGE=TRUE'
