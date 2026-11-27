@@ -1,0 +1,44 @@
+name: Matrix Flap iPhone IPA
+on:
+  push:
+    branches: [experiment/matrix-flap-ios]
+    paths:
+      - 'matrix-flap/ios/**'
+      - 'matrix-flap/app/src/main/assets/index.html'
+      - '.github/workflows/matrix-flap-ios.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build offline iPhone app for ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          APP="$PWD/out/Payload/MatrixFlap.app"
+          mkdir -p "$APP"
+          cp matrix-flap/ios/Info.plist "$APP/Info.plist"
+          cp matrix-flap/app/src/main/assets/index.html "$APP/index.html"
+          plutil -lint "$APP/Info.plist"
+          xcrun --sdk iphoneos swiftc -parse-as-library -target arm64-apple-ios16.0 -sdk "$SDK" -O matrix-flap/ios/App.swift -o "$APP/MatrixFlap" -framework UIKit -framework WebKit
+          chmod +x "$APP/MatrixFlap"
+          codesign --force --sign - "$APP"
+          codesign --verify --strict "$APP"
+          file "$APP/MatrixFlap" | grep arm64
+          cmp matrix-flap/app/src/main/assets/index.html "$APP/index.html"
+          cd out
+          /usr/bin/zip -qry MatrixFlap-iOS.ipa Payload
+          /usr/bin/unzip -t MatrixFlap-iOS.ipa
+      - name: Upload IPA for personal signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: MatrixFlap-iOS-IPA
+          path: out/MatrixFlap-iOS.ipa
+          if-no-files-found: error
+          retention-days: 7
